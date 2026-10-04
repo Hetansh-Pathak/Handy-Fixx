@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # HandyFix
 
 HandyFix is a home-services marketplace that connects customers with verified local professionals. The repository contains three Vite + React applications: a customer-facing booking experience, a dedicated provider dashboard, and a standalone admin operations panel, all backed by Supabase.
@@ -177,3 +178,6 @@ Run these from either `customer-app` or `provider-app`:
 ## License
 
 Add a license before making the repository public.
+=======
+# Handy-Fixx
+>>>>>>> 40f08aba694f1c3dbf46563b3803c4193325acca
