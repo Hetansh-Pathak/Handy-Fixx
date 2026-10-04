@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { motion } from 'framer-motion';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { DollarSign, TrendingUp, Clock, Loader2, Wallet, ArrowDownToLine } from 'lucide-react';
+import LockedPage from '@/components/provider/LockedPage';
 
 const Earnings: React.FC = () => {
   const { provider, refreshProvider } = useProvider();
@@ -131,6 +132,10 @@ const Earnings: React.FC = () => {
     paid: 'bg-success/20 text-success',
     failed: 'bg-destructive/20 text-destructive',
   };
+
+  if (provider?.kyc_status !== 'approved') {
+    return <LockedPage pageName="Earnings" />;
+  }
 
   return (
     <div className="space-y-6">

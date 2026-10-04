@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { motion } from 'framer-motion';
 import { Plus, Trash2, Copy, Clock } from 'lucide-react';
+import LockedPage from '@/components/provider/LockedPage';
 
 const DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const;
 const DAY_LABELS: Record<string, string> = {
@@ -98,6 +99,10 @@ const Schedule: React.FC = () => {
     fetchSlots();
     toast({ title: 'Schedule copied to all weekdays ✅' });
   };
+
+  if (provider?.kyc_status !== 'approved') {
+    return <LockedPage pageName="Schedule" />;
+  }
 
   return (
     <div className="space-y-6">

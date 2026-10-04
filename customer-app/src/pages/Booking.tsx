@@ -14,6 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useEmailVerification } from "@/hooks/useEmailVerification";
 import EmailVerificationCard from "@/components/EmailVerificationCard";
 import AttachmentViewer, { useBookingAttachments } from "@/components/AttachmentViewer";
+import { uploadPendingDraftFiles } from "@/utils/draftAttachmentStore";
 import { supabase } from "@/integrations/supabase/client";
 import { Tables, TablesInsert } from "@/integrations/supabase/types";
 import { CheckCircle2, LocateFixed, Mic, ImageIcon, X } from "lucide-react";
@@ -32,7 +33,14 @@ async function linkDraftAttachments(
   userId: string,
   draftId: string,
 ): Promise<void> {
-  // List all objects in the draft folder
+  // 1. Upload any pending local attachments from IndexedDB draft store (e.g. added before login)
+  try {
+    await uploadPendingDraftFiles(bookingId, userId, draftId);
+  } catch (e) {
+    console.warn("Pending draft store upload error:", e);
+  }
+
+  // 2. List all objects in the draft folder in Supabase storage
   const { data: objects } = await supabase.storage
     .from("booking-attachments")
     .list(`${userId}/${draftId}`);

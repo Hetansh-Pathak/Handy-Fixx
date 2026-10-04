@@ -1,0 +1,88 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 38 44% 96%;
+    --foreground: 0 0% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 11%;
+    --primary: 22 61% 47%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 40 32% 91%;
+    --secondary-foreground: 0 0% 11%;
+    --muted: 40 32% 91%;
+    --muted-foreground: 41 10% 33%;
+    --accent: 25 78% 93%;
+    --accent-foreground: 22 61% 47%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --success: 142 71% 45%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 11%;
+    --border: 40 32% 89%;
+    --input: 40 32% 89%;
+    --ring: 22 61% 47%;
+    --radius: 0.75rem;
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 0 0% 11%;
+    --sidebar-primary: 22 61% 47%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 25 78% 93%;
+    --sidebar-accent-foreground: 22 61% 47%;
+    --sidebar-border: 40 32% 89%;
+    --sidebar-ring: 22 61% 47%;
+  }
+}
+
+@layer base {
+  * { @apply border-border; }
+  body {
+    @apply bg-background text-foreground font-sans;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+  }
+}
+
+@layer components {
+  .glass-card {
+    @apply bg-card/80 backdrop-blur-xl border border-border/50 rounded-xl shadow-lg;
+  }
+  .gold-gradient {
+    background: linear-gradient(135deg, hsl(22 61% 47%), hsl(22 61% 42%), hsl(22 61% 55%));
+  }
+  .gold-text {
+    background: linear-gradient(135deg, hsl(22 61% 47%), hsl(22 61% 42%));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .shadow-gold {
+    box-shadow: 0 0 30px -5px hsl(22 61% 47% / 0.3);
+  }
+  .glass-input {
+    @apply bg-secondary/80 border-border/50 focus:border-primary/50 focus:ring-1 focus:ring-primary/30 transition-all;
+  }
+  .admin-sidebar-item {
+    @apply flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 cursor-pointer;
+  }
+  .admin-sidebar-item:hover {
+    @apply bg-accent text-accent-foreground;
+  }
+  .admin-sidebar-item.active {
+    @apply bg-primary text-primary-foreground shadow-sm;
+  }
+}
+
+@layer utilities {
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar { display: none; }
+}

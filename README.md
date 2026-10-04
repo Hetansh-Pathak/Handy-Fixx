@@ -1,6 +1,6 @@
 # HandyFix
 
-HandyFix is a home-services marketplace that connects customers with verified local professionals. The repository contains two Vite + React applications: a customer-facing booking experience and a dedicated provider dashboard, both backed by Supabase.
+HandyFix is a home-services marketplace that connects customers with verified local professionals. The repository contains three Vite + React applications: a customer-facing booking experience, a dedicated provider dashboard, and a standalone admin operations panel, all backed by Supabase.
 
 ![Customer application preview](docs/customer-app-preview.png)
 
@@ -30,6 +30,7 @@ HandyFix is a home-services marketplace that connects customers with verified lo
 handy-fix/
 ├── customer-app/          # Customer web application (Vite + React, port 3000)
 ├── provider-app/          # Provider dashboard (Vite + React, port 3001)
+├── admin-app/             # Admin operations panel (Vite + React, port 3002)
 ├── database/
 │   ├── migrations/
 │   │   ├── customer/      # Supabase migrations for the customer schema
@@ -123,6 +124,14 @@ npm run dev
 
 ```bash
 cd provider-app
+npm install
+npm run dev
+```
+
+**Admin app** (opens on http://localhost:3002):
+
+```bash
+cd admin-app
 npm install
 npm run dev
 ```

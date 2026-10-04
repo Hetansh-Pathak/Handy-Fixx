@@ -14,6 +14,30 @@ export type Database = {
   }
   public: {
     Tables: {
+      booking_completion_codes: {
+        Row: {
+          booking_id: string
+          code: string
+          failed_attempts: number
+          locked_until: string | null
+          created_at: string
+        }
+        Insert: {
+          booking_id: string
+          code: string
+          failed_attempts?: number
+          locked_until?: string | null
+          created_at?: string
+        }
+        Update: {
+          booking_id?: string
+          code?: string
+          failed_attempts?: number
+          locked_until?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
       booking_attachments: {
         Row: {
           id: string
@@ -394,6 +418,80 @@ export type Database = {
           },
         ]
       }
+      provider_kyc: {
+        Row: {
+          provider_id: string
+          aadhaar_last4: string | null
+          aadhaar_hash: string | null
+          pan_number: string | null
+          aadhaar_front_path: string | null
+          aadhaar_back_path: string | null
+          selfie_path: string | null
+          pan_path: string | null
+          certificate_path: string | null
+          consent_accepted_at: string | null
+          terms_version: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          provider_id: string
+          aadhaar_last4?: string | null
+          aadhaar_hash?: string | null
+          pan_number?: string | null
+          aadhaar_front_path?: string | null
+          aadhaar_back_path?: string | null
+          selfie_path?: string | null
+          pan_path?: string | null
+          certificate_path?: string | null
+          consent_accepted_at?: string | null
+          terms_version?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          provider_id?: string
+          aadhaar_last4?: string | null
+          aadhaar_hash?: string | null
+          pan_number?: string | null
+          aadhaar_front_path?: string | null
+          aadhaar_back_path?: string | null
+          selfie_path?: string | null
+          pan_path?: string | null
+          certificate_path?: string | null
+          consent_accepted_at?: string | null
+          terms_version?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "provider_kyc_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: true
+            referencedRelation: "service_providers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          user_id: string
+          role: string
+          created_at: string
+        }
+        Insert: {
+          user_id: string
+          role: string
+          created_at?: string
+        }
+        Update: {
+          user_id?: string
+          role?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
       service_providers: {
         Row: {
           acceptance_rate: number | null
@@ -403,13 +501,23 @@ export type Database = {
           bank_ifsc: string | null
           bio: string | null
           created_at: string
+          date_of_birth: string | null
           email: string | null
           experience_years: number | null
+          first_name: string | null
           full_name: string
           id: string
           is_email_verified: boolean | null
           is_online: boolean | null
+          is_verified: boolean
+          kyc_rejection_reason: string | null
+          kyc_reviewed_at: string | null
+          kyc_reviewed_by: string | null
+          kyc_status: string
+          kyc_submitted_at: string | null
+          last_name: string | null
           notification_preferences: Json | null
+          onboarding_step: number | null
           phone: string | null
           pincodes: string[] | null
           profile_completion: number | null
@@ -433,13 +541,23 @@ export type Database = {
           bank_ifsc?: string | null
           bio?: string | null
           created_at?: string
+          date_of_birth?: string | null
           email?: string | null
           experience_years?: number | null
+          first_name?: string | null
           full_name: string
           id?: string
           is_email_verified?: boolean | null
           is_online?: boolean | null
+          is_verified?: boolean
+          kyc_rejection_reason?: string | null
+          kyc_reviewed_at?: string | null
+          kyc_reviewed_by?: string | null
+          kyc_status?: string
+          kyc_submitted_at?: string | null
+          last_name?: string | null
           notification_preferences?: Json | null
+          onboarding_step?: number | null
           phone?: string | null
           pincodes?: string[] | null
           profile_completion?: number | null
@@ -463,13 +581,23 @@ export type Database = {
           bank_ifsc?: string | null
           bio?: string | null
           created_at?: string
+          date_of_birth?: string | null
           email?: string | null
           experience_years?: number | null
+          first_name?: string | null
           full_name?: string
           id?: string
           is_email_verified?: boolean | null
           is_online?: boolean | null
+          is_verified?: boolean
+          kyc_rejection_reason?: string | null
+          kyc_reviewed_at?: string | null
+          kyc_reviewed_by?: string | null
+          kyc_status?: string
+          kyc_submitted_at?: string | null
+          last_name?: string | null
           notification_preferences?: Json | null
+          onboarding_step?: number | null
           phone?: string | null
           pincodes?: string[] | null
           profile_completion?: number | null
@@ -522,10 +650,49 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      public_providers: {
+        Row: {
+          id: string
+          full_name: string
+          avatar_url: string | null
+          bio: string | null
+          rating: number | null
+          total_reviews: number | null
+          total_jobs: number | null
+          experience_years: number | null
+          pincodes: string[] | null
+          service_ids: string[] | null
+          is_online: boolean | null
+          is_verified: boolean
+          is_email_verified: boolean | null
+          status: string
+          kyc_status: string
+          created_at: string
+        }
+        Relationships: []
+      }
     }
     Functions: {
-      [_ in never]: never
+      complete_booking_with_code: {
+        Args: { p_booking_id: string; p_code: string }
+        Returns: Json
+      }
+      submit_kyc: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
+      admin_approve_kyc: {
+        Args: { p_provider_id: string }
+        Returns: Json
+      }
+      admin_reject_kyc: {
+        Args: { p_provider_id: string; p_reason: string }
+        Returns: Json
+      }
+      has_role: {
+        Args: { p_user_id: string; p_role: string }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never

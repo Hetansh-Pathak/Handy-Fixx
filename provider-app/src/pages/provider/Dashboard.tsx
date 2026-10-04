@@ -8,6 +8,7 @@ import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { DollarSign, Star, Briefcase, TrendingUp, Clock, MapPin, CheckCircle2 } from 'lucide-react';
+import LockedPage from '@/components/provider/LockedPage';
 
 const statusClasses: Record<string, string> = {
   pending: 'bg-warning/20 text-warning',
@@ -95,6 +96,10 @@ const Dashboard: React.FC = () => {
     { label: 'Total Jobs', value: provider?.total_jobs || 0, icon: Briefcase, color: 'text-blue-400' },
     { label: 'Acceptance', value: `${Number(provider?.acceptance_rate || 100).toFixed(0)}%`, icon: TrendingUp, color: 'text-success' },
   ];
+
+  if (provider?.kyc_status !== 'approved') {
+    return <LockedPage pageName="Dashboard" />;
+  }
 
   return (
     <div className="space-y-6">

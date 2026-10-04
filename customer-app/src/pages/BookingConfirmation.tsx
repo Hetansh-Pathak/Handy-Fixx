@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { format } from "date-fns";
-import { CheckCircle2, Calendar, MapPin, User, Hash, Phone, ArrowRight, Home, MessageCircle, Star, Car } from "lucide-react";
+import { CheckCircle2, Calendar, MapPin, User, Hash, Phone, ArrowRight, Home, MessageCircle, Star, Car, Copy, Info } from "lucide-react";
 import { motion } from "framer-motion";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import Navbar from "@/components/Navbar";
@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
@@ -37,6 +38,87 @@ type BookingDetails = {
   services: { name: string; slug: string | null } | null;
   service_providers: { full_name: string | null; name: string | null; rating: number | null; phone: string | null } | null;
 };
+
+// ── Completion Code Card ───────────────────────────────────────────────────────
+function CompletionCodeCard({ bookingId }: { bookingId: string }) {
+  const { toast } = useToast();
+  const [code, setCode] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    const fetch = async () => {
+      setLoading(true);
+      const { data, error } = await (supabase as unknown as {
+        from: (t: string) => {
+          select: (cols: string) => {
+            eq: (col: string, val: string) => {
+              maybeSingle: () => Promise<{ data: { code: string } | null; error: { message: string } | null }>;
+            };
+          };
+        };
+      }).from('booking_completion_codes').select('code').eq('booking_id', bookingId).maybeSingle();
+      if (cancelled) return;
+      if (error) console.error('[CompletionCodeCard] fetch error:', error.message);
+      setCode(data?.code ?? null);
+      setLoading(false);
+    };
+    void fetch();
+    return () => { cancelled = true; };
+  }, [bookingId]);
+
+  const copyCode = async () => {
+    if (!code) return;
+    await navigator.clipboard.writeText(code);
+    setCopied(true);
+    toast({ title: 'Code copied!' });
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  if (loading) return <div className="h-24 bg-secondary rounded-2xl animate-pulse" />;
+  if (!code) return null;
+
+  return (
+    <div className="bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/25 rounded-2xl p-5">
+      <div className="flex items-center justify-between mb-3">
+        <p className="font-bold text-foreground text-sm">🔐 Your Completion Code</p>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button type="button" className="p-1 rounded-full text-muted-foreground hover:text-foreground transition-colors" aria-label="What is this?">
+                <Info className="w-4 h-4" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="left" className="max-w-[220px]">
+              Share this code with your provider <strong>only after the work is finished</strong> to your satisfaction. This confirms completion.
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      </div>
+      <div className="flex items-center gap-3 mb-3">
+        <div className="flex gap-2.5">
+          {code.split('').map((digit, i) => (
+            <div key={i} className="w-12 h-14 rounded-xl bg-card border-2 border-primary/30 flex items-center justify-center text-2xl font-bold text-primary shadow-sm">
+              {digit}
+            </div>
+          ))}
+        </div>
+        <button
+          type="button"
+          onClick={() => void copyCode()}
+          className="p-2.5 rounded-xl bg-primary/10 hover:bg-primary/20 text-primary transition-colors"
+          aria-label="Copy completion code"
+        >
+          {copied ? <CheckCircle2 className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+        </button>
+      </div>
+      <p className="text-xs text-muted-foreground leading-relaxed">
+        Share this code with the provider <strong className="text-foreground">only after the work is finished</strong> to your satisfaction.
+      </p>
+    </div>
+  );
+}
 
 function StarPicker({ value, onChange }: { value: number; onChange: (v: number) => void }) {
   const [hovered, setHovered] = useState(0);
@@ -417,6 +499,13 @@ const BookingConfirmation = () => {
               </div>
             )}
           </motion.div>
+
+          {/* Completion Code — shown for active bookings only */}
+          {bookingId && ['confirmed', 'on_the_way', 'in_progress'].includes(status) && (
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.52 }}>
+              <CompletionCodeCard bookingId={bookingId} />
+            </motion.div>
+          )}
 
           {/* Cancelled — retry card */}
           {status === 'cancelled' && (

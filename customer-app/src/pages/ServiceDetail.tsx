@@ -122,7 +122,7 @@ const ServiceDetail = () => {
 
         const { data: allProviders, error: pvdErr } = await (supabase as unknown as {
           from: (t: string) => { select: (cols: string) => { order: (col: string, opts: { ascending: boolean }) => Promise<{ data: Record<string, unknown>[] | null; error: { message: string } | null }> } }
-        }).from("service_providers")
+        }).from("public_providers")
           .select("*")
           .order("rating", { ascending: false });
 

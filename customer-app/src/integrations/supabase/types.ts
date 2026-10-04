@@ -12,6 +12,30 @@ export type Database = {
   }
   public: {
     Tables: {
+      booking_completion_codes: {
+        Row: {
+          booking_id: string
+          code: string
+          failed_attempts: number
+          locked_until: string | null
+          created_at: string
+        }
+        Insert: {
+          booking_id: string
+          code: string
+          failed_attempts?: number
+          locked_until?: string | null
+          created_at?: string
+        }
+        Update: {
+          booking_id?: string
+          code?: string
+          failed_attempts?: number
+          locked_until?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
       booking_attachments: {
         Row: {
           id: string
@@ -572,6 +596,10 @@ export type Database = {
       is_customer_email_verified: {
         Args: Record<PropertyKey, never>
         Returns: boolean
+      }
+      complete_booking_with_code: {
+        Args: { p_booking_id: string; p_code: string }
+        Returns: Json
       }
     }
     Enums: {

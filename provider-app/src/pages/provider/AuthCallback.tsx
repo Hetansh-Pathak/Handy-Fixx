@@ -70,17 +70,17 @@ const AuthCallback = () => {
           full_name: profile?.full_name || displayName,
           phone: profile?.phone || null,
           email: user.email,
-          status: 'active',
+          status: 'pending_approval',   // stays pending until KYC approved
+          kyc_status: 'not_submitted',  // explicit default
         });
         if (createProviderError) throw createProviderError;
         createdGoogleAccount = true;
-      } else if (provider.status === 'suspended' || provider.status === 'pending_approval') {
+      } else if (provider.status === 'suspended') {
+        // Only suspended providers are blocked from logging in
         await supabase.auth.signOut();
         toast({
-          title: provider.status === 'suspended' ? 'Account Suspended' : 'Application Under Review',
-          description: provider.status === 'suspended'
-            ? 'Your account has been suspended. Email support@handyfix.com for help.'
-            : "Your pro application is being reviewed. We'll contact you within 3 business days.",
+          title: 'Account Suspended',
+          description: 'Your account has been suspended. Email support@handyfix.com for help.',
           variant: 'destructive',
         });
         navigate('/provider-login', { replace: true });
@@ -99,8 +99,9 @@ const AuthCallback = () => {
         });
       }
 
-      if (!profile?.full_name || !profile?.phone) {
-        navigate('/provider-panel/profile?setup=true', { replace: true });
+      // Redirect: new providers go to onboarding, returning providers go to panel
+      if (createdGoogleAccount || !profile?.full_name || !profile?.phone) {
+        navigate('/provider-panel/onboarding', { replace: true });
       } else {
         navigate('/provider-panel', { replace: true });
       }

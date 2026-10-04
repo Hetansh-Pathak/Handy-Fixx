@@ -1,0 +1,9 @@
+﻿src/components/ui/toaster.tsx(9,31): error TS7031: Binding element 'id' implicitly has an 'any' type.
+src/components/ui/toaster.tsx(9,35): error TS7031: Binding element 'title' implicitly has an 'any' type.
+src/components/ui/toaster.tsx(9,42): error TS7031: Binding element 'description' implicitly has an 'any' type.
+src/components/ui/toaster.tsx(9,55): error TS7031: Binding element 'action' implicitly has an 'any' type.
+src/hooks/use-toast.ts(5,33): error TS2307: Cannot find module './ui/use-toast' or its corresponding type declarations.
+src/integrations/supabase/client.ts(5,34): error TS2339: Property 'env' does not exist on type 'ImportMeta'.
+src/integrations/supabase/client.ts(6,46): error TS2339: Property 'env' does not exist on type 'ImportMeta'.
+src/pages/admin/Bookings.tsx(623,29): error TS2322: Type 'unknown' is not assignable to type 'ReactNode'.
+src/pages/admin/Providers.tsx(589,27): error TS2322: Type 'unknown' is not assignable to type 'ReactNode'.

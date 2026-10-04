@@ -1,0 +1,41 @@
+ M README.md
+ M customer-app/src/components/ProblemDescription.tsx
+ M customer-app/src/integrations/supabase/types.ts
+ M customer-app/src/pages/Booking.tsx
+ M customer-app/src/pages/BookingConfirmation.tsx
+ M customer-app/src/pages/MyBookings.tsx
+ M customer-app/src/pages/ServiceDetail.tsx
+ M customer-app/vite.config.ts
+ M database/migrations/customer/20261003000001_booking_attachments.sql
+ D handyfix
+ M provider-app/src/App.tsx
+ M provider-app/src/components/AttachmentViewer.tsx
+ M provider-app/src/components/provider/ProviderLayout.tsx
+ M provider-app/src/components/provider/ProviderRoute.tsx
+ M provider-app/src/contexts/ProviderContext.tsx
+ M provider-app/src/integrations/supabase/types.ts
+ M provider-app/src/pages/provider/AuthCallback.tsx
+ M provider-app/src/pages/provider/Bookings.tsx
+ M provider-app/src/pages/provider/Dashboard.tsx
+ M provider-app/src/pages/provider/Earnings.tsx
+ M provider-app/src/pages/provider/Profile.tsx
+ M provider-app/src/pages/provider/ProviderLogin.tsx
+ M provider-app/src/pages/provider/Schedule.tsx
+ M provider-app/vite.config.ts
+?? admin-app/
+?? customer-app/src/utils/
+?? database/migrations/customer/20261004000001_completion_codes_and_fixes.sql
+?? database/migrations/provider/20261005000000_kyc_onboarding.sql
+?? database/migrations/provider/20261005000001_kyc_storage.sql
+?? database/migrations/provider/20261005000002_public_providers_view.sql
+?? database/migrations/provider/20261006000000_admin_phase1.sql
+?? git_status.txt
+?? provider-app/src/components/admin/
+?? provider-app/src/components/provider/AdminRoute.tsx
+?? provider-app/src/components/provider/CompleteJobDialog.tsx
+?? provider-app/src/components/provider/KycStatusBanner.tsx
+?? provider-app/src/components/provider/LockedPage.tsx
+?? provider-app/src/lib/constants.ts
+?? provider-app/src/pages/admin/
+?? provider-app/src/pages/provider/KycOnboarding.tsx
+?? provider-app/src/pages/provider/TermsAndConditions.tsx

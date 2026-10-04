@@ -13,45 +13,12 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
-// ── All Gujarat cities ──────────────────────────────────────────────────────
-const GUJARAT_CITIES = [
-  'Ahmedabad', 'Surat', 'Vadodara', 'Rajkot', 'Bhavnagar', 'Jamnagar',
-  'Junagadh', 'Gandhinagar', 'Anand', 'Navsari', 'Morbi', 'Mehsana',
-  'Surendranagar', 'Gandhidham', 'Bharuch', 'Vapi', 'Gondal', 'Veraval',
-  'Godhra', 'Ankleshwar', 'Porbandar', 'Amreli', 'Botad', 'Dahod',
-  'Khambhat', 'Palanpur', 'Patan', 'Vyara', 'Dahanu', 'Modasa',
-  'Nadiad', 'Petlad', 'Kalol', 'Deesa', 'Sidhpur', 'Unjha',
-  'Wankaner', 'Jetpur', 'Dhoraji', 'Upleta', 'Amroli', 'Limbdi',
-  'Visnagar', 'Kadi', 'Mahuva', 'Talaja', 'Palitana', 'Gadhada',
-  'Dwarka', 'Okha', 'Somnath', 'Chorwad', 'Una', 'Kodinar',
-  'Rajula', 'Savarkundla', 'Lathi', 'Dhari', 'Bagasara', 'Visavadar',
-  'Jamjodhpur', 'Kalavad', 'Jam Khambhalia', 'Dhrol', 'Paddhari',
-  'Tankara', 'Morvi', 'Halvad', 'Wadhwan', 'Chotila', 'Lakhtar',
-  'Dasada', 'Zinzuwada', 'Patdi', 'Sanand', 'Dholka', 'Dhandhuka',
-  'Bavla', 'Viramgam', 'Mandal', 'Chanasma', 'Radhanpur',
-  'Tharad', 'Dhanera', 'Vadgam', 'Kankrej', 'Sami', 'Harij',
-  'Prantij', 'Idar', 'Himatnagar', 'Khedbrahma', 'Bhiloda', 'Meghraj',
-  'Bayad', 'Lunawada', 'Santrampur', 'Shamlaji', 'Poshina', 'Ambaji',
-  'Danta', 'Vadnagar', 'Kapadvanj', 'Balasinor', 'Thasra', 'Vatrak',
-  'Kheda', 'Matar', 'Mahudha', 'Kathlal', 'Umreth', 'Tarapur',
-  'Sojitra', 'Cambay', 'Vallabh Vidyanagar', 'Karamsad', 'Ode',
-  'Borsad', 'Amod', 'Jambusar', 'Vagra', 'Hansot', 'Olpad',
-  'Kamrej', 'Bardoli', 'Mandvi', 'Kukma', 'Bhuj',
-  'Rapar', 'Anjar', 'Mundra', 'Nakhatrana', 'Abdasa', 'Lakhpat',
-  'Dayapar', 'Bhachau', 'Samakhiali', 'Adipur', 'Kandla',
-  'Hazira', 'Sachin', 'Sayan', 'Palsana', 'Songadh', 'Nizar',
-  'Valod', 'Mangrol', 'Bilimora', 'Gandevi', 'Chikhli', 'Jalalpore',
-  'Valsad', 'Dharampur', 'Pardi', 'Umbergaon',
-];
-
-// Emoji map for service display
-const SERVICE_ICONS: Record<string, string> = {
-  'Plumbing': '🔧', 'Electrical': '⚡', 'House Cleaning': '🧹',
-  'Painting': '🖌️', 'AC Service': '❄️', 'Carpentry': '🪚',
-  'Pest Control': '🐛', 'Appliance Repair': '⚙️', 'Home Salon': '💇', 'HVAC': '🌡️',
-};
+import { useNavigate } from 'react-router-dom';
+import { GUJARAT_CITIES, SERVICE_ICONS } from '@/lib/constants';
+import { Shield, ArrowRight, Clock, AlertTriangle, ShieldCheck } from 'lucide-react';
 
 const Profile: React.FC = () => {
+  const navigate = useNavigate();
   const { provider, refreshProvider } = useProvider();
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);

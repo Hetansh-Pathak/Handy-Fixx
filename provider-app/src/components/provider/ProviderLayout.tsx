@@ -7,10 +7,13 @@ import { useProvider } from '@/contexts/ProviderContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
+import KycStatusBanner from '@/components/provider/KycStatusBanner';
 import {
   LayoutDashboard, Briefcase, DollarSign, CalendarDays,
-  Star, Bell, User, Settings, LogOut, Menu, X, ChevronLeft
+  Star, Bell, User, Settings, LogOut, Menu, X, ChevronLeft,
+  ClipboardList
 } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 const ProviderLayout: React.FC = () => {
   const navigate = useNavigate();
@@ -20,7 +23,10 @@ const ProviderLayout: React.FC = () => {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
+  const isApproved = provider?.kyc_status === 'approved';
+
   const navItems = [
+    ...(isApproved ? [] : [{ path: '/provider-panel/onboarding', label: 'KYC Verification', icon: ClipboardList }]),
     { path: '/provider-panel', label: 'Dashboard', icon: LayoutDashboard },
     { path: '/provider-panel/bookings', label: 'Bookings', icon: Briefcase, badge: pendingBookingsCount },
     { path: '/provider-panel/earnings', label: 'Earnings', icon: DollarSign },
@@ -68,11 +74,26 @@ const ProviderLayout: React.FC = () => {
               <div className={cn("w-2 h-2 rounded-full", provider.is_online ? "bg-success animate-pulse-gold" : "bg-muted-foreground")} />
               <span className="text-sm text-muted-foreground">{provider.is_online ? 'Online' : 'Offline'}</span>
             </div>
-            <Switch
-              checked={provider.is_online || false}
-              onCheckedChange={toggleOnline}
-              className="data-[state=checked]:bg-success"
-            />
+            {isApproved ? (
+              <Switch
+                checked={provider.is_online || false}
+                onCheckedChange={toggleOnline}
+                className="data-[state=checked]:bg-success"
+              />
+            ) : (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span>
+                      <Switch disabled checked={false} className="opacity-40 cursor-not-allowed" />
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    Complete KYC verification to go online
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
           </div>
         </div>
       )}
@@ -191,6 +212,9 @@ const ProviderLayout: React.FC = () => {
             </div>
           </div>
         </header>
+
+        {/* KYC Status Banner */}
+        <KycStatusBanner />
 
         {/* Page content */}
         <main className="flex-1 p-4 md:p-6 overflow-y-auto">

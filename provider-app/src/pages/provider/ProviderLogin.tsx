@@ -106,18 +106,8 @@ const ProviderLogin: React.FC = () => {
       return;
     }
 
-    if (providerData.status === 'pending_approval') {
-      await supabase.auth.signOut();
-      toast({
-        title: 'Application Under Review',
-        description: "Your pro application is being reviewed. We'll contact you within 3 business days.",
-        variant: 'destructive',
-      });
-      setLoading(false);
-      return;
-    }
-
-    toast({ title: `Welcome back, ${providerData.full_name}! 👋`, description: "Ready to take on today's jobs?" });
+    // pending_approval: let them in — ProviderRoute will redirect to onboarding
+    toast({ title: `Welcome back, ${providerData.full_name}! 👋`, description: "Let's pick up where you left off." });
     navigate('/provider-panel');
     setLoading(false);
   };
@@ -188,7 +178,8 @@ const ProviderLogin: React.FC = () => {
       full_name: suName,
       phone: suPhone || null,
       email: suEmail,
-      status: 'active',
+      status: 'pending_approval',   // stays pending until KYC approved
+      kyc_status: 'not_submitted',  // explicit default
     });
 
     if (provErr) {
@@ -197,12 +188,12 @@ const ProviderLogin: React.FC = () => {
       return;
     }
 
-    // 4. All good — go straight to provider dashboard
+    // 4. All good — go straight to onboarding wizard
     toast({
       title: `Welcome to HandyFix Pro, ${suName}! 🎉`,
-      description: "Your account is ready. Let's get started!",
+      description: "Let's set up your profile and verify your identity.",
     });
-    navigate('/provider-panel');
+    navigate('/provider-panel/onboarding');
     setLoading(false);
   };
 

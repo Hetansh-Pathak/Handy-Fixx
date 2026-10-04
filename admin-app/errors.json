@@ -1,0 +1,6 @@
+﻿[
+    "src/integrations/supabase/client.ts(5,34): error TS2339: Property \u0027env\u0027 does not exist on type \u0027ImportMeta\u0027.",
+    "src/integrations/supabase/client.ts(6,46): error TS2339: Property \u0027env\u0027 does not exist on type \u0027ImportMeta\u0027.",
+    "src/pages/admin/Bookings.tsx(623,29): error TS2322: Type \u0027unknown\u0027 is not assignable to type \u0027ReactNode\u0027.",
+    "src/pages/admin/Providers.tsx(589,27): error TS2322: Type \u0027unknown\u0027 is not assignable to type \u0027ReactNode\u0027."
+]

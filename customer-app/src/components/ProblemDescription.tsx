@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { saveDraftFile, removeDraftFile, blobToDataURL } from "@/utils/draftAttachmentStore";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -458,19 +459,40 @@ export default function ProblemDescription({ userId, draftId, state, onChange }:
       durationSeconds: duration,
     };
 
-    // Show immediately; upload in background
+    // Show immediately; upload in background & persist in IndexedDB draft store
     onChange({ ...state, audio: attachment });
 
-    if (!userId) return; // not logged in — keep in memory
+    const filename = `voice_${Date.now()}.${ext}`;
+    try {
+      const dataUrl = await blobToDataURL(blob);
+      await saveDraftFile(draftId, {
+        name: filename,
+        type: "audio",
+        mimeType,
+        dataUrl,
+        durationSeconds: duration,
+      });
+    } catch {
+      // non-blocking local save
+    }
+
+    if (!userId) return; // not logged in — kept in local draft store
 
     setAudioUploading(true);
     try {
-      const filename = `voice_${Date.now()}.${ext}`;
       const path = await uploadToStorage(userId, draftId, filename, blob, mimeType);
       onChange({ ...state, audio: { ...attachment, storagePath: path } });
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Upload failed";
-      toast({ title: "Audio upload failed", description: msg, variant: "destructive" });
+      const isBucketErr = /bucket not found/i.test(msg);
+      const isRlsErr = /row-level security/i.test(msg);
+      toast({
+        title: isBucketErr || isRlsErr ? "Voice note saved in draft" : "Audio upload failed",
+        description: isBucketErr || isRlsErr
+          ? "Voice note is kept safely in local draft (database migration pending)."
+          : msg,
+        variant: isBucketErr || isRlsErr ? "default" : "destructive",
+      });
     } finally {
       setAudioUploading(false);
     }
@@ -524,12 +546,25 @@ export default function ProblemDescription({ userId, draftId, state, onChange }:
       const nextImages = [...state.images, stub];
       onChange({ ...state, images: nextImages });
 
-      if (!userId) continue; // keep in memory if not logged in
+      const compressed = await compressImage(file);
+      const filename = `photo_${Date.now()}_${idx}.jpg`;
+
+      try {
+        const dataUrl = await blobToDataURL(compressed);
+        await saveDraftFile(draftId, {
+          name: filename,
+          type: "image",
+          mimeType: "image/jpeg",
+          dataUrl,
+        });
+      } catch {
+        // non-blocking local save
+      }
+
+      if (!userId) continue; // kept in local draft store if not logged in
 
       setImageUploading(prev => ({ ...prev, [idx]: true }));
       try {
-        const compressed = await compressImage(file);
-        const filename = `photo_${Date.now()}_${idx}.jpg`;
         const path = await uploadToStorage(userId, draftId, filename, compressed, "image/jpeg");
         const finalAttachment: UploadedAttachment = {
           ...stub,

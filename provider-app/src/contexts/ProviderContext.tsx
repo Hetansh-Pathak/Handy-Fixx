@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './AuthContext';
+import type { KycStatus } from '@/lib/constants';
 
 interface NotificationPreferences {
   new_booking: boolean;
@@ -14,6 +15,9 @@ export interface ProviderProfile {
   id: string;
   user_id: string;
   full_name: string;
+  first_name: string | null;
+  last_name: string | null;
+  date_of_birth: string | null;
   phone: string | null;
   email: string | null;
   is_email_verified: boolean | null;
@@ -22,6 +26,13 @@ export interface ProviderProfile {
   bio: string | null;
   status: string;
   is_online: boolean | null;
+  is_verified: boolean;
+  kyc_status: KycStatus;
+  kyc_rejection_reason: string | null;
+  kyc_submitted_at: string | null;
+  kyc_reviewed_at: string | null;
+  kyc_reviewed_by: string | null;
+  onboarding_step: number | null;
   rating: number | null;
   total_reviews: number | null;
   total_jobs: number | null;
@@ -97,8 +108,11 @@ export const ProviderProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setPendingBookingsCount(pendingCount || 0);
   }, [provider]);
 
+  // Auto-set online — ONLY for approved providers
   useEffect(() => {
     if (!provider) return;
+    // Guard: only approved+active providers can go online
+    if (provider.kyc_status !== 'approved' || provider.status !== 'active') return;
 
     const markOnline = async () => {
       const { data } = await supabase
@@ -128,6 +142,24 @@ export const ProviderProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         .update({ is_online: false })
         .eq('id', provider.id);
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [provider?.id, provider?.kyc_status]);
+
+  // Realtime: listen for live KYC status updates from admin
+  useEffect(() => {
+    if (!provider?.id) return;
+    const channel = supabase
+      .channel(`provider-kyc-status-${provider.id}`)
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'service_providers',
+        filter: `id=eq.${provider.id}`,
+      }, (payload) => {
+        setProvider(prev => prev ? { ...prev, ...(payload.new as Partial<ProviderProfile>) } : prev);
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
   }, [provider?.id]);
 
   useEffect(() => {
@@ -150,6 +182,8 @@ export const ProviderProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const toggleOnline = async () => {
     if (!provider) return;
+    // Guard: DB trigger will silently reset to false anyway, but show a cleaner UX
+    if (provider.kyc_status !== 'approved' || provider.status !== 'active') return;
     const newStatus = !provider.is_online;
     const { data } = await supabase
       .from('service_providers')

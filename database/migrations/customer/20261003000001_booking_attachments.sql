@@ -64,17 +64,15 @@ CREATE POLICY "provider_select_booking_attachments"
   );
 
 -- ── 3. Create private Storage bucket ─────────────────────────────────────────
--- NOTE: Supabase does NOT expose storage bucket creation via SQL.
--- Run the following in the Supabase Dashboard → Storage → New Bucket:
---   Name:   booking-attachments
---   Public: OFF (private bucket — signed URLs only)
---
--- Then run the storage.objects policies below:
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('booking-attachments', 'booking-attachments', false)
+ON CONFLICT (id) DO NOTHING;
 
 -- Drop existing storage policies (idempotent)
 DROP POLICY IF EXISTS "ba_owner_upload"  ON storage.objects;
 DROP POLICY IF EXISTS "ba_owner_read"    ON storage.objects;
-DROP POLICY IF EXISTS "ba_provider_read" ON storage.objects;
+DROP POLICY IF EXISTS "ba_owner_update"  ON storage.objects;
+DROP POLICY IF EXISTS "ba_owner_delete"  ON storage.objects;
 
 -- Allow authenticated users to upload ONLY into their own folder
 -- Path structure: {user_id}/{draft_id}/{filename}
@@ -84,7 +82,10 @@ CREATE POLICY "ba_owner_upload"
   TO authenticated
   WITH CHECK (
     bucket_id = 'booking-attachments'
-    AND (storage.foldername(name))[1] = auth.uid()::text
+    AND (
+      (storage.foldername(name))[1] = auth.uid()::text
+      OR split_part(name, '/', 1) = auth.uid()::text
+    )
   );
 
 -- Allow owner to read their own files
@@ -94,18 +95,43 @@ CREATE POLICY "ba_owner_read"
   TO authenticated
   USING (
     bucket_id = 'booking-attachments'
-    AND (storage.foldername(name))[1] = auth.uid()::text
+    AND (
+      (storage.foldername(name))[1] = auth.uid()::text
+      OR split_part(name, '/', 1) = auth.uid()::text
+    )
+  );
+
+-- Allow owner to update their own files (CRITICAL for upsert: true)
+CREATE POLICY "ba_owner_update"
+  ON storage.objects
+  FOR UPDATE
+  TO authenticated
+  USING (
+    bucket_id = 'booking-attachments'
+    AND (
+      (storage.foldername(name))[1] = auth.uid()::text
+      OR split_part(name, '/', 1) = auth.uid()::text
+    )
+  )
+  WITH CHECK (
+    bucket_id = 'booking-attachments'
+    AND (
+      (storage.foldername(name))[1] = auth.uid()::text
+      OR split_part(name, '/', 1) = auth.uid()::text
+    )
   );
 
 -- Allow owner to delete their own files (for cleanup)
-DROP POLICY IF EXISTS "ba_owner_delete" ON storage.objects;
 CREATE POLICY "ba_owner_delete"
   ON storage.objects
   FOR DELETE
   TO authenticated
   USING (
     bucket_id = 'booking-attachments'
-    AND (storage.foldername(name))[1] = auth.uid()::text
+    AND (
+      (storage.foldername(name))[1] = auth.uid()::text
+      OR split_part(name, '/', 1) = auth.uid()::text
+    )
   );
 
 -- Allow providers to read files for their own bookings

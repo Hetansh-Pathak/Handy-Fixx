@@ -55,6 +55,54 @@ type BookingCard = {
   city: string | null;
 };
 
+function CompletionCodeCard({ bookingId }: { bookingId: string }) {
+  const { toast } = useToast();
+  const [code, setCode] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    const fetch = async () => {
+      const { data } = await (sb as unknown as {
+        from: (t: string) => {
+          select: (cols: string) => {
+            eq: (col: string, val: string) => {
+              maybeSingle: () => Promise<{ data: { code: string } | null }>;
+            };
+          };
+        };
+      }).from('booking_completion_codes').select('code').eq('booking_id', bookingId).maybeSingle();
+      if (!cancelled) setCode(data?.code ?? null);
+    };
+    void fetch();
+    return () => { cancelled = true; };
+  }, [bookingId]);
+
+  if (!code) return null;
+
+  return (
+    <div className="bg-primary/10 border border-primary/20 rounded-xl p-3 flex items-center justify-between gap-3">
+      <div>
+        <p className="text-xs font-medium text-foreground">🔐 Completion Code: <span className="font-mono font-bold text-sm text-primary tracking-widest">{code}</span></p>
+        <p className="text-[11px] text-muted-foreground">Share with provider after work is completed</p>
+      </div>
+      <Button
+        size="sm"
+        variant="ghost"
+        className="h-8 px-2.5 text-xs text-primary hover:bg-primary/20"
+        onClick={async () => {
+          await navigator.clipboard.writeText(code);
+          setCopied(true);
+          toast({ title: "Code copied!" });
+          setTimeout(() => setCopied(false), 2000);
+        }}
+      >
+        {copied ? "Copied ✓" : "Copy"}
+      </Button>
+    </div>
+  );
+}
+
 const BookingTracker = ({ bookingId, status, latitude, longitude }: {
   bookingId: string;
   status: string;
@@ -91,24 +139,31 @@ const BookingTracker = ({ bookingId, status, latitude, longitude }: {
     return () => { sb.removeChannel(channel); };
   }, [bookingId, status, latitude, longitude]);
 
-  if (!latitude || !longitude) return null;
-  const markers = [
-    { latitude, longitude, label: "Your service location", color: "gold" as const },
-    ...(providerLocation ? [{ ...providerLocation, label: "Provider", color: "blue" as const }] : []),
-  ];
+  const showCode = ["confirmed", "on_the_way", "in_progress"].includes(status);
 
   return (
-    <div className="mt-4 space-y-2 border-t border-border pt-4">
+    <div className="mt-4 space-y-3 border-t border-border pt-4">
+      {showCode && <CompletionCodeCard bookingId={bookingId} />}
       {status === "on_the_way" && (
         <div className="rounded-xl bg-orange-500/10 px-3 py-2 text-sm font-semibold text-orange-400">
           Provider is on the way
         </div>
       )}
-      <p className="text-sm font-semibold text-foreground">Track Provider</p>
-      <LiveMap markers={markers} height="220px" />
-      <p className="text-xs text-muted-foreground">
-        {providerLocation ? "Live provider location" : "Waiting for the provider to share their location..."}
-      </p>
+      {latitude && longitude && (
+        <>
+          <p className="text-sm font-semibold text-foreground">Track Provider</p>
+          <LiveMap
+            markers={[
+              { latitude, longitude, label: "Your service location", color: "gold" as const },
+              ...(providerLocation ? [{ ...providerLocation, label: "Provider", color: "blue" as const }] : []),
+            ]}
+            height="220px"
+          />
+          <p className="text-xs text-muted-foreground">
+            {providerLocation ? "Live provider location" : "Waiting for the provider to share their location..."}
+          </p>
+        </>
+      )}
     </div>
   );
 };
