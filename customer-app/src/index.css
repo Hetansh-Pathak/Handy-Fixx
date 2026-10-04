@@ -1,0 +1,102 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 38 44% 96%;
+    --foreground: 0 0% 11%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 11%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 11%;
+
+    --primary: 22 61% 47%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 40 32% 91%;
+    --secondary-foreground: 0 0% 11%;
+
+    --muted: 40 32% 91%;
+    --muted-foreground: 41 10% 33%;
+
+    --accent: 25 78% 93%;
+    --accent-foreground: 22 61% 47%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 40 32% 89%;
+    --input: 40 32% 89%;
+    --ring: 22 61% 47%;
+
+    --radius: 0.75rem;
+
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 0 0% 11%;
+    --sidebar-primary: 22 61% 47%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 25 78% 93%;
+    --sidebar-accent-foreground: 22 61% 47%;
+    --sidebar-border: 40 32% 89%;
+    --sidebar-ring: 22 61% 47%;
+
+    --gold-glow: 22 61% 47%;
+    --surface-elevated: 0 0% 100%;
+    --stat-strip: 0 0% 11%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+  }
+}
+
+@layer utilities {
+  .text-gradient-gold {
+    background: linear-gradient(135deg, hsl(22 61% 47%), hsl(22 61% 57%));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .bg-gradient-gold {
+    background: linear-gradient(135deg, hsl(22 61% 47%), hsl(22 61% 55%));
+  }
+
+  .bg-surface-elevated {
+    background: hsl(var(--surface-elevated));
+  }
+
+  .shadow-gold {
+    box-shadow: 0 0 30px -5px hsl(22 61% 47% / 0.3);
+  }
+
+  .glow-gold {
+    box-shadow: 0 0 40px -10px hsl(22 61% 47% / 0.4);
+  }
+
+  /* Booking status badges */
+  .status-pending {
+    @apply bg-yellow-500/10 text-yellow-500 border border-yellow-500/20;
+  }
+  .status-confirmed {
+    @apply bg-blue-500/10 text-blue-400 border border-blue-500/20;
+  }
+  .status-completed {
+    @apply bg-green-500/10 text-green-400 border border-green-500/20;
+  }
+  .status-cancelled {
+    @apply bg-red-500/10 text-red-400 border border-red-500/20;
+  }
+}

@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <radialGradient id="bg" cx="30%" cy="80%" r="80%">
+      <stop offset="0%" stop-color="#6b5200"/>
+      <stop offset="40%" stop-color="#2e2b27"/>
+      <stop offset="100%" stop-color="#1a1a18"/>
+    </radialGradient>
+    <clipPath id="roundedRect">
+      <rect width="1024" height="1024" rx="230" ry="230"/>
+    </clipPath>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1024" height="1024" rx="230" ry="230" fill="url(#bg)"/>
+
+  <!-- 
+    Unified house+wrench shape in amber.
+    The icon: 
+    - Roof: peak at top center, extends left and right as thick angled lines, small chimney on upper-left
+    - Body: left wall goes down then curves into wrench handle going lower-left
+    - Right side: opens into C-shape wrench jaw facing right
+    All ONE solid amber shape.
+  -->
+  <g clip-path="url(#roundedRect)">
+    <path fill="#F5A623" d="
+      M 512 195
+      L 305 370
+      L 305 340
+      L 270 340
+      L 270 290
+      L 340 290
+      L 512 145
+      L 684 290
+      L 754 290
+      L 754 340
+      L 719 340
+      L 719 370
+      Z
+
+      M 305 400
+      L 305 620
+      Q 305 660 270 660
+      Q 220 660 200 620
+      L 200 410
+      Q 200 380 230 370
+      L 305 400
+      Z
+
+      M 719 400
+      L 719 490
+      Q 760 510 790 550
+      Q 820 590 820 640
+      Q 820 700 780 740
+      Q 740 780 680 780
+      Q 630 780 595 750
+      Q 560 720 550 680
+      L 490 680
+      Q 480 720 445 750
+      Q 410 780 360 780
+      Q 300 780 260 740
+      L 305 695
+      Q 330 720 360 720
+      Q 395 720 420 695
+      Q 445 670 445 635
+      Q 445 600 420 575
+      Q 395 550 360 550
+      Q 330 550 307 568
+      L 260 523
+      Q 300 480 360 480
+      Q 410 480 445 510
+      Q 480 540 490 580
+      L 550 580
+      Q 560 540 595 510
+      Q 630 480 680 480
+      Q 720 480 750 500
+      L 719 400
+      Z
+    "/>
+  </g>
+</svg>
