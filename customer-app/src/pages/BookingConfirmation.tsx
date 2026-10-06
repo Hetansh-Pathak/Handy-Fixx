@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { format } from "date-fns";
-import { CheckCircle2, Calendar, MapPin, User, Hash, Phone, ArrowRight, Home, MessageCircle, Star, Car, Copy, Info } from "lucide-react";
+import { CheckCircle2, Phone, ArrowRight, Home, MessageCircle, Star, Copy, Info } from "lucide-react";
+import PayCard from "@/components/payments/PayCard";
 import { motion } from "framer-motion";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
 import BookingChat from "@/components/BookingChat";
+import StatusHero from "@/components/service/StatusHero";
+import TrackingMap from "@/components/service/TrackingMap";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
@@ -21,6 +21,7 @@ import AttachmentViewer from "@/components/AttachmentViewer";
 type BookingDetails = {
   id: string;
   status: string | null;
+  created_at?: string | null;
   booking_date: string;
   booking_time: string;
   scheduled_date?: string;
@@ -29,12 +30,15 @@ type BookingDetails = {
   city: string | null;
   pincode: string;
   total_amount: number | null;
+  payment_status?: string | null;
   provider_id: string | null;
   provider_departed_at: string | null;
   provider_eta_minutes: number | null;
   cancellation_reason?: string | null;
   special_instructions?: string | null;
   description?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
   services: { name: string; slug: string | null } | null;
   service_providers: { full_name: string | null; name: string | null; rating: number | null; phone: string | null } | null;
 };
@@ -80,42 +84,39 @@ function CompletionCodeCard({ bookingId }: { bookingId: string }) {
   if (!code) return null;
 
   return (
-    <div className="bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/25 rounded-2xl p-5">
-      <div className="flex items-center justify-between mb-3">
-        <p className="font-bold text-foreground text-sm">🔐 Your Completion Code</p>
+    <div className="rounded-3xl bg-primary p-5 text-primary-foreground">
+      <div className="mb-4 flex items-center justify-between">
+        <p className="text-sm font-bold">Your completion code</p>
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
-              <button type="button" className="p-1 rounded-full text-muted-foreground hover:text-foreground transition-colors" aria-label="What is this?">
-                <Info className="w-4 h-4" />
-              </button>
+              <button type="button" className="rounded-full p-1 opacity-70" aria-label="What is this?"><Info className="h-4 w-4" /></button>
             </TooltipTrigger>
             <TooltipContent side="left" className="max-w-[220px]">
-              Share this code with your provider <strong>only after the work is finished</strong> to your satisfaction. This confirms completion.
+              Share this code with your provider <strong>only after the work is finished</strong> to your satisfaction.
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
       </div>
-      <div className="flex items-center gap-3 mb-3">
-        <div className="flex gap-2.5">
+      <div className="flex items-center gap-3">
+        <div className="flex flex-1 gap-2.5">
           {code.split('').map((digit, i) => (
-            <div key={i} className="w-12 h-14 rounded-xl bg-card border-2 border-primary/30 flex items-center justify-center text-2xl font-bold text-primary shadow-sm">
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.08 * i, duration: 0.35 }}
+              className="flex h-16 flex-1 items-center justify-center rounded-2xl bg-white/10 text-3xl font-extrabold text-gold"
+            >
               {digit}
-            </div>
+            </motion.div>
           ))}
         </div>
-        <button
-          type="button"
-          onClick={() => void copyCode()}
-          className="p-2.5 rounded-xl bg-primary/10 hover:bg-primary/20 text-primary transition-colors"
-          aria-label="Copy completion code"
-        >
-          {copied ? <CheckCircle2 className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+        <button type="button" onClick={() => void copyCode()} className="press flex h-12 w-12 items-center justify-center rounded-2xl bg-white/10" aria-label="Copy completion code">
+          {copied ? <CheckCircle2 className="h-5 w-5 text-gold" /> : <Copy className="h-5 w-5" />}
         </button>
       </div>
-      <p className="text-xs text-muted-foreground leading-relaxed">
-        Share this code with the provider <strong className="text-foreground">only after the work is finished</strong> to your satisfaction.
-      </p>
+      <p className="mt-4 text-xs leading-relaxed opacity-70">Only share this once the job is finished and you're happy with it.</p>
     </div>
   );
 }
@@ -131,11 +132,11 @@ function StarPicker({ value, onChange }: { value: number; onChange: (v: number) 
           onClick={() => onChange(star)}
           onMouseEnter={() => setHovered(star)}
           onMouseLeave={() => setHovered(0)}
-          className="transition-transform hover:scale-110"
+          className="press p-0.5"
         >
           <Star
-            className={`w-8 h-8 transition-colors ${
-              star <= (hovered || value) ? "text-yellow-400 fill-current" : "text-muted-foreground/30"
+            className={`w-9 h-9 transition-colors ${
+              star <= (hovered || value) ? "text-gold fill-gold" : "text-muted-foreground/30"
             }`}
           />
         </button>
@@ -204,10 +205,15 @@ const BookingConfirmation = () => {
     if (!bookingId) return;
     const { data } = await supabase
       .from("bookings")
-      .select("id, status, booking_date, booking_time, scheduled_date, scheduled_time, address, city, pincode, total_amount, provider_id, provider_departed_at, provider_eta_minutes, cancellation_reason, special_instructions, description, services(name, slug), service_providers(full_name, name, rating, phone)")
+      .select("id, status, created_at, booking_date, booking_time, scheduled_date, scheduled_time, address, city, pincode, latitude, longitude, total_amount, payment_status, provider_id, provider_departed_at, provider_eta_minutes, cancellation_reason, special_instructions, description, services(name, slug)")
       .eq("id", bookingId)
       .single();
-    setBooking(data as unknown as BookingDetails | null);
+    if (!data) { setBooking(null); return; }
+    // Customers cannot read service_providers directly; booking_provider_info returns just this booking's pro.
+    const { data: pro } = await (supabase as unknown as {
+      from: (t: string) => { select: (c: string) => { eq: (c: string, v: string) => { maybeSingle: () => Promise<{ data: Record<string, unknown> | null }> } } };
+    }).from("booking_provider_info").select("full_name, name, rating, phone").eq("booking_id", bookingId).maybeSingle();
+    setBooking({ ...(data as object), service_providers: pro ?? null } as unknown as BookingDetails);
   };
 
   const checkReview = async () => {
@@ -275,12 +281,28 @@ const BookingConfirmation = () => {
     }
   }, [booking, toastShown, toast]);
 
+  // Nobody accepted in time: the server cancels stale requests (pg_cron); this makes the screen
+  // resolve itself even if cron is not enabled. 30 minutes must match expire_stale_pending_bookings.
+  const pendingSince = booking?.status === "pending" ? booking.created_at : null;
+  useEffect(() => {
+    if (!bookingId || !pendingSince) return;
+    const wait = Math.max(0, new Date(pendingSince).getTime() + 30 * 60_000 - Date.now()) + 1_000;
+    const t = setTimeout(async () => {
+      await (supabase as any).rpc("expire_my_pending_booking", { p_booking_id: bookingId, p_minutes: 30 });
+      fetchBooking();
+    }, wait);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bookingId, pendingSince]);
+
   const formattedBookingId = useMemo(() => {
     if (!booking?.id) return "-";
     return `HF-${booking.id.slice(0, 8).toUpperCase()}`;
   }, [booking?.id]);
 
   const status = booking?.status ?? "pending";
+  const sp = booking?.service_providers as unknown as { full_name?: string | null; name?: string | null } | null;
+  const providerName = sp?.full_name ?? sp?.name ?? null;
   const display = statusDisplay[status as keyof typeof statusDisplay] ?? statusDisplay.pending;
 
   // Live timeline steps
@@ -323,182 +345,91 @@ const BookingConfirmation = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <Navbar />
+    <div className="min-h-dvh bg-background">
       <motion.main
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="container mx-auto pt-28 pb-16 px-4"
+        className="container mx-auto pt-[max(1.25rem,env(safe-area-inset-top))] pb-28 px-4 md:pt-28"
       >
         <div className="max-w-2xl mx-auto space-y-6">
-          {/* Top card — dynamic status */}
-          <div className="bg-card border border-border rounded-2xl p-8 text-center relative overflow-hidden">
-            <div className="absolute inset-0 overflow-hidden pointer-events-none">
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-72 h-72 rounded-full bg-primary/5 blur-3xl" />
-            </div>
-            <motion.div
-              key={status}  /* re-animate when status changes */
-              initial={{ scale: 0, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ type: "spring", stiffness: 200, damping: 15, delay: 0.2 }}
-              className={`mx-auto w-24 h-24 rounded-full border-2 flex items-center justify-center mb-6 ${display.iconBg}`}
-            >
-              <span className="text-5xl">{display.icon}</span>
-            </motion.div>
+          <StatusHero
+            status={status}
+            onTheWay={Boolean(booking?.provider_departed_at)}
+            arrived={status === "on_the_way" && booking?.provider_eta_minutes === 0}
+            etaMinutes={booking?.provider_eta_minutes}
+            providerName={providerName}
+            bookingCode={formattedBookingId}
+          />
 
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
-              <h1 className={`text-3xl font-bold mb-2 ${display.titleColor}`}>{display.title}</h1>
-              <p className="text-muted-foreground text-sm mb-3">{display.subtitle}</p>
-              {status !== 'pending' && (
-                <div className="inline-flex items-center gap-2 bg-secondary rounded-full px-4 py-1.5">
-                  <Hash className="w-3.5 h-3.5 text-muted-foreground" />
-                  <span className="text-sm font-mono text-muted-foreground">{formattedBookingId}</span>
-                </div>
-              )}
-              {status === 'pending' && (
-                <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground mt-2">
-                  <div className="w-2 h-2 rounded-full bg-warning animate-pulse" />
-                  Waiting for provider response...
-                </div>
-              )}
-            </motion.div>
-          </div>
-
-          {/* Live Status Timeline */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.45 }}
-            className="bg-card border border-border rounded-2xl p-6"
-          >
-            <h2 className="font-semibold text-foreground mb-5">Live Status</h2>
-            <div className="relative pl-6 space-y-5">
-              <div className="absolute left-2 top-0 bottom-0 w-0.5 bg-border" />
-              {steps.map((step) => (
-                <motion.div
-                  key={step.label}
-                  className="relative flex items-center gap-3"
-                  animate={{ opacity: 1 }}
-                >
-                  <div className={cn(
-                    "absolute -left-4 w-3.5 h-3.5 rounded-full border-2 border-background transition-all duration-500",
-                    step.done ? "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]" : "bg-border"
-                  )} />
-                  <span className={cn(
-                    "text-sm transition-colors",
-                    step.done ? "text-foreground font-semibold" : "text-muted-foreground"
-                  )}>
-                    {step.label}
-                  </span>
-                  {step.done && step.label === "Provider On The Way" && step.eta && (
-                    <Badge className="bg-blue-500/20 text-blue-400 text-xs border border-blue-500/20">
-                      ~{step.eta} mins
-                    </Badge>
-                  )}
-                </motion.div>
-              ))}
-            </div>
-          </motion.div>
-
-          {/* Provider info card */}
-          {booking?.service_providers && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.5 }}
-              className="bg-card border border-border rounded-2xl p-4 flex items-center gap-4"
-            >
-              <Avatar className="h-14 w-14">
-                <AvatarFallback className="bg-gradient-gold text-primary-foreground text-lg font-bold">
-                {(booking.service_providers?.full_name ?? booking.service_providers?.name ?? "P")[0]}
-                </AvatarFallback>
-              </Avatar>
-              <div className="flex-1">
-                <p className="font-bold text-foreground">{booking.service_providers?.full_name ?? booking.service_providers?.name}</p>
-                {booking.service_providers.rating && (
-                  <p className="text-sm text-yellow-400 flex items-center gap-1">
-                    <Star className="w-3.5 h-3.5 fill-current" />
-                    {booking.service_providers.rating} rating
-                  </p>
-                )}
-              </div>
-              {booking.service_providers.phone && (
-                <a
-                  href={`tel:${booking.service_providers.phone}`}
-                  className="flex items-center gap-1.5 text-primary font-semibold text-sm border border-primary/30 px-3 py-2 rounded-xl hover:bg-primary/10 transition-colors"
-                >
-                  <Phone className="w-4 h-4" /> Call
-                </a>
-              )}
-            </motion.div>
+          {bookingId && status === "on_the_way" && booking?.latitude != null && booking?.longitude != null && (
+            <TrackingMap
+              bookingId={bookingId}
+              destination={{ latitude: booking.latitude, longitude: booking.longitude }}
+              etaMinutes={booking.provider_eta_minutes}
+              arrived={booking.provider_eta_minutes === 0}
+            />
           )}
 
-          {/* Booking details */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.55 }}
-            className="bg-card border border-border rounded-2xl p-6 space-y-4"
-          >
-            <h2 className="font-semibold text-foreground text-lg">Booking Details</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-              <div className="flex items-start gap-3 bg-secondary rounded-xl p-4">
-                <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                  <User className="w-4 h-4 text-primary" />
-                </div>
-                <div>
-                  <p className="text-muted-foreground text-xs mb-0.5">Service</p>
-                  <p className="font-medium text-foreground">{booking?.services?.name ?? "—"}</p>
-                  <p className="text-muted-foreground">{booking?.service_providers?.full_name ?? booking?.service_providers?.name}</p>
-                </div>
-              </div>
+          {/* Progress */}
+          <div className="rounded-3xl border border-border p-5">
+            <h2 className="mb-4 text-base font-extrabold tracking-tight">Progress</h2>
+            <ol className="space-y-4">
+              {steps.map((st, i) => (
+                <motion.li key={st.label} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 + i * 0.06 }} className="flex items-center gap-3">
+                  <span className={cn("flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs transition-colors duration-500", st.done ? "bg-gold text-gold-foreground" : "bg-secondary text-muted-foreground")}>
+                    {st.done ? <CheckCircle2 className="h-4 w-4" /> : i + 1}
+                  </span>
+                  <span className={cn("text-sm", st.done ? "font-bold" : "text-muted-foreground")}>{st.label.replace(" ✅", "")}</span>
+                  {st.done && st.label === "Provider On The Way" && st.eta ? <span className="ml-auto rounded-full bg-secondary px-2.5 py-0.5 text-xs font-bold">~{st.eta} min</span> : null}
+                </motion.li>
+              ))}
+            </ol>
+          </div>
 
-              <div className="flex items-start gap-3 bg-secondary rounded-xl p-4">
-                <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                  <Calendar className="w-4 h-4 text-primary" />
-                </div>
-                <div>
-                  <p className="text-muted-foreground text-xs mb-0.5">Date & Time</p>
-                  <p className="font-medium text-foreground">
-                    {booking?.booking_date ? format(new Date(booking.booking_date), "EEEE, d MMMM yyyy") : "—"}
-                  </p>
-                  <p className="text-muted-foreground">{booking?.booking_time?.slice(0, 5)}</p>
-                </div>
+          {/* Provider */}
+          {booking?.service_providers && (
+            <div className="flex items-center gap-4 rounded-3xl border border-border p-4">
+              <Avatar className="h-14 w-14">
+                <AvatarFallback className="bg-primary text-lg font-bold text-primary-foreground">
+                  {(booking.service_providers?.full_name ?? booking.service_providers?.name ?? "P")[0]}
+                </AvatarFallback>
+              </Avatar>
+              <div className="min-w-0 flex-1">
+                <p className="truncate font-bold">{booking.service_providers?.full_name ?? booking.service_providers?.name}</p>
+                {booking.service_providers.rating ? (
+                  <p className="mt-0.5 flex items-center gap-1 text-sm font-semibold"><Star className="h-3.5 w-3.5 fill-gold text-gold" />{booking.service_providers.rating}</p>
+                ) : null}
               </div>
-
-              <div className="flex items-start gap-3 bg-secondary rounded-xl p-4 sm:col-span-2">
-                <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                  <MapPin className="w-4 h-4 text-primary" />
-                </div>
-                <div>
-                  <p className="text-muted-foreground text-xs mb-0.5">Address</p>
-                  <p className="font-medium text-foreground">
-                    {booking?.address}, {booking?.city} — {booking?.pincode}
-                  </p>
-                </div>
-              </div>
+              {booking.service_providers.phone && (
+                <a href={`tel:${booking.service_providers.phone}`} className="press flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground" aria-label="Call provider">
+                  <Phone className="h-5 w-5" />
+                </a>
+              )}
             </div>
+          )}
 
-            {booking?.total_amount && (
-              <div className="flex items-center justify-between pt-4 border-t border-border">
-                <span className="text-muted-foreground text-sm">Total Amount</span>
-                <span className="text-primary font-bold text-lg">₹{booking.total_amount}</span>
-              </div>
-            )}
-
-            {/* Problem description attachments */}
+          {/* Details */}
+          <div className="rounded-3xl bg-secondary p-5">
+            <h2 className="mb-3 text-base font-extrabold tracking-tight">Details</h2>
+            <dl className="divide-y divide-border/70 text-sm">
+              {[
+                ["Service", booking?.services?.name ?? "—"],
+                ["When", `${booking?.booking_date ? format(new Date(booking.booking_date), "EEE, d MMM") : "—"}${booking?.booking_time ? ` · ${booking.booking_time.slice(0, 5)}` : ""}`],
+                ["Where", [booking?.address, booking?.city, booking?.pincode].filter(Boolean).join(", ") || "—"],
+              ].map(([k, v]) => (
+                <div key={k} className="flex justify-between gap-6 py-3"><dt className="text-muted-foreground">{k}</dt><dd className="text-right font-semibold">{v}</dd></div>
+              ))}
+              {booking?.total_amount ? (
+                <div className="flex justify-between py-3 text-base font-extrabold"><dt>Total</dt><dd>₹{booking.total_amount}</dd></div>
+              ) : null}
+            </dl>
             {bookingId && (
-              <div className="pt-4 border-t border-border">
-                <AttachmentViewer
-                  bookingId={bookingId}
-                  note={booking?.special_instructions ?? booking?.description}
-                  lazy
-                  visible
-                />
+              <div className="mt-2 border-t border-border/70 pt-4">
+                <AttachmentViewer bookingId={bookingId} note={booking?.special_instructions ?? booking?.description} lazy visible />
               </div>
             )}
-          </motion.div>
+          </div>
 
           {/* Completion Code — shown for active bookings only */}
           {bookingId && ['confirmed', 'on_the_way', 'in_progress'].includes(status) && (
@@ -509,73 +440,54 @@ const BookingConfirmation = () => {
 
           {/* Cancelled — retry card */}
           {status === 'cancelled' && (
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 }}>
-              <div className="bg-card border border-destructive/20 rounded-2xl p-5 text-center">
-                <p className="text-muted-foreground text-sm mb-4">
-                  {booking?.cancellation_reason || 'The provider was unable to take this booking.'}{' '}
-                  You can book with another provider.
-                </p>
-                <Button
-                  className="bg-gradient-gold text-primary-foreground font-bold rounded-xl w-full"
-                  onClick={() => navigate(`/services/${booking?.services?.slug ?? ''}?pincode=${booking?.pincode ?? ''}`)}
-                >
-                  Find Another Provider →
-                </Button>
-              </div>
-            </motion.div>
-          )}
-
-          {/* Chat button (when confirmed / in_progress) */}
-          {["confirmed", "in_progress"].includes(status) && user && (
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 }}>
-              <Button
-                className="w-full bg-gradient-gold text-primary-foreground font-bold h-12 rounded-2xl shadow-gold hover:opacity-90"
-                onClick={() => setShowChat(true)}
-              >
-                <MessageCircle className="w-5 h-5 mr-2" />
-                Message {booking?.service_providers?.full_name ?? booking?.service_providers?.name}
+            <div className="rounded-3xl border border-destructive/30 p-5 text-center">
+              <p className="mb-4 text-sm text-muted-foreground">
+                {booking?.cancellation_reason || 'The provider was unable to take this booking.'} You can book with another provider.
+              </p>
+              <Button className="h-14 w-full rounded-2xl bg-primary text-base font-bold text-primary-foreground" onClick={() => navigate(`/services/${booking?.services?.slug ?? ''}?pincode=${booking?.pincode ?? ''}`)}>
+                Find another provider
               </Button>
-
-            </motion.div>
+            </div>
           )}
 
-          {/* Rate & Review — shown when completed and no review yet */}
+          {/* Rate & review */}
           {status === "completed" && !hasReview && (
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 }}>
-              <div className="bg-card border border-primary/20 rounded-2xl p-5">
-                <h3 className="font-bold text-foreground mb-1">How was your experience?</h3>
-                <p className="text-muted-foreground text-sm mb-4">Your review helps others find great providers.</p>
-                <Button
-                  className="w-full bg-gradient-gold text-primary-foreground font-bold rounded-xl h-11 hover:opacity-90"
-                  onClick={() => setShowReview(true)}
-                >
-                  <Star className="w-4 h-4 mr-2" /> Rate & Review
-                </Button>
-              </div>
-            </motion.div>
+            <div className="rounded-3xl bg-gold p-6 text-gold-foreground">
+              <h3 className="text-xl font-extrabold tracking-tight">How was it?</h3>
+              <p className="mb-4 mt-1 text-sm opacity-80">Your review helps others choose great pros.</p>
+              <Button className="h-14 w-full rounded-2xl bg-primary text-base font-bold text-primary-foreground" onClick={() => setShowReview(true)}>
+                <Star className="mr-2 h-4 w-4" /> Rate &amp; review
+              </Button>
+            </div>
           )}
 
-          {/* CTAs */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.65 }}
-            className="flex flex-col sm:flex-row gap-3"
-          >
-            <Button
-              onClick={() => navigate("/my-bookings")}
-              className="flex-1 bg-gradient-gold text-primary-foreground font-bold py-6 rounded-xl shadow-gold hover:opacity-90 transition-opacity"
-            >
-              View My Bookings <ArrowRight className="w-4 h-4 ml-2" />
+          {/* Pay after service: Razorpay. The amount shown is read from the booking; the server re-reads it. */}
+          {status === "completed" && booking?.total_amount ? (
+            <PayCard
+              bookingId={booking.id}
+              amount={Number(booking.total_amount)}
+              paymentStatus={booking.payment_status ?? null}
+              onChanged={fetchBooking}
+            />
+          ) : null}
+
+          <div className="flex gap-3">
+            <Button onClick={() => navigate("/my-bookings")} className="h-14 flex-1 rounded-2xl bg-primary text-base font-bold text-primary-foreground">
+              My bookings <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
-            <Button
-              variant="outline"
-              onClick={() => navigate("/")}
-              className="flex-1 border-border py-6 rounded-xl"
-            >
-              <Home className="w-4 h-4 mr-2" /> Go to Home
+            <Button variant="outline" onClick={() => navigate("/")} className="h-14 rounded-2xl px-5" aria-label="Home">
+              <Home className="h-5 w-5" />
             </Button>
-          </motion.div>
+          </div>
+
+          {/* Sticky chat button */}
+          {["confirmed", "on_the_way", "in_progress"].includes(status) && user && (
+            <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border/60 bg-background/90 px-5 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur-2xl">
+              <button onClick={() => setShowChat(true)} className="press mx-auto flex h-14 w-full max-w-2xl items-center justify-center gap-2 rounded-2xl bg-gold text-base font-bold text-gold-foreground">
+                <MessageCircle className="h-5 w-5" /> Message {booking?.service_providers?.full_name ?? booking?.service_providers?.name}
+              </button>
+            </div>
+          )}
         </div>
       </motion.main>
 
@@ -632,7 +544,6 @@ const BookingConfirmation = () => {
         </DialogContent>
       </Dialog>
 
-      <Footer />
     </div>
   );
 };

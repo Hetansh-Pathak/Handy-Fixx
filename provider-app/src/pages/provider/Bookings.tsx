@@ -1,752 +1,269 @@
-import { useEffect, useState, useCallback, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import {
-  Calendar, Clock, MapPin, CheckCircle, XCircle, Play, Flag,
-  Phone, AlertCircle, MessageCircle, Car, Paperclip, FileSearch
-} from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { Calendar, Check, ChevronRight, FileSearch, MapPin, MessageCircle, Phone, X } from 'lucide-react';
 import { useProvider } from '@/contexts/ProviderContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import BookingChat from '@/components/provider/BookingChat';
-import LiveMap from '@/components/LiveMap';
 import { cn } from '@/lib/utils';
-import AttachmentViewer, {
-  useBookingAttachments,
-  AttachmentBadges,
-  ProblemDetailsDialog,
-  type RawAttachment,
-} from '@/components/AttachmentViewer';
-import CompleteJobDialog from '@/components/provider/CompleteJobDialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import BookingChat from '@/components/provider/BookingChat';
 import LockedPage from '@/components/provider/LockedPage';
+import { ProblemDetailsDialog, useBookingAttachments } from '@/components/AttachmentViewer';
+import {
+  OPEN_JOB_EVENT, TAB_LABEL, TAB_ORDER, defaultTab, earningsOf, statusLabel, tabOf, toneOf, whenLabel,
+  type Tone, type TabKey,
+} from '@/lib/bookingView';
 
-type BookingStatus = 'pending' | 'confirmed' | 'on_the_way' | 'in_progress' | 'completed' | 'cancelled';
+type Row = {
+  id: string; status: string;
+  booking_date: string | null; booking_time: string | null; scheduled_date: string | null; scheduled_time: string | null;
+  address: string | null; city: string | null; pincode: string | null;
+  total_amount: number | null; platform_fee: number | null; provider_amount: number | null;
+  description: string | null; special_instructions: string | null; sub_item_name: string | null;
+  customer_name: string | null; customer_phone: string | null;
+  cancellation_reason: string | null; provider_eta_minutes: number | null;
+  unread_messages_provider: number | null;
+  services: { name: string } | null;
+};
 
-// ── Provider location mini-map ─────────────────────────────────────────────────
-const ProviderBookingMap = ({ bookingId, status, latitude, longitude }: {
-  bookingId: string;
-  status: BookingStatus;
-  latitude: number;
-  longitude: number;
-}) => {
-  const [providerLocation, setProviderLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+const SELECT = `id, status, booking_date, booking_time, scheduled_date, scheduled_time, address, city, pincode,
+  total_amount, platform_fee, provider_amount, description, special_instructions, sub_item_name,
+  customer_name, customer_phone, cancellation_reason, provider_eta_minutes, unread_messages_provider, services(name)`;
 
-  useEffect(() => {
-    if (status !== 'on_the_way') return;
-    const loadLocation = async () => {
-      const { data } = await (supabase as any)
-        .from('provider_locations')
-        .select('latitude, longitude')
-        .eq('booking_id', bookingId)
-        .maybeSingle();
-      if (data) setProviderLocation(data);
-    };
-    loadLocation();
-    const channel = supabase.channel(`provider-own-location-${bookingId}`)
-      .on('postgres_changes', {
-        event: '*', schema: 'public', table: 'provider_locations', filter: `booking_id=eq.${bookingId}`,
-      }, (payload) => {
-        const newLoc = payload.new as { latitude?: number; longitude?: number } | null;
-        if (newLoc && typeof newLoc.latitude === 'number' && typeof newLoc.longitude === 'number') {
-          setProviderLocation({ latitude: newLoc.latitude, longitude: newLoc.longitude });
-        }
-      })
-      .subscribe();
-    return () => { void supabase.removeChannel(channel); };
-  }, [bookingId, status]);
+const TONE: Record<Tone, string> = {
+  gold: 'bg-gold/15 text-gold-foreground ring-1 ring-gold/40',
+  black: 'bg-primary text-primary-foreground',
+  green: 'bg-emerald-500/15 text-emerald-700 ring-1 ring-emerald-500/30',
+  red: 'bg-red-500/10 text-red-600 ring-1 ring-red-500/30',
+};
+const BAR: Record<Tone, string> = { gold: 'bg-gold', black: 'bg-primary', green: 'bg-emerald-500', red: 'bg-red-500' };
 
+const buzz = (ms = 10) => { try { navigator.vibrate?.(ms); } catch { /* unsupported */ } };
+
+function ProblemChip({ id, note, onOpen }: { id: string; note: string | null; onOpen: () => void }) {
+  const { hasAudio, hasImages, attachments } = useBookingAttachments(id);
+  if (!hasAudio && !hasImages && !note?.trim()) return null;
+  const bits = [hasAudio && '🎤 Voice', hasImages && `📷 ${attachments.filter(a => a.type === 'image').length}`, note?.trim() && '📝 Note'].filter(Boolean);
   return (
-    <div className="mb-3">
-      <LiveMap
-        height="180px"
-        markers={[
-          { latitude, longitude, label: 'Customer service location', color: 'gold' },
-          ...(providerLocation ? [{ ...providerLocation, label: 'Your live location', color: 'blue' as const }] : []),
-        ]}
-      />
-      <p className="mt-1 text-[11px] text-muted-foreground">
-        {providerLocation ? 'Your live location is updating' : 'Waiting for your first location update...'}
-      </p>
-    </div>
-  );
-};
-
-// ── Status styles ─────────────────────────────────────────────────────────────
-const statusStyles: Record<BookingStatus, string> = {
-  pending:     'bg-warning/20 text-warning border border-warning/20',
-  confirmed:   'bg-primary/20 text-primary border border-primary/20',
-  on_the_way:  'bg-orange-500/20 text-orange-400 border border-orange-500/20',
-  in_progress: 'bg-blue-500/20 text-blue-400 border border-blue-500/20',
-  completed:   'bg-success/20 text-success border border-success/20',
-  cancelled:   'bg-destructive/20 text-destructive border border-destructive/20',
-};
-
-const statusBarColor: Record<BookingStatus, string> = {
-  pending:     'bg-warning',
-  confirmed:   'bg-primary',
-  on_the_way:  'bg-orange-500',
-  in_progress: 'bg-blue-500',
-  completed:   'bg-success',
-  cancelled:   'bg-destructive',
-};
-
-// ── Attachment badge (row-only, no signed URLs needed) ────────────────────────
-function AttachmentBadgeRow({
-  bookingId,
-  note,
-  onViewDetails,
-}: {
-  bookingId: string;
-  note?: string | null;
-  onViewDetails: () => void;
-}) {
-  const { attachments, hasAudio, hasImages } = useBookingAttachments(bookingId);
-  const hasNote = Boolean(note?.trim());
-  const imageCount = attachments.filter((a: RawAttachment) => a.type === 'image').length;
-  const hasAnything = hasAudio || hasImages || hasNote;
-
-  if (!hasAnything) {
-    return (
-      <p className="text-xs text-muted-foreground/60 italic">
-        Customer didn't add problem details
-      </p>
-    );
-  }
-
-  const badgeParts: string[] = [];
-  if (hasAudio) badgeParts.push('🎤 1');
-  if (hasImages) badgeParts.push(`📷 ${imageCount}`);
-  if (hasNote) badgeParts.push('📝 Note');
-
-  return (
-    <Button
-      type="button"
-      size="sm"
-      variant="outline"
-      className="w-full border-primary/25 text-primary hover:bg-primary/10 rounded-xl gap-2 justify-start"
-      onClick={onViewDetails}
-      aria-label="View customer problem details"
-    >
+    <button onClick={onOpen} className="press mt-3 flex w-full items-center gap-2 rounded-xl bg-secondary px-3 py-2.5 text-left">
       <FileSearch className="h-4 w-4 shrink-0" />
-      <span className="flex-1 text-left text-xs font-medium">View Problem Details</span>
-      <span className="text-xs text-muted-foreground bg-secondary rounded-full px-2 py-0.5">
-        {badgeParts.join(' · ')}
-      </span>
-    </Button>
+      <span className="flex-1 text-sm font-semibold">Problem details</span>
+      <span className="text-xs text-muted-foreground">{bits.join(' · ')}</span>
+    </button>
   );
 }
 
-// ── Main Bookings component ───────────────────────────────────────────────────
 const Bookings = () => {
   const { provider } = useProvider();
   const { user } = useAuth();
   const { toast } = useToast();
-  const [bookings, setBookings] = useState<any[]>([]);
+  const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState('pending');
-  const [actionLoading, setActionLoading] = useState<string | null>(null);
-  const [activeChatBookingId, setActiveChatBookingId] = useState<string | null>(null);
-  const watchIds = useRef<Record<string, number>>({});
-  const [locationSharing, setLocationSharing] = useState<Record<string, { loading: boolean; approximate: boolean }>>({});
+  const [failed, setFailed] = useState(false);
+  const [tab, setTab] = useState<TabKey | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [chatId, setChatId] = useState<string | null>(null);
+  const [detail, setDetail] = useState<Row | null>(null);
+  const [declineId, setDeclineId] = useState<string | null>(null);
 
-  // Feature 1: Problem details dialog state
-  const [problemDetailsBooking, setProblemDetailsBooking] = useState<any | null>(null);
-
-  // Feature 2: Complete job dialog state
-  const [completeDialogBookingId, setCompleteDialogBookingId] = useState<string | null>(null);
-
-  const fetchBookings = useCallback(async () => {
+  const load = useCallback(async () => {
     if (!provider?.id) return;
-
-    const { data, error } = await (supabase as any)
-      .from('bookings')
-      .select(`
-        id, status,
-        booking_date, booking_time,
-        scheduled_date, scheduled_time,
-        address, city, pincode, latitude, longitude,
-        total_amount, platform_fee, provider_amount,
-        description, special_instructions, sub_item_id, sub_item_name,
-        customer_name, customer_phone, created_at,
-        cancelled_at, cancellation_reason, started_at, completed_at,
-        provider_departed_at, provider_eta_minutes,
-        unread_messages_provider,
-        services(id, name, icon, slug)
-      `)
-      .eq('provider_id', provider.id)
-      .order('created_at', { ascending: false });
-
-    let enrichedData = data || [];
-    try {
-      const { data: extra } = await (supabase as any)
-        .from('bookings')
-        .select('id, provider_amount, description, special_instructions, sub_item_id, sub_item_name')
-        .eq('provider_id', provider.id);
-
-      if (extra) {
-        const extraMap: Record<string, any> = {};
-        extra.forEach((e: any) => { extraMap[e.id] = e; });
-        enrichedData = enrichedData.map((b: any) => ({ ...b, ...extraMap[b.id] }));
-      }
-    } catch {
-      // New columns not yet added — safe to ignore
-    }
-
-    if (error) {
-      console.error('Bookings fetch error:', error);
-      toast({ title: 'Could not load bookings', description: error.message, variant: 'destructive' });
-    } else {
-      setBookings(enrichedData);
-    }
+    const { data, error } = await (supabase as any).from('bookings').select(SELECT)
+      .eq('provider_id', provider.id).order('created_at', { ascending: false });
+    if (error) { setFailed(true); } else { setFailed(false); setRows((data ?? []) as Row[]); }
     setLoading(false);
   }, [provider?.id]);
 
   useEffect(() => {
     if (!provider?.id) return;
-    fetchBookings();
-
-    // Realtime: booking changes
-    const channel = supabase
-      .channel(`bookings-provider-${provider.id}`)
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'bookings',
-        filter: `provider_id=eq.${provider.id}`,
-      }, (payload) => {
-        console.log('📬 Booking change:', payload);
-        fetchBookings();
-      })
-      .subscribe((status) => {
-        console.log('🔌 Bookings realtime:', status);
-      });
-
-    return () => { supabase.removeChannel(channel); };
-  }, [provider?.id, fetchBookings]);
-
-  // Feature 1 Realtime: attachment rows — refetch raw attachment cache 1.5s after new booking
-  useEffect(() => {
-    if (!provider?.id) return;
-    const attChannel = supabase
-      .channel(`att-inserts-${provider.id}`)
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'booking_attachments',
-      }, () => {
-        // Force badge refresh — cache is cleared in the hook refetch
-        // Let React re-render naturally, the badge hook will re-query
-      })
+    void load();
+    const ch = supabase.channel(`provider-bookings-list-${provider.id}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings', filter: `provider_id=eq.${provider.id}` }, () => void load())
       .subscribe();
-    return () => { supabase.removeChannel(attChannel); };
-  }, [provider?.id]);
+    return () => { void supabase.removeChannel(ch); };
+  }, [provider?.id, load]);
 
-  const stopLocationSharing = useCallback((bookingId: string) => {
-    const watchId = watchIds.current[bookingId];
-    if (watchId !== undefined) {
-      navigator.geolocation.clearWatch(watchId);
-      delete watchIds.current[bookingId];
-    }
-  }, []);
+  const counts = useMemo(() => {
+    const c: Record<TabKey, number> = { new: 0, upcoming: 0, active: 0, done: 0, cancelled: 0 };
+    rows.forEach(r => { c[tabOf(r.status)]++; });
+    return c;
+  }, [rows]);
 
-  useEffect(() => {
-    bookings.forEach((booking) => {
-      if (!['on_the_way'].includes(booking.status)) stopLocationSharing(booking.id);
-    });
-    return () => Object.keys(watchIds.current).forEach(stopLocationSharing);
-  }, [bookings, stopLocationSharing]);
+  const current: TabKey = tab ?? defaultTab(counts);
+  const list = useMemo(() => rows.filter(r => tabOf(r.status) === current), [rows, current]);
 
-  const doAction = async (
-    bookingId: string,
-    updates: Record<string, any>,
-    successMsg: string,
-  ) => {
-    setActionLoading(bookingId);
-    const { error } = await (supabase as any)
-      .from('bookings')
-      .update(updates)
-      .eq('id', bookingId)
-      .eq('provider_id', provider!.id);
-
-    if (error) {
-      console.error('doAction error:', error);
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
-    } else {
-      toast({ title: successMsg });
-      await fetchBookings();
-    }
-    setActionLoading(null);
+  const update = async (id: string, patch: Record<string, unknown>, ok: string) => {
+    if (!provider) return;
+    setBusy(id); buzz();
+    // Guard on current status so two devices can't both act on the same request.
+    const { data, error } = await (supabase as any).from('bookings').update(patch)
+      .eq('id', id).eq('provider_id', provider.id).eq('status', 'pending').select('id');
+    setBusy(null);
+    if (error) toast({ title: 'Could not update', description: error.message, variant: 'destructive' });
+    else if (!data?.length) { toast({ title: 'Already handled', description: 'This request was changed or cancelled.' }); void load(); }
+    else { toast({ title: ok }); void load(); }
   };
 
-  const accept = (id: string) =>
-    doAction(id, { status: 'confirmed' }, '✅ Booking Accepted — Customer notified!');
+  const accept = (id: string) => update(id, { status: 'confirmed' }, 'Accepted. Customer notified.');
+  const decline = (id: string) => update(id, { status: 'cancelled', cancelled_at: new Date().toISOString(), cancellation_reason: 'Declined by provider' }, 'Request declined');
+  const openJob = () => window.dispatchEvent(new Event(OPEN_JOB_EVENT));
 
-  const decline = async (id: string) => {
-    stopLocationSharing(id);
-    await doAction(id, {
-      status: 'cancelled',
-      cancelled_at: new Date().toISOString(),
-      cancellation_reason: 'Declined by provider',
-    }, 'Booking declined');
-  };
-
-  const startLocationSharing = (bookingId: string) => {
-    if (!navigator.geolocation) {
-      toast({ title: 'Location unavailable', description: 'This browser does not support live location sharing.', variant: 'destructive' });
-      return;
-    }
-    stopLocationSharing(bookingId);
-    setLocationSharing((current) => ({ ...current, [bookingId]: { loading: true, approximate: false } }));
-    const watchId = navigator.geolocation.watchPosition(async (position) => {
-      setLocationSharing((current) => ({
-        ...current,
-        [bookingId]: { loading: false, approximate: position.coords.accuracy > 100 },
-      }));
-      const { error } = await (supabase as any).from('provider_locations').upsert({
-        booking_id: bookingId,
-        provider_id: user?.id,
-        latitude: position.coords.latitude,
-        longitude: position.coords.longitude,
-        updated_at: new Date().toISOString(),
-      }, { onConflict: 'booking_id' });
-      if (error) console.error('Provider location update failed:', error.message);
-    }, () => {
-      setLocationSharing((current) => ({ ...current, [bookingId]: { loading: false, approximate: false } }));
-      toast({ title: 'Location permission denied', description: 'Enable location permission to share your live position.', variant: 'destructive' });
-    }, { enableHighAccuracy: true, maximumAge: 0, timeout: 15_000 });
-    watchIds.current[bookingId] = watchId;
-  };
-
-  const onMyWay = async (id: string) => {
-    await doAction(id, {
-      status: 'on_the_way',
-      provider_departed_at: new Date().toISOString(),
-      provider_eta_minutes: 20,
-    }, '🚗 Customer notified you are on the way!');
-    startLocationSharing(id);
-  };
-
-  const startJob = async (id: string) => {
-    stopLocationSharing(id);
-    await doAction(id, {
-      status: 'in_progress',
-      started_at: new Date().toISOString(),
-    }, '🚀 Job started — Customer notified');
-  };
-
-  // Tab-to-status mapping
-  const filtered = bookings.filter(b => {
-    if (tab === 'pending')   return b.status === 'pending';
-    if (tab === 'confirmed') return ['confirmed', 'on_the_way'].includes(b.status);
-    if (tab === 'active')    return ['on_the_way', 'in_progress'].includes(b.status);
-    if (tab === 'completed') return b.status === 'completed';
-    if (tab === 'cancelled') return b.status === 'cancelled';
-    return true;
-  });
-
-  const counts = {
-    pending:   bookings.filter(b => b.status === 'pending').length,
-    confirmed: bookings.filter(b => ['confirmed', 'on_the_way'].includes(b.status)).length,
-    active:    bookings.filter(b => ['on_the_way', 'in_progress'].includes(b.status)).length,
-    completed: bookings.filter(b => b.status === 'completed').length,
-    cancelled: bookings.filter(b => b.status === 'cancelled').length,
-  };
-
-  const tabs = [
-    { value: 'pending',   label: 'New',       count: counts.pending   },
-    { value: 'confirmed', label: 'Upcoming',  count: counts.confirmed },
-    { value: 'active',    label: 'Active',    count: counts.active    },
-    { value: 'completed', label: 'Done',      count: counts.completed },
-    { value: 'cancelled', label: 'Cancelled', count: counts.cancelled },
-  ];
-
-  if (provider?.kyc_status !== 'approved') {
-    return <LockedPage pageName="Bookings" />;
-  }
+  if (provider && provider.kyc_status !== 'approved') return <LockedPage pageName="Bookings" />;
 
   return (
-    <div className="space-y-4 pb-20 md:pb-0">
-      {/* Tab bar */}
-      <div className="bg-secondary w-full grid grid-cols-5 gap-1 p-1 rounded-xl">
-        {tabs.map(t => (
-          <button
-            key={t.value}
-            type="button"
-            onClick={() => setTab(t.value)}
-            className={cn(
-              'relative text-xs py-2 font-medium rounded-lg transition-colors text-center flex items-center justify-center',
-              tab === t.value
-                ? 'bg-primary text-primary-foreground font-bold shadow-sm'
-                : 'text-muted-foreground hover:text-foreground hover:bg-background/50',
-            )}
-          >
-            {t.label}
-            {t.count > 0 && (
-              <span className="absolute -top-1 -right-1 bg-warning text-warning-foreground text-[8px] font-bold rounded-full h-3.5 w-3.5 flex items-center justify-center leading-none">
-                {t.count}
+    <div className="space-y-4 pb-28 md:pb-6">
+      <div className="no-scrollbar -mx-1 flex gap-2 overflow-x-auto px-1" role="tablist">
+        {TAB_ORDER.map(t => (
+          <button key={t} role="tab" aria-selected={current === t} onClick={() => { buzz(6); setTab(t); }}
+            className={cn('press relative flex h-10 shrink-0 items-center gap-1.5 rounded-full px-4 text-sm font-semibold transition-colors',
+              current === t ? 'bg-primary text-primary-foreground' : 'bg-secondary text-muted-foreground')}>
+            {TAB_LABEL[t]}
+            {counts[t] > 0 && (
+              <span className={cn('flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[11px] font-bold',
+                current === t ? 'bg-gold text-gold-foreground' : t === 'new' ? 'bg-gold text-gold-foreground' : 'bg-background')}>
+                {counts[t]}
               </span>
             )}
           </button>
         ))}
       </div>
 
-      <div className="mt-4 space-y-3">
-        {loading ? (
-          [...Array(3)].map((_, i) => (
-            <div key={i} className="h-48 glass-card rounded-2xl animate-pulse" />
-          ))
-        ) : filtered.length === 0 ? (
-          <div className="text-center py-16 glass-card rounded-2xl">
-            <div className="text-4xl mb-3">
-              {tab === 'pending' ? '🔔' : tab === 'completed' ? '✅' : tab === 'cancelled' ? '❌' : '📅'}
-            </div>
-            <p className="text-muted-foreground font-medium">No {tab} bookings</p>
-            <p className="text-xs text-muted-foreground mt-1">
-              {tab === 'pending' ? 'New booking requests will appear here instantly' : 'Check other tabs'}
-            </p>
-          </div>
-        ) : (
-          <AnimatePresence>
-            {filtered.map((booking, i) => {
-              const status = booking.status as BookingStatus;
-              const isLoading = actionLoading === booking.id;
-              const serviceName = booking.services?.name ?? 'Service';
-              const subItemName = booking.sub_item_name;
-              const alreadyDeparted = !!booking.provider_departed_at;
-              const canChat = ['confirmed', 'on_the_way', 'in_progress'].includes(status);
-              const unread = booking.unread_messages_provider ?? 0;
-              const bookingDate = booking.scheduled_date || booking.booking_date;
-              const bookingTime = booking.scheduled_time || booking.booking_time;
-              const earnings = booking.provider_amount
-                ?? (booking.total_amount && booking.platform_fee
-                    ? booking.total_amount - booking.platform_fee
-                    : booking.total_amount);
-              const note = booking.special_instructions || booking.description;
-              const shortId = booking.id.slice(0, 8).toUpperCase();
+      {loading ? (
+        <div className="space-y-3">{[0, 1, 2].map(i => <div key={i} className="h-44 animate-pulse rounded-3xl bg-secondary" />)}</div>
+      ) : failed ? (
+        <div className="rounded-3xl bg-secondary p-8 text-center">
+          <p className="font-bold">Couldn't load bookings</p>
+          <p className="mt-1 text-sm text-muted-foreground">Check your connection and try again.</p>
+          <button onClick={() => { setLoading(true); void load(); }} className="press mt-4 h-11 rounded-xl bg-primary px-6 font-bold text-primary-foreground">Try again</button>
+        </div>
+      ) : list.length === 0 ? (
+        <div className="rounded-3xl bg-secondary p-10 text-center">
+          <p className="text-lg font-extrabold">{current === 'new' ? 'No new requests' : `Nothing in ${TAB_LABEL[current]}`}</p>
+          <p className="mt-1 text-sm text-muted-foreground">{current === 'new' ? 'Stay online and requests will pop up instantly.' : 'Jobs show up here as they move along.'}</p>
+        </div>
+      ) : (
+        <AnimatePresence mode="popLayout" initial={false}>
+          {list.map((b, i) => {
+            const tone = toneOf(b.status);
+            const earn = earningsOf(b);
+            const note = b.special_instructions || b.description;
+            const place = [b.address, b.city, b.pincode].filter(Boolean).join(', ');
+            const when = whenLabel(b.scheduled_date || b.booking_date, b.scheduled_time || b.booking_time);
+            const unread = b.unread_messages_provider ?? 0;
+            const live = b.status === 'confirmed' || b.status === 'on_the_way' || b.status === 'in_progress';
+            return (
+              <motion.article key={b.id} layout
+                initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, x: -40 }}
+                transition={{ type: 'spring', damping: 26, stiffness: 300, delay: Math.min(i, 5) * 0.04 }}
+                className="overflow-hidden rounded-3xl bg-card shadow-sm ring-1 ring-border">
+                <div className={cn('h-1.5', BAR[tone])} />
+                <div className="p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <h3 className="truncate text-lg font-extrabold leading-tight">{b.services?.name ?? 'Service'}</h3>
+                      {b.sub_item_name && <p className="truncate text-sm text-muted-foreground">{b.sub_item_name}</p>}
+                    </div>
+                    <div className="shrink-0 text-right">
+                      <p className="text-xl font-extrabold">{earn != null ? `₹${earn.toLocaleString('en-IN')}` : '—'}</p>
+                      <span className={cn('mt-1 inline-block rounded-full px-2.5 py-0.5 text-[11px] font-bold', TONE[tone])}>
+                        {statusLabel(b.status, b.provider_eta_minutes)}
+                      </span>
+                    </div>
+                  </div>
 
-              return (
-                <motion.div
-                  key={booking.id}
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  transition={{ delay: i * 0.05 }}
-                >
-                  <Card className="glass-card rounded-2xl overflow-hidden border-border">
-                    {/* Status colour bar */}
-                    <div className={cn('h-1.5', statusBarColor[status])} />
+                  <div className="mt-3 space-y-1.5 text-sm text-muted-foreground">
+                    <p className="flex items-center gap-2"><Calendar className="h-4 w-4 shrink-0" /><span className="font-semibold text-foreground">{when}</span></p>
+                    {place && <p className="flex items-start gap-2"><MapPin className="mt-0.5 h-4 w-4 shrink-0" /><span className="line-clamp-2">{place}</span></p>}
+                  </div>
 
-                    <CardContent className="p-4">
-                      {/* Header row */}
-                      <div className="flex items-start justify-between mb-3">
-                        <div>
-                          <p className="font-bold text-foreground">{serviceName}</p>
-                          {subItemName && (
-                            <p className="text-xs text-primary font-medium">→ {subItemName}</p>
-                          )}
-                          <p className="text-xs text-muted-foreground font-mono mt-0.5">
-                            #{shortId}
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-xl font-extrabold text-primary">
-                            ₹{earnings ?? '—'}
-                          </p>
-                          <Badge className={cn('text-xs mt-1', statusStyles[status])}>
-                            {status.replace('_', ' ')}
-                          </Badge>
-                          {/* Attachment badge (row-only) */}
-                          <div className="mt-1 flex justify-end">
-                            <AttachmentBadges
-                              hasAudio={false}
-                              hasImages={false}
-                              imageCount={0}
-                            />
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Date / time / address */}
-                      <div className="space-y-1.5 text-xs text-muted-foreground mb-3">
-                        {bookingDate && (
-                          <div className="flex items-center gap-2">
-                            <Calendar className="h-3.5 w-3.5 shrink-0" />
-                            {new Date(bookingDate).toLocaleDateString('en-IN', {
-                              weekday: 'short', day: 'numeric', month: 'short', year: 'numeric',
-                            })}
-                            {bookingTime && (
-                              <>
-                                <span className="text-muted-foreground">·</span>
-                                <Clock className="h-3.5 w-3.5" />
-                                {bookingTime.slice(0, 5)}
-                              </>
-                            )}
-                          </div>
-                        )}
-                        {booking.address && (
-                          <div className="flex items-center gap-2">
-                            <MapPin className="h-3.5 w-3.5 shrink-0" />
-                            <a
-                              href={`https://maps.google.com/?q=${encodeURIComponent(booking.address)}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="hover:text-primary transition-colors truncate"
-                            >
-                              {booking.address}{booking.city ? `, ${booking.city}` : ''} — {booking.pincode}
-                            </a>
-                          </div>
-                        )}
-                      </div>
-
-                      {booking.latitude != null && booking.longitude != null && (
-                        <div className="mb-3">
-                          {status === 'on_the_way' ? (
-                            <>
-                              <ProviderBookingMap
-                                bookingId={booking.id}
-                                status={status}
-                                latitude={booking.latitude}
-                                longitude={booking.longitude}
-                              />
-                              {locationSharing[booking.id]?.loading && (
-                                <p className="mt-1 text-[11px] text-muted-foreground">Waiting for a fresh GPS fix...</p>
-                              )}
-                              {locationSharing[booking.id]?.approximate && (
-                                <p className="mt-1 text-[11px] text-amber-400">Location may be approximate.</p>
-                              )}
-                            </>
-                          ) : (
-                            <>
-                              <LiveMap
-                                height="180px"
-                                markers={[{
-                                  latitude: booking.latitude,
-                                  longitude: booking.longitude,
-                                  label: 'Customer service location',
-                                }]}
-                              />
-                              <p className="mt-1 text-[11px] text-muted-foreground">Customer location preview</p>
-                            </>
-                          )}
-                        </div>
+                  {(b.customer_name || (b.customer_phone && live)) && (
+                    <div className="mt-3 flex items-center justify-between rounded-xl bg-secondary px-3 py-2">
+                      <span className="flex items-center gap-2 text-sm font-semibold">
+                        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">{(b.customer_name || 'C')[0].toUpperCase()}</span>
+                        {b.customer_name || 'Customer'}
+                      </span>
+                      {b.customer_phone && live && (
+                        <a href={`tel:${b.customer_phone}`} className="press flex h-9 items-center gap-1.5 rounded-full bg-background px-3 text-sm font-bold" aria-label="Call customer">
+                          <Phone className="h-4 w-4" /> Call
+                        </a>
                       )}
+                    </div>
+                  )}
 
-                      {/* Customer info */}
-                      {(booking.customer_name || booking.customer_phone) && (
-                        <div className="flex items-center justify-between p-2.5 rounded-xl bg-secondary/50 mb-3">
-                          <div className="flex items-center gap-2">
-                            <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xs font-bold">
-                              {(booking.customer_name || 'C')[0].toUpperCase()}
-                            </div>
-                            <span className="text-sm font-medium text-foreground">
-                              {booking.customer_name || 'Customer'}
-                            </span>
-                          </div>
-                          {booking.customer_phone && ['confirmed', 'in_progress'].includes(status) && (
-                            <a
-                              href={`tel:${booking.customer_phone}`}
-                              className="flex items-center gap-1 text-xs text-primary font-semibold hover:underline"
-                            >
-                              <Phone className="h-3 w-3" /> Call
-                            </a>
-                          )}
-                        </div>
+                  <ProblemChip id={b.id} note={note} onOpen={() => setDetail(b)} />
+
+                  {b.status === 'pending' && (
+                    <div className="mt-4 grid grid-cols-[auto_1fr] gap-2">
+                      <button disabled={busy === b.id} onClick={() => setDeclineId(b.id)}
+                        className="press flex h-14 w-14 items-center justify-center rounded-2xl bg-red-500/10 text-red-600 disabled:opacity-50" aria-label="Decline request">
+                        <X className="h-6 w-6" />
+                      </button>
+                      <button disabled={busy === b.id} onClick={() => accept(b.id)}
+                        className="press flex h-14 items-center justify-center gap-2 rounded-2xl bg-gold text-base font-extrabold text-gold-foreground disabled:opacity-60">
+                        {busy === b.id ? <span className="h-5 w-5 animate-spin rounded-full border-2 border-current border-t-transparent" /> : <><Check className="h-5 w-5" /> Accept request</>}
+                      </button>
+                    </div>
+                  )}
+
+                  {live && (
+                    <div className="mt-4 flex gap-2">
+                      <button onClick={openJob} className="press flex h-14 flex-1 items-center justify-center gap-1 rounded-2xl bg-primary text-base font-extrabold text-primary-foreground">
+                        {b.status === 'confirmed' ? 'Start job flow' : 'Continue job'} <ChevronRight className="h-5 w-5" />
+                      </button>
+                      {user && (
+                        <button onClick={() => setChatId(b.id)} aria-label="Chat with customer"
+                          className="press relative flex h-14 w-14 items-center justify-center rounded-2xl bg-secondary">
+                          <MessageCircle className="h-6 w-6" />
+                          {unread > 0 && <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-gold px-1 text-[11px] font-bold text-gold-foreground">{unread}</span>}
+                        </button>
                       )}
+                    </div>
+                  )}
 
-                      {/* Price breakdown */}
-                      {booking.total_amount && (
-                        <div className="flex justify-between text-xs text-muted-foreground mb-3 px-1">
-                          <span>Customer pays: <span className="text-foreground font-medium">₹{booking.total_amount}</span></span>
-                          <span>·</span>
-                          <span>Platform: <span className="text-foreground font-medium">₹{booking.platform_fee ?? 49}</span></span>
-                          <span>·</span>
-                          <span>You earn: <span className="text-primary font-bold">₹{earnings}</span></span>
-                        </div>
-                      )}
+                  {b.status === 'completed' && <p className="mt-4 rounded-xl bg-emerald-500/10 px-3 py-2.5 text-center text-sm font-bold text-emerald-700">Completed · {earn != null ? `₹${earn.toLocaleString('en-IN')} earned` : 'earned'}</p>}
+                  {b.status === 'cancelled' && <p className="mt-4 rounded-xl bg-red-500/10 px-3 py-2.5 text-center text-sm font-semibold text-red-600">{b.cancellation_reason || 'Cancelled'}</p>}
+                </div>
+              </motion.article>
+            );
+          })}
+        </AnimatePresence>
+      )}
 
-                      {/* Special instructions (text) */}
-                      {note && (
-                        <div className="flex items-start gap-2 p-2.5 rounded-xl bg-warning/5 border border-warning/20 mb-3">
-                          <AlertCircle className="h-3.5 w-3.5 text-warning shrink-0 mt-0.5" />
-                          <p className="text-xs text-warning">{note}</p>
-                        </div>
-                      )}
-
-                      {/* ── Feature 1: View Problem Details button ── */}
-                      <div className="mb-3">
-                        <AttachmentBadgeRow
-                          bookingId={booking.id}
-                          note={note}
-                          onViewDetails={() => setProblemDetailsBooking(booking)}
-                        />
-                      </div>
-
-                      {/* ═══════════ ACTION BUTTONS ═══════════ */}
-                      <div className="flex flex-col gap-2">
-
-                        {/* PENDING: Accept + Decline */}
-                        {status === 'pending' && (
-                          <div className="flex gap-2">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="border-destructive/30 text-destructive hover:bg-destructive/10 rounded-xl px-3 shrink-0"
-                              onClick={() => decline(booking.id)}
-                              disabled={isLoading}
-                            >
-                              <XCircle className="h-4 w-4 mr-1" /> Decline
-                            </Button>
-                            <Button
-                              size="sm"
-                              className="flex-1 gold-gradient text-primary-foreground font-bold rounded-xl h-10"
-                              onClick={() => accept(booking.id)}
-                              disabled={isLoading}
-                            >
-                              {isLoading ? (
-                                <div className="w-4 h-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" />
-                              ) : (
-                                <><CheckCircle className="h-4 w-4 mr-1.5" /> Accept Booking</>
-                              )}
-                            </Button>
-                          </div>
-                        )}
-
-                        {/* CONFIRMED / ON_THE_WAY */}
-                        {(status === 'confirmed' || status === 'on_the_way') && (
-                          <div className="flex gap-2">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className={cn(
-                                'flex-1 rounded-xl',
-                                alreadyDeparted || status === 'on_the_way'
-                                  ? 'border-blue-500/20 text-blue-400/50 cursor-default'
-                                  : 'border-blue-500/30 text-blue-400 hover:bg-blue-500/10',
-                              )}
-                              onClick={() => !alreadyDeparted && status !== 'on_the_way' && onMyWay(booking.id)}
-                              disabled={alreadyDeparted || status === 'on_the_way' || isLoading}
-                            >
-                              <Car className="h-4 w-4 mr-1" />
-                              {alreadyDeparted || status === 'on_the_way' ? 'Sharing location ✓' : "I'm On My Way"}
-                            </Button>
-                            <Button
-                              size="sm"
-                              className="flex-1 bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-xl"
-                              onClick={() => startJob(booking.id)}
-                              disabled={isLoading}
-                            >
-                              <Play className="h-4 w-4 mr-1" /> Start Job
-                            </Button>
-                          </div>
-                        )}
-
-                        {/* IN PROGRESS: Mark Complete (opens OTP dialog) */}
-                        {status === 'in_progress' && (
-                          <Button
-                            className="w-full bg-success hover:bg-success/90 text-success-foreground font-bold rounded-xl h-11"
-                            onClick={() => setCompleteDialogBookingId(booking.id)}
-                            disabled={isLoading}
-                          >
-                            {isLoading ? (
-                              <div className="w-4 h-4 border-2 border-success-foreground border-t-transparent rounded-full animate-spin" />
-                            ) : (
-                              <><Flag className="h-4 w-4 mr-1.5" /> Mark as Completed</>
-                            )}
-                          </Button>
-                        )}
-
-                        {/* COMPLETED */}
-                        {status === 'completed' && (
-                          <div className="text-center p-2 rounded-xl bg-success/5 border border-success/20">
-                            <p className="text-xs text-success">
-                              ✅ Completed · ₹{earnings} earned
-                            </p>
-                          </div>
-                        )}
-
-                        {/* CANCELLED */}
-                        {status === 'cancelled' && booking.cancellation_reason && (
-                          <div className="text-center p-2 rounded-xl bg-destructive/5 border border-destructive/20">
-                            <p className="text-xs text-destructive">{booking.cancellation_reason}</p>
-                          </div>
-                        )}
-
-                        {/* Chat button */}
-                        {canChat && user && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className={cn(
-                              'w-full border-primary/30 text-primary hover:bg-primary/10 rounded-xl relative',
-                              unread > 0 && 'border-primary bg-primary/10',
-                            )}
-                            onClick={() => setActiveChatBookingId(booking.id)}
-                          >
-                            <MessageCircle className="h-4 w-4 mr-1.5" />
-                            Chat with Customer
-                            {unread > 0 && (
-                              <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-[9px] font-bold rounded-full h-4 w-4 flex items-center justify-center">
-                                {unread}
-                              </span>
-                            )}
-                          </Button>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              );
-            })}
-          </AnimatePresence>
-        )}
-      </div>
-
-      {/* ── Problem Details Dialog (Feature 1) ── */}
-      {problemDetailsBooking && (
+      {detail && (
         <ProblemDetailsDialog
-          open={!!problemDetailsBooking}
-          onClose={() => setProblemDetailsBooking(null)}
-          bookingId={problemDetailsBooking.id}
-          note={problemDetailsBooking.special_instructions || problemDetailsBooking.description}
-          serviceName={problemDetailsBooking.services?.name}
-          subItemName={problemDetailsBooking.sub_item_name}
-          shortId={problemDetailsBooking.id.slice(0, 8).toUpperCase()}
-          showActions={problemDetailsBooking.status === 'pending'}
-          actionLoading={actionLoading === problemDetailsBooking.id}
-          onAccept={problemDetailsBooking.status === 'pending' ? () => accept(problemDetailsBooking.id) : undefined}
-          onDecline={problemDetailsBooking.status === 'pending' ? () => decline(problemDetailsBooking.id) : undefined}
+          open onClose={() => setDetail(null)} bookingId={detail.id}
+          note={detail.special_instructions || detail.description}
+          serviceName={detail.services?.name} subItemName={detail.sub_item_name}
+          shortId={detail.id.slice(0, 8).toUpperCase()}
+          showActions={detail.status === 'pending'} actionLoading={busy === detail.id}
+          onAccept={detail.status === 'pending' ? () => { void accept(detail.id); setDetail(null); } : undefined}
+          onDecline={detail.status === 'pending' ? () => { setDeclineId(detail.id); setDetail(null); } : undefined}
         />
       )}
 
-      {/* ── Complete Job Dialog (Feature 2) ── */}
-      {completeDialogBookingId && (
-        <CompleteJobDialog
-          open={!!completeDialogBookingId}
-          bookingId={completeDialogBookingId}
-          onClose={() => setCompleteDialogBookingId(null)}
-          onCompleted={fetchBookings}
-        />
-      )}
+      <AlertDialog open={!!declineId} onOpenChange={o => !o && setDeclineId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Decline this request?</AlertDialogTitle>
+            <AlertDialogDescription>The customer will be told, and can book another pro.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep it</AlertDialogCancel>
+            <AlertDialogAction onClick={() => { if (declineId) void decline(declineId); setDeclineId(null); }}>Decline</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
-      {/* ── Chat Dialog ── */}
-      {activeChatBookingId && user && (
-        <Dialog open={!!activeChatBookingId} onOpenChange={() => setActiveChatBookingId(null)}>
-          <DialogContent className="bg-card border-border p-0 max-w-md">
-            <DialogHeader className="p-4 pb-0 border-b border-border">
-              <DialogTitle className="flex items-center gap-2 text-foreground">
-                <MessageCircle className="w-5 h-5 text-primary" />
-                Chat with Customer
-              </DialogTitle>
-            </DialogHeader>
-            <BookingChat
-              bookingId={activeChatBookingId}
-              currentUserId={user.id}
-              senderType="provider"
-            />
+      {chatId && user && (
+        <Dialog open onOpenChange={() => setChatId(null)}>
+          <DialogContent className="max-w-md p-0">
+            <DialogHeader className="border-b border-border p-4 pb-3"><DialogTitle>Chat with customer</DialogTitle></DialogHeader>
+            <BookingChat bookingId={chatId} currentUserId={user.id} senderType="provider" />
           </DialogContent>
         </Dialog>
       )}

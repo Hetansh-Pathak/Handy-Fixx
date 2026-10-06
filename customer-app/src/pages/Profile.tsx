@@ -1,409 +1,432 @@
-import { useEffect, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { format } from "date-fns";
-import { motion } from "framer-motion";
-import { useSearchParams, useNavigate, Link } from "react-router-dom";
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import {
+  AlertCircle, Bell, CalendarDays, Check, ChevronRight, Info, Loader2, LogOut, MapPin, MessageCircle, Wrench,
+} from "lucide-react";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
+  AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
+import DeleteAccountDialog from "@/components/DeleteAccountDialog";
+import TextField, { FieldShell, fieldClass, fieldErrorClass } from "@/components/form/TextField";
 import { useAuth } from "@/contexts/AuthContext";
 import { useApp } from "@/contexts/AppContext";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import {
-  User, Mail, Phone, MapPin, Star, Calendar, CheckCircle2,
-  Save, Loader2, ArrowRight, AlertCircle
-} from "lucide-react";
-
-type ProfileData = {
-  full_name: string | null;
-  avatar_url: string | null;
-  phone: string | null;
-  pincode: string | null;
-  city: string | null;
-  address: string | null;
-  created_at: string;
-};
-
-type BookingStat = {
-  id: string;
-  status: string | null;
-  booking_date: string;
-  services: { name: string; icon_name: string | null } | null;
-};
+import { BRAND } from "@/lib/brand";
+import { EASE } from "@/lib/motion";
+import { cn } from "@/lib/utils";
+import { EMPTY_FIELDS, VALIDATED_ORDER, validateProfile, type FieldKey, type Errors, type Fields } from "@/lib/profileForm";
 
 const Profile = () => {
-  const { user } = useAuth();
-  const { refetchProfile } = useApp();
+  const { user, signOut } = useAuth();
+  const { refetchProfile, upcomingBookingsCount, unreadNotificationsCount } = useApp();
   const { toast } = useToast();
-  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const isSetup = searchParams.get("setup") === "true";
+  const reduce = useReducedMotion();
 
-  const [profile, setProfile] = useState<ProfileData | null>(null);
-  const [bookings, setBookings] = useState<BookingStat[]>([]);
+  const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
+  const [saved, setSaved] = useState<Fields>(EMPTY_FIELDS);
+  const [form, setForm] = useState<Fields>(EMPTY_FIELDS);
+  const [meta, setMeta] = useState<{ avatarUrl: string | null; createdAt: string | null }>({ avatarUrl: null, createdAt: null });
+  const [stats, setStats] = useState({ total: 0, completed: 0 });
+  const [errors, setErrors] = useState<Errors>({});
   const [saving, setSaving] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [confirmLogout, setConfirmLogout] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
-  const [name, setName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [pincode, setPincode] = useState("");
-  const [city, setCity] = useState("");
-  const [address, setAddress] = useState("");
-
-  useEffect(() => {
-    const load = async () => {
-      if (!user) return;
-      const [{ data: profileData, error: profileError }, { data: bookingData }] =
-        await Promise.all([
-          supabase
-            .from("profiles")
-            .select(
-              "user_id, full_name, avatar_url, phone, pincode, city, address, created_at"
-            )
-            .eq("user_id", user.id)
-            .maybeSingle(),
-          supabase
-            .from("bookings")
-            .select("id, status, booking_date, services(name, icon_name)")
-            .eq("customer_id", user.id)
-            .order("created_at", { ascending: false })
-            .limit(3),
-        ]);
-
-      if (profileError) {
-        console.error("profile load error:", profileError);
-      }
-
-      if (profileData) {
-        setProfile(profileData as ProfileData);
-        setName(profileData.full_name ?? "");
-        setPhone(profileData.phone ?? "");
-        setPincode(profileData.pincode ?? "");
-        setCity(profileData.city ?? "");
-        setAddress(profileData.address ?? "");
-      }
-
-      setBookings((bookingData ?? []) as BookingStat[]);
-      setLoading(false);
-    };
-    load();
-  }, [user]);
-
-  const totalBookings = bookings.length;
-  const completedBookings = bookings.filter((b) => b.status === "completed").length;
-
-  const updateProfile = async () => {
+  const load = useCallback(async () => {
     if (!user) return;
-    setSaving(true);
-    const { error } = await supabase
-      .from("profiles")
-      .update({
-        full_name: name,
-        phone,
-        pincode,
-        city,
-        address,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("user_id", user.id);
+    setStatus("loading");
 
-    setSaving(false);
+    // Counts come from the database, not from the length of a "recent" list.
+    const [profileRes, totalRes, completedRes] = await Promise.all([
+      supabase
+        .from("profiles")
+        .select("full_name, avatar_url, phone, pincode, city, address, created_at")
+        .eq("user_id", user.id)
+        .maybeSingle(),
+      supabase.from("bookings").select("id", { count: "exact", head: true }).eq("customer_id", user.id),
+      supabase.from("bookings").select("id", { count: "exact", head: true }).eq("customer_id", user.id).eq("status", "completed"),
+    ]);
 
-    if (error) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+    if (profileRes.error) {
+      console.error("profile load error:", profileRes.error);
+      setStatus("error");
       return;
     }
 
-    // Update the shared AppContext so navbar name refreshes too
-    refetchProfile();
+    const p = profileRes.data;
+    const next: Fields = {
+      name: p?.full_name ?? "",
+      phone: p?.phone ?? "",
+      pincode: p?.pincode ?? "",
+      city: p?.city ?? "",
+      address: p?.address ?? "",
+    };
+    setSaved(next);
+    setForm(next);
+    setMeta({ avatarUrl: p?.avatar_url ?? null, createdAt: p?.created_at ?? null });
+    setStats({ total: totalRes.count ?? 0, completed: completedRes.count ?? 0 });
+    setStatus("ready");
+  }, [user]);
 
-    toast({ title: "Profile updated ✅", description: "Your profile has been saved." });
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  const dirty = useMemo(
+    () => (Object.keys(form) as FieldKey[]).some((k) => form[k].trim() !== saved[k].trim()),
+    [form, saved],
+  );
+
+  const set = (key: FieldKey) => (value: string) => {
+    setForm((f) => ({ ...f, [key]: value }));
+    if (errors[key]) setErrors((e) => ({ ...e, [key]: undefined }));
   };
 
-  const initial = (name || user?.email || "U").slice(0, 1).toUpperCase();
-  const memberSince = profile?.created_at
-    ? format(new Date(profile.created_at), "MMMM yyyy")
-    : "—";
-
-  const statusBadgeClass: Record<string, string> = {
-    pending: "status-pending",
-    confirmed: "status-confirmed",
-    completed: "status-completed",
-    cancelled: "status-cancelled",
-    in_progress: "status-confirmed",
+  const discard = () => {
+    setForm(saved);
+    setErrors({});
   };
+
+  const save = async (e?: FormEvent) => {
+    e?.preventDefault();
+    if (!user || saving) return;
+
+    const found = validateProfile(form);
+    setErrors(found);
+    const firstInvalid = VALIDATED_ORDER.find((k) => found[k]);
+    if (firstInvalid) {
+      document.getElementById(`pf-${firstInvalid}`)?.focus();
+      return;
+    }
+
+    const clean: Fields = {
+      name: form.name.trim(),
+      phone: form.phone.trim(),
+      pincode: form.pincode,
+      city: form.city.trim(),
+      address: form.address.trim(),
+    };
+
+    setSaving(true);
+    const { data, error } = await supabase
+      .from("profiles")
+      .update({
+        full_name: clean.name,
+        phone: clean.phone,
+        pincode: clean.pincode,
+        city: clean.city,
+        address: clean.address,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("user_id", user.id)
+      .select("user_id");
+    setSaving(false);
+
+    if (error) {
+      toast({ title: "Couldn't save your profile", description: error.message, variant: "destructive" });
+      return;
+    }
+    if (!data || data.length === 0) {
+      // update() matches zero rows without an error when the profile row is missing.
+      toast({
+        title: "Couldn't find your profile",
+        description: "Log out, log back in and try again.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSaved(clean);
+    setForm(clean);
+    refetchProfile(); // keeps the name and pincode in the rest of the app fresh
+    toast({ title: "Profile saved" });
+  };
+
+  const handleLogout = async () => {
+    await signOut();
+    navigate("/", { replace: true });
+  };
+
+  const initial = (saved.name || user?.email || "U").trim().slice(0, 1).toUpperCase();
+  const memberSince = meta.createdAt ? format(new Date(meta.createdAt), "MMMM yyyy") : null;
+
+  const setupSteps = [
+    { label: "Add your name", done: saved.name.trim().length >= 2 },
+    { label: "Add your mobile number", done: saved.phone.trim().length > 0 },
+  ];
+  const showSetup = status === "ready" && setupSteps.some((s) => !s.done);
+
+  const shortcuts = [
+    { to: "/my-bookings", label: "My bookings", Icon: CalendarDays, badge: upcomingBookingsCount > 0 ? `${upcomingBookingsCount} upcoming` : undefined },
+    { to: "/notifications", label: "Notifications", Icon: Bell, badge: unreadNotificationsCount > 0 ? `${unreadNotificationsCount} new` : undefined },
+    { to: "/become-a-pro", label: "Earn as a pro", Icon: Wrench },
+    { to: "/contact", label: "Help and contact", Icon: MessageCircle },
+    { to: "/about", label: `About ${BRAND.name}`, Icon: Info },
+  ];
 
   return (
-    <div className="min-h-screen bg-background">
-      <Navbar />
-      <motion.main
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="container mx-auto pt-28 pb-16 px-4"
-      >
-        {/* Setup Banner */}
-        {isSetup && (
+    <div className="min-h-dvh bg-background pb-32 md:pb-24">
+      <div className="sticky top-0 z-30 border-b border-border/60 bg-background/90 px-5 pb-3 pt-[max(1rem,env(safe-area-inset-top))] backdrop-blur-2xl md:pt-24">
+        <h1 className="mx-auto max-w-2xl text-[28px] font-extrabold tracking-tight">Profile</h1>
+      </div>
+
+      <div className="mx-auto max-w-2xl space-y-8 px-5 pt-5">
+        {status === "loading" && (
+          <div className="space-y-6" aria-busy="true" aria-label="Loading your profile">
+            <Skeleton className="h-44 rounded-3xl" />
+            <div className="space-y-4">
+              <Skeleton className="h-12 rounded-xl" />
+              <Skeleton className="h-12 rounded-xl" />
+              <Skeleton className="h-12 rounded-xl" />
+            </div>
+          </div>
+        )}
+
+        {status === "error" && (
+          <div role="alert" className="space-y-4 rounded-3xl bg-secondary p-6">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-destructive" />
+              <div>
+                <p className="font-bold">We couldn't load your profile.</p>
+                <p className="mt-1 text-sm text-muted-foreground">Check your connection and try again.</p>
+              </div>
+            </div>
+            <Button onClick={() => void load()}>Try again</Button>
+          </div>
+        )}
+
+        {status === "ready" && (
+          <>
+            <motion.section
+              initial={reduce ? false : { opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.35, ease: EASE }}
+              className="overflow-hidden rounded-3xl bg-primary text-primary-foreground"
+            >
+              <div className="flex items-center gap-4 p-5">
+                <Avatar className="h-16 w-16 ring-2 ring-gold/80">
+                  <AvatarImage src={meta.avatarUrl ?? undefined} alt="" />
+                  <AvatarFallback className="bg-gold text-2xl font-extrabold text-gold-foreground">{initial}</AvatarFallback>
+                </Avatar>
+                <div className="min-w-0">
+                  <p className="truncate text-xl font-extrabold tracking-tight">{saved.name || "Add your name"}</p>
+                  <p className="truncate text-sm text-white/70">{user?.email}</p>
+                  {memberSince && <p className="mt-0.5 text-xs text-white/55">Member since {memberSince}</p>}
+                </div>
+              </div>
+              <dl className="grid grid-cols-2 border-t border-white/10">
+                <div className="px-5 py-4">
+                  <dt className="text-xs text-white/60">Bookings</dt>
+                  <dd className="mt-0.5 text-2xl font-extrabold">{stats.total}</dd>
+                </div>
+                <div className="border-l border-white/10 px-5 py-4">
+                  <dt className="text-xs text-white/60">Completed</dt>
+                  <dd className="mt-0.5 text-2xl font-extrabold text-gold">{stats.completed}</dd>
+                </div>
+              </dl>
+            </motion.section>
+
+            {showSetup && (
+              <section aria-labelledby="setup-title" className="rounded-3xl bg-accent px-5 py-5">
+                <h2 id="setup-title" className="font-extrabold tracking-tight">
+                  {isSetup ? "One last step before you book" : "Finish setting up"}
+                </h2>
+                <p className="mt-1 text-sm text-muted-foreground">Pros use your name and number to reach you about a booking.</p>
+                <ul className="mt-4 space-y-2.5">
+                  {setupSteps.map((s) => (
+                    <li key={s.label} className="flex items-center gap-3 text-sm font-semibold">
+                      <span
+                        className={cn(
+                          "flex h-5 w-5 items-center justify-center rounded-full border-2",
+                          s.done ? "border-primary bg-primary text-primary-foreground" : "border-foreground/30",
+                        )}
+                        aria-hidden="true"
+                      >
+                        {s.done && <Check className="h-3 w-3" strokeWidth={3} />}
+                      </span>
+                      <span className={s.done ? "text-muted-foreground line-through" : undefined}>{s.label}</span>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
+
+            <form id="profile-form" onSubmit={save} noValidate className="space-y-8">
+              <section aria-labelledby="details-title" className="space-y-4">
+                <h2 id="details-title" className="text-lg font-extrabold tracking-tight">Your details</h2>
+                <TextField
+                  id="pf-name"
+                  name="name"
+                  label="Full name"
+                  autoComplete="name"
+                  autoCapitalize="words"
+                  enterKeyHint="next"
+                  placeholder="Your full name"
+                  value={form.name}
+                  onChange={(e) => set("name")(e.target.value)}
+                  error={errors.name}
+                />
+                <TextField
+                  id="pf-phone"
+                  name="phone"
+                  type="tel"
+                  label="Mobile number"
+                  inputMode="tel"
+                  autoComplete="tel"
+                  enterKeyHint="next"
+                  placeholder="98765 43210"
+                  value={form.phone}
+                  onChange={(e) => set("phone")(e.target.value)}
+                  error={errors.phone}
+                  hint="Pros call this number about your booking."
+                />
+                <TextField
+                  id="pf-email"
+                  name="email"
+                  label="Email"
+                  readOnly
+                  value={user?.email ?? ""}
+                  className="bg-secondary/60 text-muted-foreground focus-visible:bg-secondary/60"
+                  hint="This is your login email. It can't be changed here."
+                />
+              </section>
+
+              <section aria-labelledby="address-title" className="space-y-4">
+                <h2 id="address-title" className="text-lg font-extrabold tracking-tight">Default address</h2>
+                <TextField
+                  id="pf-pincode"
+                  name="pincode"
+                  label="Pincode"
+                  inputMode="numeric"
+                  autoComplete="postal-code"
+                  maxLength={6}
+                  enterKeyHint="next"
+                  placeholder="380001"
+                  value={form.pincode}
+                  onChange={(e) => set("pincode")(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                  error={errors.pincode}
+                />
+                {form.pincode.length === 6 && !errors.pincode && (
+                  <button
+                    type="button"
+                    onClick={() => navigate(`/services?pincode=${form.pincode}`)}
+                    className="-mt-2 inline-flex items-center gap-1.5 rounded text-sm font-semibold underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    <MapPin className="h-4 w-4" /> See services in {form.pincode}
+                  </button>
+                )}
+                <TextField
+                  id="pf-city"
+                  name="city"
+                  label="City"
+                  autoComplete="address-level2"
+                  enterKeyHint="next"
+                  placeholder="Your city"
+                  value={form.city}
+                  onChange={(e) => set("city")(e.target.value)}
+                />
+                <FieldShell id="pf-address" label="Full address" hint="House number, street and area.">
+                  <Textarea
+                    id="pf-address"
+                    name="address"
+                    autoComplete="street-address"
+                    rows={3}
+                    placeholder="House number, street, area"
+                    aria-describedby="pf-address-msg"
+                    value={form.address}
+                    onChange={(e) => set("address")(e.target.value)}
+                    className={cn(fieldClass, "h-auto min-h-[96px] resize-none py-3", errors.address && fieldErrorClass)}
+                  />
+                </FieldShell>
+              </section>
+            </form>
+
+            <nav aria-label="Shortcuts" className="divide-y divide-border/70 overflow-hidden rounded-2xl border border-border">
+              {shortcuts.map(({ to, label, Icon, badge }) => (
+                <Link
+                  key={to}
+                  to={to}
+                  className="press flex min-h-14 items-center gap-3 px-4 py-3 transition-colors hover:bg-secondary/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+                >
+                  <Icon className="h-5 w-5 text-muted-foreground" aria-hidden="true" />
+                  <span className="flex-1 font-semibold">{label}</span>
+                  {badge && <span className="rounded-full bg-gold px-2.5 py-0.5 text-xs font-bold text-gold-foreground">{badge}</span>}
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                </Link>
+              ))}
+            </nav>
+
+            <button
+              type="button"
+              onClick={() => setConfirmLogout(true)}
+              className="press flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-secondary font-bold text-red-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <LogOut className="h-5 w-5" aria-hidden="true" /> Log out
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setConfirmDelete(true)}
+              className="press mx-auto block min-h-11 px-4 text-sm font-semibold text-muted-foreground underline underline-offset-4 hover:text-red-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              Delete account
+            </button>
+          </>
+        )}
+      </div>
+
+      <AnimatePresence>
+        {status === "ready" && dirty && (
           <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mb-6 bg-primary/10 border border-primary/30 rounded-xl px-5 py-4 flex items-start gap-3"
+            initial={reduce ? false : { y: 24, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 24, opacity: 0 }}
+            transition={{ duration: 0.2, ease: EASE }}
+            className="fixed inset-x-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] z-40 border-t border-border/60 bg-background/90 px-5 py-3 backdrop-blur-2xl md:bottom-0"
           >
-            <AlertCircle className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
-            <div>
-              <p className="text-sm font-semibold text-foreground">Complete your profile</p>
-              <p className="text-sm text-muted-foreground">
-                Add your name, phone, and address to enable faster checkout and
-                personalized service recommendations.
-              </p>
+            <div className="mx-auto flex max-w-2xl gap-3">
+              <Button type="button" variant="secondary" size="lg" className="flex-1" onClick={discard} disabled={saving}>
+                Discard
+              </Button>
+              <Button type="submit" form="profile-form" size="lg" className="flex-[2]" disabled={saving} aria-busy={saving}>
+                {saving ? (
+                  <>
+                    <Loader2 className="animate-spin" /> Saving…
+                  </>
+                ) : (
+                  "Save changes"
+                )}
+              </Button>
             </div>
           </motion.div>
         )}
+      </AnimatePresence>
 
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8 gap-4 flex-wrap">
-          <h1 className="text-3xl font-bold text-foreground">My Profile</h1>
-          <Button
-            className="bg-gradient-gold text-primary-foreground font-semibold shadow-gold hover:opacity-90"
-            disabled={saving}
-            onClick={updateProfile}
-          >
-            {saving ? (
-              <Loader2 className="w-4 h-4 animate-spin mr-2" />
-            ) : (
-              <Save className="w-4 h-4 mr-2" />
-            )}
-            {saving ? "Saving..." : "Save Changes"}
-          </Button>
-        </div>
+      <DeleteAccountDialog open={confirmDelete} onOpenChange={setConfirmDelete} />
 
-        {loading ? (
-          <div className="grid lg:grid-cols-3 gap-6">
-            {[1, 2, 3].map((i) => (
-              <div
-                key={i}
-                className="bg-card border border-border rounded-2xl p-5 animate-pulse"
-              >
-                <div className="h-6 bg-secondary rounded mb-4 w-1/3" />
-                <div className="space-y-3">
-                  <div className="h-10 bg-secondary rounded" />
-                  <div className="h-10 bg-secondary rounded" />
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="grid lg:grid-cols-3 gap-6">
-            {/* Main column */}
-            <div className="lg:col-span-2 space-y-6">
-              {/* Personal Info */}
-              <section className="bg-card border border-border rounded-2xl p-6">
-                <h2 className="text-xl font-semibold text-foreground mb-5">Personal Info</h2>
-
-                {/* Avatar + name display */}
-                <div className="flex items-center gap-4 mb-6 pb-6 border-b border-border">
-                  <Avatar className="w-16 h-16">
-                    <AvatarImage src={profile?.avatar_url ?? undefined} alt="Profile" />
-                    <AvatarFallback className="bg-gradient-gold text-primary-foreground text-2xl font-bold">
-                      {initial}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <p className="font-semibold text-foreground text-lg">
-                      {name || "Your Name"}
-                    </p>
-                    <p className="text-sm text-muted-foreground">{user?.email}</p>
-                    {profile?.created_at && (
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Member since {memberSince}
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <label className="text-sm text-muted-foreground flex items-center gap-1.5">
-                      <User className="w-3.5 h-3.5" /> Full Name
-                    </label>
-                    <Input
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      placeholder="Your full name"
-                      className="bg-secondary border-border"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-sm text-muted-foreground flex items-center gap-1.5">
-                      <Phone className="w-3.5 h-3.5" /> Phone
-                    </label>
-                    <Input
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      placeholder="+91 9876543210"
-                      className="bg-secondary border-border"
-                    />
-                  </div>
-                  <div className="md:col-span-2 space-y-1.5">
-                    <label className="text-sm text-muted-foreground flex items-center gap-1.5">
-                      <Mail className="w-3.5 h-3.5" /> Email
-                    </label>
-                    <Input
-                      value={user?.email ?? ""}
-                      disabled
-                      className="bg-secondary/50 border-border text-muted-foreground"
-                    />
-                  </div>
-                </div>
-              </section>
-
-              {/* Address */}
-              <section className="bg-card border border-border rounded-2xl p-6">
-                <h2 className="text-xl font-semibold text-foreground mb-5">
-                  Address Details
-                </h2>
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <label className="text-sm text-muted-foreground flex items-center gap-1.5">
-                      <MapPin className="w-3.5 h-3.5" /> Default Pincode
-                    </label>
-                    <Input
-                      value={pincode}
-                      onChange={(e) =>
-                        setPincode(e.target.value.replace(/\D/g, "").slice(0, 6))
-                      }
-                      placeholder="380001"
-                      className="bg-secondary border-border"
-                      maxLength={6}
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-sm text-muted-foreground">City</label>
-                    <Input
-                      value={city}
-                      onChange={(e) => setCity(e.target.value)}
-                      placeholder="Ahmedabad"
-                      className="bg-secondary border-border"
-                    />
-                  </div>
-                  <div className="md:col-span-2 space-y-1.5">
-                    <label className="text-sm text-muted-foreground">Full Address</label>
-                    <Textarea
-                      value={address}
-                      onChange={(e) => setAddress(e.target.value)}
-                      placeholder="House number, street, area..."
-                      className="bg-secondary border-border resize-none"
-                      rows={3}
-                    />
-                  </div>
-                </div>
-
-                {/* Quick search with saved pincode */}
-                {pincode.length === 6 && (
-                  <div className="mt-4 pt-4 border-t border-border">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="border-primary/30 text-primary hover:bg-primary/10"
-                      onClick={() => navigate(`/services?pincode=${pincode}`)}
-                    >
-                      <MapPin className="w-3.5 h-3.5 mr-1.5" />
-                      Find services in {pincode}{" "}
-                      <ArrowRight className="w-3.5 h-3.5 ml-1" />
-                    </Button>
-                  </div>
-                )}
-              </section>
-            </div>
-
-            {/* Sidebar */}
-            <div className="space-y-6">
-              {/* Stats */}
-              <section className="bg-card border border-border rounded-2xl p-5">
-                <h2 className="text-lg font-semibold text-foreground mb-4">Account Stats</h2>
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between py-2 border-b border-border/50">
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Calendar className="w-4 h-4" /> Member Since
-                    </div>
-                    <span className="text-sm font-medium text-foreground">{memberSince}</span>
-                  </div>
-                  <div className="flex items-center justify-between py-2 border-b border-border/50">
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Star className="w-4 h-4" /> Total Bookings
-                    </div>
-                    <span className="text-2xl font-bold text-primary">{totalBookings}</span>
-                  </div>
-                  <div className="flex items-center justify-between py-2">
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <CheckCircle2 className="w-4 h-4" /> Completed
-                    </div>
-                    <span className="text-2xl font-bold text-green-400">
-                      {completedBookings}
-                    </span>
-                  </div>
-                </div>
-              </section>
-
-              {/* Recent Bookings */}
-              <section className="bg-card border border-border rounded-2xl p-5">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-semibold text-foreground">Recent Bookings</h2>
-                  <Link
-                    to="/my-bookings"
-                    className="text-sm text-primary hover:underline flex items-center gap-1"
-                  >
-                    View all <ArrowRight className="w-3 h-3" />
-                  </Link>
-                </div>
-
-                {bookings.length === 0 ? (
-                  <div className="text-center py-6">
-                    <Calendar className="w-8 h-8 text-muted-foreground/30 mx-auto mb-2" />
-                    <p className="text-sm text-muted-foreground">No bookings yet.</p>
-                    <Button
-                      size="sm"
-                      className="mt-3 bg-gradient-gold text-primary-foreground"
-                      onClick={() => navigate("/services")}
-                    >
-                      Book a Service
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {bookings.map((booking) => (
-                      <div
-                        key={booking.id}
-                        className="rounded-xl bg-secondary px-3 py-3 flex items-center justify-between gap-3"
-                      >
-                        <div>
-                          <p className="text-sm font-medium text-foreground">
-                            {booking.services?.name ?? "Service"}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {format(new Date(booking.booking_date), "d MMM yyyy")}
-                          </p>
-                        </div>
-                        <Badge
-                          className={
-                            statusBadgeClass[booking.status ?? "pending"] ?? "status-pending"
-                          }
-                        >
-                          {booking.status?.replace("_", " ") ?? "pending"}
-                        </Badge>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </section>
-            </div>
-          </div>
-        )}
-      </motion.main>
-      <Footer />
+      <AlertDialog open={confirmLogout} onOpenChange={setConfirmLogout}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Log out of {BRAND.name}?</AlertDialogTitle>
+            <AlertDialogDescription>You'll need to log in again to book or track a service.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Stay logged in</AlertDialogCancel>
+            <AlertDialogAction onClick={() => void handleLogout()}>Log out</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

@@ -7,13 +7,21 @@ This directory contains all Supabase database resources for HandyFix.
 ```
 database/
 ├── migrations/
-│   ├── customer/   # Migrations for the customer-app schema
-│   └── provider/   # Migrations for the provider-app schema
-└── functions/
-    ├── send-welcome-email/     # Sends a welcome email after customer signup
-    ├── send-provider-otp/      # Generates and sends an OTP for provider login
-    └── verify-provider-otp/    # Verifies the OTP and returns a session
+│   ├── 20261007000000_security_hardening.sql   # latest, shared by all apps
+│   ├── customer/   # historical customer-app migrations
+│   └── provider/   # historical provider-app migrations
+├── supabase/
+│   └── functions/            # Edge Functions (single source of truth)
+│       ├── _shared/cors.ts   # CORS allow-list + helpers
+│       ├── send-welcome-email/
+│       ├── send-customer-otp/    verify-customer-otp/
+│       └── send-provider-otp/    verify-provider-otp/
+└── README.md
 ```
+
+> Run Supabase CLI commands from this `database/` directory so it finds `supabase/functions`.
+> Both apps share ONE Supabase project. Put every new migration in `database/migrations/` (not the
+> per-app folders). `docs/archive/` holds a fee-trigger proposal that was never applied.
 
 ## Applying migrations
 
@@ -36,6 +44,13 @@ supabase functions deploy verify-customer-otp
 ```
 
 > Edge Functions require the Supabase CLI to be installed and linked to your project.
+
+## Required secrets
+
+```bash
+supabase secrets set ALLOWED_ORIGINS=https://handyfix.in,https://provider.handyfix.in,https://admin.handyfix.in
+```
+Without `ALLOWED_ORIGINS` the functions fall back to `*` and log a warning (dev only).
 
 ## Email provider: Brevo
 

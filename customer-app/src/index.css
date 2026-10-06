@@ -1,53 +1,55 @@
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
-    --background: 38 44% 96%;
-    --foreground: 0 0% 11%;
+    --background: 0 0% 100%;
+    --foreground: 0 0% 7%;
 
     --card: 0 0% 100%;
-    --card-foreground: 0 0% 11%;
+    --card-foreground: 0 0% 7%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 11%;
+    --popover-foreground: 0 0% 7%;
 
-    --primary: 22 61% 47%;
+    /* Brand: ink black primary, gold accent */
+    --primary: 0 0% 7%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 40 32% 91%;
-    --secondary-foreground: 0 0% 11%;
+    --secondary: 0 0% 96%;
+    --secondary-foreground: 0 0% 7%;
 
-    --muted: 40 32% 91%;
-    --muted-foreground: 41 10% 33%;
+    --muted: 0 0% 96%;
+    --muted-foreground: 0 0% 40%;
 
-    --accent: 25 78% 93%;
-    --accent-foreground: 22 61% 47%;
+    --accent: 45 100% 93%;
+    --accent-foreground: 0 0% 7%;
+
+    --gold: 43 96% 51%;
+    --gold-foreground: 0 0% 7%;
 
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 40 32% 89%;
-    --input: 40 32% 89%;
-    --ring: 22 61% 47%;
+    --border: 0 0% 91%;
+    --input: 0 0% 91%;
+    --ring: 43 96% 51%;
 
-    --radius: 0.75rem;
+    --radius: 1rem;
 
     --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 0 0% 11%;
-    --sidebar-primary: 22 61% 47%;
+    --sidebar-foreground: 0 0% 7%;
+    --sidebar-primary: 0 0% 7%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 25 78% 93%;
-    --sidebar-accent-foreground: 22 61% 47%;
-    --sidebar-border: 40 32% 89%;
-    --sidebar-ring: 22 61% 47%;
+    --sidebar-accent: 45 100% 93%;
+    --sidebar-accent-foreground: 0 0% 7%;
+    --sidebar-border: 0 0% 91%;
+    --sidebar-ring: 43 96% 51%;
 
-    --gold-glow: 22 61% 47%;
+    --gold-glow: 43 96% 51%;
     --surface-elevated: 0 0% 100%;
-    --stat-strip: 0 0% 11%;
+    --stat-strip: 0 0% 7%;
   }
 }
 
@@ -56,34 +58,69 @@
     @apply border-border;
   }
 
+  html {
+    -webkit-text-size-adjust: 100%;
+    scroll-padding-top: calc(5rem + env(safe-area-inset-top));
+  }
+
   body {
-    @apply bg-background text-foreground font-sans;
-    font-family: 'Plus Jakarta Sans', sans-serif;
+    @apply bg-background text-foreground font-sans antialiased;
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    -webkit-tap-highlight-color: transparent;
+    overscroll-behavior-y: none;   /* no rubber-band pull on the whole app */
+    touch-action: manipulation;    /* removes the 300ms double-tap-zoom delay */
+  }
+
+  /* iOS zooms the page when a focused field is under 16px — keep inputs at 16px on phones. */
+  @media (max-width: 767px) {
+    input, select, textarea { font-size: 16px !important; }
+  }
+
+  /* Respect people who ask their device for less motion. */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
   }
 }
 
 @layer utilities {
+  /* Skip rendering work for long off-screen sections until they scroll near the viewport. */
+  .defer-render {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 640px;
+  }
+
   .text-gradient-gold {
-    background: linear-gradient(135deg, hsl(22 61% 47%), hsl(22 61% 57%));
+    background: linear-gradient(135deg, hsl(43 96% 51%), hsl(38 92% 44%));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
   }
 
   .bg-gradient-gold {
-    background: linear-gradient(135deg, hsl(22 61% 47%), hsl(22 61% 55%));
+    background: linear-gradient(135deg, hsl(43 96% 56%), hsl(38 92% 46%));
   }
+
+  /* Tactile press feedback used on every tappable surface */
+  .press { transition: transform 160ms cubic-bezier(0.22,1,0.36,1); }
+  .press:active { transform: scale(0.96); }
+  .no-scrollbar { scrollbar-width: none; }
+  .no-scrollbar::-webkit-scrollbar { display: none; }
 
   .bg-surface-elevated {
     background: hsl(var(--surface-elevated));
   }
 
   .shadow-gold {
-    box-shadow: 0 0 30px -5px hsl(22 61% 47% / 0.3);
+    box-shadow: 0 0 30px -5px hsl(43 96% 51% / 0.35);
   }
 
   .glow-gold {
-    box-shadow: 0 0 40px -10px hsl(22 61% 47% / 0.4);
+    box-shadow: 0 0 40px -10px hsl(43 96% 51% / 0.4);
   }
 
   /* Booking status badges */

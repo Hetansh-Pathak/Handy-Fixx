@@ -89,7 +89,21 @@ const Dashboard: React.FC = () => {
       ]);
 
       if (countsRes.error) throw countsRes.error;
-      setCounts(countsRes.data as unknown as DashboardCounts);
+      // admin_get_dashboard_counts answers {error: 'Permission denied'} as DATA (not as an RPC error). Treating that
+      // as counts rendered a dashboard full of undefined values.
+      const raw = countsRes.data as unknown as (Partial<DashboardCounts> & { error?: string }) | null;
+      if (!raw || raw.error) throw new Error(raw?.error ?? 'Dashboard data unavailable');
+      setCounts({
+        pending_kyc: raw.pending_kyc ?? 0,
+        active_providers: raw.active_providers ?? 0,
+        suspended_providers: raw.suspended_providers ?? 0,
+        bookings_today: raw.bookings_today ?? 0,
+        pending_bookings: raw.pending_bookings ?? 0,
+        in_progress_bookings: raw.in_progress_bookings ?? 0,
+        completed_today: raw.completed_today ?? 0,
+        cancelled_today: raw.cancelled_today ?? 0,
+        needs_attention: Array.isArray(raw.needs_attention) ? raw.needs_attention : [],
+      });
 
       if (auditRes.error) throw auditRes.error;
       setAuditLog((auditRes.data ?? []) as AuditEntry[]);

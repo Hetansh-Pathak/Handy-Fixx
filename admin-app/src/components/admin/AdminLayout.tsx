@@ -3,7 +3,7 @@ import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard, Shield, Users, BookOpen, FileText,
-  LogOut, Menu, X, ChevronLeft, Bell
+  LogOut, Menu, X, ChevronLeft, Bell, Wallet
 } from 'lucide-react';
 import { useAdminAuth } from '@/contexts/AdminAuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -46,6 +46,7 @@ const AdminLayout: React.FC = () => {
     { to: '/kyc', icon: <Shield className="h-5 w-5" />, label: 'KYC Review', badge: pendingKyc },
     { to: '/providers', icon: <Users className="h-5 w-5" />, label: 'Providers' },
     { to: '/bookings', icon: <BookOpen className="h-5 w-5" />, label: 'Bookings' },
+    { to: '/payouts', icon: <Wallet className="h-5 w-5" />, label: 'Payouts' },
     { to: '/audit', icon: <FileText className="h-5 w-5" />, label: 'Audit Log' },
   ];
 

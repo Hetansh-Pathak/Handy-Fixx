@@ -9,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Save, Plus, X, Loader2, Building2, CreditCard, Briefcase, CheckCircle2, Mail, MapPin } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { cleanPayout, validatePayout } from '@/lib/payoutDetails';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -164,13 +165,29 @@ const Profile: React.FC = () => {
   };
 
   const saveCustomPrice = async (serviceId: string, price: number) => {
-    if (!provider?.id || !price) return;
-    await (supabase as any).from('provider_service_pricing').upsert({
+    if (!provider?.id || !price) return true;
+    const { error } = await (supabase as any).from('provider_service_pricing').upsert({
       provider_id: provider.id,
       service_id: serviceId,
       custom_price: price,
       is_available: true,
     }, { onConflict: 'provider_id,service_id' });
+    return !error;
+  };
+
+  // Payout details save on their own. They used to be saved only by the big Save button, which refused to run
+  // until at least one service was ticked, so a new provider could not add a bank account at all.
+  const [savingBank, setSavingBank] = useState(false);
+  const saveBank = async () => {
+    if (!provider || savingBank) return;
+    const problem = validatePayout(form);
+    if (problem) { toast({ title: 'Check your payout details', description: problem, variant: 'destructive' }); return; }
+    setSavingBank(true);
+    const { error } = await supabase.from('service_providers').update(cleanPayout(form) as any).eq('id', provider.id);
+    setSavingBank(false);
+    if (error) { toast({ title: 'Could not save payout details', description: error.message, variant: 'destructive' }); return; }
+    toast({ title: 'Payout details saved', description: 'You can now withdraw your earnings.' });
+    refreshProvider();
   };
 
   const handleSave = async () => {
@@ -178,6 +195,13 @@ const Profile: React.FC = () => {
 
     if (selectedServiceIds.length === 0) {
       toast({ title: 'Select at least one service', description: 'Customers need to know what you offer.', variant: 'destructive' });
+      return;
+    }
+
+    const anyPayout = Boolean(form.bank_account_name || form.bank_account_number || form.bank_ifsc || form.upi_id);
+    const payoutProblem = anyPayout ? validatePayout(form) : null;
+    if (payoutProblem) {
+      toast({ title: 'Check your payout details', description: payoutProblem, variant: 'destructive' });
       return;
     }
 
@@ -204,10 +228,7 @@ const Profile: React.FC = () => {
       bio: form.bio,
       experience_years: Number(form.experience_years),
       service_ids: selectedServiceIds,
-      bank_account_name: form.bank_account_name || null,
-      bank_account_number: form.bank_account_number || null,
-      bank_ifsc: form.bank_ifsc || null,
-      upi_id: form.upi_id || null,
+      ...cleanPayout(form),
       profile_completion: completion,
     } as any).eq('id', provider.id);
 
@@ -217,13 +238,32 @@ const Profile: React.FC = () => {
       return;
     }
 
-    // Save custom prices for all selected services
+    // Customers read the services a pro offers from `provider_services`; keep it in step with the ticked services.
+    const { error: syncErr } = await (supabase as any).rpc('sync_my_provider_services', { p_service_ids: selectedServiceIds });
+
+    // Optional custom prices. Report a failure instead of claiming everything saved.
+    let priceFailed = false;
     for (const serviceId of selectedServiceIds) {
       const price = customPrices[serviceId];
-      if (price) await saveCustomPrice(serviceId, price);
+      if (price) { if (!(await saveCustomPrice(serviceId, price))) priceFailed = true; }
     }
 
-    toast({ title: 'Profile saved ✅', description: 'Services, prices, and service cities are now live.' });
+    if (syncErr || priceFailed) {
+      // Show the REAL reason. The old generic text hid that the database function was missing, which is the
+      // usual cause on a project where the latest migrations have not been applied yet.
+      if (syncErr) console.error('[Profile] sync_my_provider_services failed:', syncErr);
+      const msg = String(syncErr?.message ?? '');
+      const code = String((syncErr as { code?: string } | null)?.code ?? '');
+      const missingFn = code === 'PGRST202' || code === '42883' || /could not find the function|schema cache|does not exist/i.test(msg);
+      const description = syncErr
+        ? (missingFn
+            ? 'The database is missing sync_my_provider_services. Apply migration 20261012000000_provider_customer_matching.sql in Supabase, then run: NOTIFY pgrst, \'reload schema\';'
+            : `${msg || 'Unknown error'}${code ? ` (${code})` : ''}`)
+        : 'Your custom prices could not be saved. Check that the provider_service_pricing table exists.';
+      toast({ title: 'Profile saved, but your services did not sync', description, variant: 'destructive' });
+    } else {
+      toast({ title: 'Profile saved', description: 'Your details and services are up to date.' });
+    }
     refreshProvider();
     setSaving(false);
   };
@@ -532,6 +572,9 @@ const Profile: React.FC = () => {
               <Input value={form.upi_id} onChange={e => update('upi_id', e.target.value)} className="glass-input" placeholder="name@upi" />
             </div>
           </div>
+          <Button type="button" variant="outline" className="w-full h-11" onClick={saveBank} disabled={savingBank}>
+            {savingBank ? 'Saving…' : 'Save payout details'}
+          </Button>
           {provider?.bank_account_number && (
             <div className="flex items-center gap-2 text-xs text-success">
               <CreditCard className="h-3.5 w-3.5" />

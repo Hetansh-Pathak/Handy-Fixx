@@ -2,15 +2,10 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 // @ts-expect-error Supabase resolves Deno URL imports at deploy time.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { getCorsHeaders, makeJson } from "../_shared/cors.ts";
 
 declare const Deno: { env: { get: (name: string) => string | undefined } };
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
-const json = (body: unknown, status = 200) =>
-  new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
 const MAX_ATTEMPTS = 5;
 
@@ -26,6 +21,8 @@ const safeEqual = (a: string, b: string) => {
 };
 
 serve(async (req: Request) => {
+  const corsHeaders = getCorsHeaders(req);
+  const json = makeJson(corsHeaders);
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   try {
     const { otp_code } = await req.json();
