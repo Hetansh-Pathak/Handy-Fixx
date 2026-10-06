@@ -13,7 +13,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
-type RpcOk = { ok: true };
 type RpcFail = {
   ok: false;
   reason: string;       // 'wrong_code' | 'locked' | 'unauthorized' | ...
@@ -21,7 +20,8 @@ type RpcFail = {
   locked?: boolean;
   locked_until?: string;
 };
-type RpcResult = RpcOk | RpcFail;
+// Flat shape: works without strictNullChecks, where the ok:true/false union does not narrow.
+type RpcResult = { ok: boolean } & Partial<Omit<RpcFail, 'ok'>>;
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function formatLockTime(lockedUntil: string): string {
@@ -82,7 +82,7 @@ export default function CompleteJobDialog({ open, bookingId, onClose, onComplete
       const result = data as RpcResult;
 
       if (result.ok) {
-        toast({ title: '🎉 Job Completed!', description: 'Earnings have been credited.' });
+        toast({ title: '🎉 Job Completed!', description: 'Your earnings become withdrawable once the customer has paid.' });
         onCompleted();
         onClose();
       } else if (result.reason === 'wrong_code') {
@@ -116,25 +116,25 @@ export default function CompleteJobDialog({ open, bookingId, onClose, onComplete
   };
 
   const handleReportIssue = async () => {
+    if (reportSent) return;
     setReportSent(true);
-    // Create an admin notification / support request
-    try {
-      await (supabase as unknown as {
-        from: (t: string) => {
-          insert: (row: unknown) => Promise<{ error: { message: string } | null }>;
-        };
-      }).from('provider_notifications').insert({
-        provider_id: '__admin__',   // placeholder; adjust to your admin system
-        type: 'support_request',
-        title: 'Provider unable to get completion code',
-        message: `Provider reported customer unavailable for booking ${bookingId.slice(0, 8).toUpperCase()}. Manual review needed.`,
-        data: { booking_id: bookingId, reason: 'customer_unavailable' },
+    // Goes through report_job_issue(): the old code inserted provider_id '__admin__' (not a uuid, no policy), which
+    // always failed, and the dialog still said "Issue reported".
+    const { data, error } = await (supabase as unknown as {
+      rpc: (fn: string, args: Record<string, unknown>) => Promise<{ data: { ok?: boolean; reason?: string } | null; error: { message: string } | null }>;
+    }).rpc('report_job_issue', { p_booking_id: bookingId, p_reason: 'customer_unavailable' });
+
+    if (error || data?.ok !== true) {
+      setReportSent(false);
+      toast({
+        title: 'Could not send the report',
+        description: error?.message ?? (data?.reason === 'unauthorized' ? 'This booking is not assigned to you.' : 'Please try again, or contact support.'),
+        variant: 'destructive',
       });
-    } catch {
-      // non-blocking
+      return;
     }
     toast({
-      title: 'Issue Reported',
+      title: 'Issue reported',
       description: 'Our team will review this booking and contact you shortly.',
     });
     onClose();

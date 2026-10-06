@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -229,7 +229,7 @@ const ProviderLogin: React.FC = () => {
             {features.map(({ icon: Icon, text }) => (
               <div key={text} className="flex items-center gap-3 bg-card/70 rounded-xl px-4 py-3 border border-border">
                 <div className="w-8 h-8 rounded-lg gold-gradient flex items-center justify-center shrink-0">
-                  <Icon className="h-4 w-4 text-primary-foreground" />
+                  <Icon className="h-4 w-4 text-gold-foreground" />
                 </div>
                 <span className="text-sm text-secondary-foreground">{text}</span>
               </div>
@@ -261,7 +261,7 @@ const ProviderLogin: React.FC = () => {
                 onClick={() => { setMode(m); setShowPassword(false); }}
                 className={`flex-1 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 ${
                   mode === m
-                    ? 'gold-gradient text-primary-foreground shadow-md'
+                    ? 'bg-gold text-gold-foreground font-bold shadow-md'
                     : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
@@ -291,12 +291,14 @@ const ProviderLogin: React.FC = () => {
                 <div className="space-y-4 pt-2">
                   {/* Email */}
                   <div>
-                    <label className="text-sm font-medium text-foreground mb-1.5 block">Email</label>
+                    <label htmlFor="signin-email" className="text-sm font-medium text-foreground mb-1.5 block">Email</label>
                     <div className="relative">
                       <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input
                         id="signin-email"
                         type="email"
+                        autoComplete="email"
+                        inputMode="email"
                         value={siEmail}
                         onChange={e => setSiEmail(e.target.value)}
                         className="glass-input pl-10"
@@ -308,12 +310,16 @@ const ProviderLogin: React.FC = () => {
 
                   {/* Password */}
                   <div>
-                    <label className="text-sm font-medium text-foreground mb-1.5 block">Password</label>
+                    <div className="mb-1.5 flex items-center justify-between">
+                      <label htmlFor="signin-password" className="text-sm font-medium text-foreground">Password</label>
+                      <Link to="/forgot-password" className="text-sm font-semibold underline underline-offset-2">Forgot password?</Link>
+                    </div>
                     <div className="relative">
                       <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input
                         id="signin-password"
                         type={showPassword ? 'text' : 'password'}
+                        autoComplete="current-password"
                         value={siPassword}
                         onChange={e => setSiPassword(e.target.value)}
                         className="glass-input pl-10 pr-10"
@@ -323,6 +329,7 @@ const ProviderLogin: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
+                        aria-label={showPassword ? 'Hide password' : 'Show password'}
                         className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                       >
                         {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -335,7 +342,7 @@ const ProviderLogin: React.FC = () => {
                   id="signin-submit"
                   type="submit"
                   disabled={loading}
-                  className="w-full gold-gradient text-primary-foreground font-semibold h-11 text-base"
+                  className="w-full bg-gold text-gold-foreground font-extrabold hover:bg-gold/90 h-11 text-base"
                 >
                   {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : (
                     <span className="flex items-center gap-2">Sign In <ArrowRight className="h-4 w-4" /></span>
@@ -487,7 +494,7 @@ const ProviderLogin: React.FC = () => {
                   id="signup-submit"
                   type="submit"
                   disabled={loading || (!!suConfirm && suConfirm !== suPassword)}
-                  className="w-full gold-gradient text-primary-foreground font-semibold h-11 text-base"
+                  className="w-full bg-gold text-gold-foreground font-extrabold hover:bg-gold/90 h-11 text-base"
                 >
                   {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : (
                     <span className="flex items-center gap-2">Create Account <ArrowRight className="h-4 w-4" /></span>

@@ -1,65 +1,65 @@
 import { useEffect, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import logo from "@/assets/logo.png";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { LogoMark } from "@/components/brand/Logo";
+import { BRAND } from "@/lib/brand";
+import { EASE } from "@/lib/motion";
 
+const SEEN_KEY = "hf_splash_seen";
+
+/**
+ * Brand moment on a cold start only. It never delays the app: the app renders underneath,
+ * and the splash lifts as soon as the first frame is ready (0.7s max). Returning within the
+ * same session — or opening any deep link again — skips it entirely.
+ * Ink background and gold mark match the launcher icon, so the hand-off from the native
+ * splash (added with the Android build) is seamless.
+ */
 const SplashScreen = () => {
-  const [visible, setVisible] = useState(true);
+  const reduce = useReducedMotion();
+  const [visible, setVisible] = useState(() => {
+    try {
+      return sessionStorage.getItem(SEEN_KEY) !== "1";
+    } catch {
+      return false;
+    }
+  });
 
   useEffect(() => {
-    // Show splash for 2.4 seconds then fade out
-    const timer = setTimeout(() => setVisible(false), 2400);
+    if (!visible) return;
+    try {
+      sessionStorage.setItem(SEEN_KEY, "1");
+    } catch {
+      /* private mode — fine */
+    }
+    const timer = setTimeout(() => setVisible(false), 700);
     return () => clearTimeout(timer);
-  }, []);
+  }, [visible]);
 
   return (
     <AnimatePresence>
       {visible && (
         <motion.div
           key="splash"
+          aria-hidden="true"
           initial={{ opacity: 1 }}
-          exit={{ opacity: 0, scale: 1.04 }}
-          transition={{ duration: 0.55, ease: "easeInOut" }}
-          className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-background"
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.25, ease: "easeOut" }}
+          className="pointer-events-none fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-primary"
         >
-          {/* Pulsing glow ring */}
           <motion.div
-            animate={{ scale: [1, 1.18, 1], opacity: [0.35, 0.6, 0.35] }}
-            transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-            className="absolute w-52 h-52 rounded-full bg-primary/20 blur-2xl"
-          />
-
-          {/* Logo */}
-          <motion.img
-            src={logo}
-            alt="HandyFix"
-            initial={{ opacity: 0, scale: 0.6, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            transition={{ duration: 0.65, ease: [0.34, 1.56, 0.64, 1] }}
-            className="w-28 h-28 rounded-3xl object-cover shadow-gold mb-6 relative z-10"
-          />
-
-          {/* Brand name */}
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.35, duration: 0.5, ease: "easeOut" }}
-            className="relative z-10 text-center"
+            initial={reduce ? false : { opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.4, ease: EASE }}
           >
-            <h1 className="text-3xl font-extrabold tracking-tight text-gradient-gold">
-              HandyFix
-            </h1>
-            <p className="text-muted-foreground text-sm mt-1 tracking-widest uppercase">
-              Home Services
-            </p>
+            <LogoMark className="h-28 w-28 text-gold" />
           </motion.div>
-
-          {/* Loading bar */}
-          <motion.div
-            initial={{ width: 0 }}
-            animate={{ width: "120px" }}
-            transition={{ delay: 0.5, duration: 1.6, ease: "easeInOut" }}
-            className="absolute bottom-20 h-0.5 rounded-full bg-primary"
-          />
+          <motion.p
+            initial={reduce ? false : { opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.12, duration: 0.3 }}
+            className="mt-5 text-xl font-extrabold tracking-tight text-primary-foreground"
+          >
+            {BRAND.name}
+          </motion.p>
         </motion.div>
       )}
     </AnimatePresence>

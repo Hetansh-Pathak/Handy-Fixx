@@ -3,7 +3,15 @@ ALTER TABLE public.bookings
   ADD COLUMN IF NOT EXISTS latitude DOUBLE PRECISION,
   ADD COLUMN IF NOT EXISTS longitude DOUBLE PRECISION;
 
-ALTER TYPE public.booking_status ADD VALUE IF NOT EXISTS 'on_the_way';
+-- bookings.status is TEXT with a CHECK on a clean database, so there is no enum to extend. Only touch the enum
+-- when this database really has one; 20261013000000_integrity_repairs.sql widens the CHECK for the text case.
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_type t JOIN pg_namespace n ON n.oid = t.typnamespace
+              WHERE n.nspname = 'public' AND t.typname = 'booking_status') THEN
+    ALTER TYPE public.booking_status ADD VALUE IF NOT EXISTS 'on_the_way';
+  END IF;
+END $$;
 
 CREATE TABLE IF NOT EXISTS public.provider_locations (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

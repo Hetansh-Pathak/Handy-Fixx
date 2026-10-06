@@ -3,6 +3,7 @@ import { Star } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { usePrefetchService } from "@/hooks/usePrefetchService";
 import { useApp } from "@/contexts/AppContext";
 import plumbingImg from "@/assets/service-plumbing.jpg";
 import electricalImg from "@/assets/service-electrical.jpg";
@@ -16,11 +17,14 @@ const imgFallback: Record<string, string> = {
 };
 
 const MostBooked = () => {
+  const prefetchService = usePrefetchService();
   const navigate = useNavigate();
   const { pincode } = useApp();
 
   const { data: mostBooked } = useQuery({
     queryKey: ["most-booked"],
+    staleTime: 1000 * 60 * 10,
+    meta: { persist: true },
     queryFn: async () => {
       const { data } = await supabase
         .from("services")
@@ -61,6 +65,7 @@ const MostBooked = () => {
               <motion.div key={item.slug || item.name} initial={{ opacity: 0, x: 30 }}
                 whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }}
                 transition={{ duration: 0.4, delay: i * 0.1 }} whileHover={{ y: -8 }}
+                onPointerEnter={() => prefetchService(item.slug)} onTouchStart={() => prefetchService(item.slug)}
                 onClick={() => navigate(`/services/${item.slug}${pincode ? `?pincode=${pincode}` : ""}`)}
                 className="min-w-[220px] bg-card rounded-xl overflow-hidden cursor-pointer group border border-border hover:border-primary/40 transition-colors">
                 <div className="relative h-40 overflow-hidden">

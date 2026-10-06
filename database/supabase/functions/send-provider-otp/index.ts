@@ -2,18 +2,19 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 // @ts-expect-error Supabase resolves Deno URL imports at deploy time.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { getCorsHeaders, makeJson } from "../_shared/cors.ts";
 
 declare const Deno: { env: { get: (name: string) => string | undefined } };
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+const RESEND_COOLDOWN_SECONDS = 60;
+const MAX_SENDS_PER_HOUR = 5;
+const OTP_TTL_MINUTES = 10;
+
+const sha256 = async (value: string) => {
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
+  return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, "0")).join("");
 };
 
-const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), {
-  status,
-  headers: { ...corsHeaders, "Content-Type": "application/json" },
-});
 
 const otpEmail = (code: string, email: string) => `<!doctype html>
 <html><head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -21,6 +22,8 @@ const otpEmail = (code: string, email: string) => `<!doctype html>
 </head><body><div class="wrapper"><div class="card"><div class="header"><h1>HandyFix</h1><p>Your Trusted Home Services Marketplace</p></div><div class="body"><p class="title">Verify your provider email</p><p class="text">Use this code to verify <strong style="color:#f5f5f5">${email}</strong>. It expires in 10 minutes.</p><div class="code">${code}</div><p class="text">If you did not request this code, you can safely ignore this email.</p></div><div class="footer">© 2026 HandyFix. All rights reserved.</div></div></div></body></html>`;
 
 serve(async (req: Request) => {
+  const corsHeaders = getCorsHeaders(req);
+  const json = makeJson(corsHeaders);
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   try {
     const { provider_id, email } = await req.json();
@@ -43,16 +46,28 @@ serve(async (req: Request) => {
     const { data: provider } = await admin.from("service_providers").select("id").eq("id", provider_id).eq("user_id", user.id).maybeSingle();
     if (!provider) return json({ error: "Provider not found" }, 403);
 
+    // Rate limiting (DB-backed, per provider) — runs BEFORE any state change
+    const hourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    const { data: recent, error: recentErr } = await admin
+      .from("provider_otp_codes").select("created_at").eq("provider_id", provider_id)
+      .gte("created_at", hourAgo).order("created_at", { ascending: false });
+    if (recentErr) throw recentErr;
+    if (recent && recent.length >= MAX_SENDS_PER_HOUR) return json({ error: "Too many requests. Try again in an hour." }, 429);
+    if (recent && recent[0]) {
+      const wait = RESEND_COOLDOWN_SECONDS - Math.floor((Date.now() - new Date(recent[0].created_at).getTime()) / 1000);
+      if (wait > 0) return json({ error: `Please wait ${wait}s before requesting another code.`, retry_after: wait }, 429);
+    }
+
     const normalizedEmail = email.trim().toLowerCase();
     const { error: providerError } = await admin.from("service_providers").update({ email: normalizedEmail, is_email_verified: false, verified_at: null }).eq("id", provider_id);
     if (providerError) throw providerError;
 
-    const { error: deleteError } = await admin.from("provider_otp_codes").delete().eq("provider_id", provider_id).gt("expires_at", new Date().toISOString());
+    const { error: deleteError } = await admin.from("provider_otp_codes").delete().eq("provider_id", provider_id);
     if (deleteError) throw deleteError;
 
-    const otp_code = crypto.getRandomValues(new Uint32Array(1))[0].toString().slice(-6).padStart(6, "0");
-    const expires_at = new Date(Date.now() + 10 * 60 * 1000).toISOString();
-    const { error: insertError } = await admin.from("provider_otp_codes").insert({ provider_id, email: normalizedEmail, otp_code, expires_at });
+    const otp_code = (crypto.getRandomValues(new Uint32Array(1))[0] % 1_000_000).toString().padStart(6, "0");
+    const expires_at = new Date(Date.now() + OTP_TTL_MINUTES * 60 * 1000).toISOString();
+    const { error: insertError } = await admin.from("provider_otp_codes").insert({ provider_id, email: normalizedEmail, code_hash: await sha256(`${provider_id}:${otp_code}`), expires_at });
     if (insertError) throw insertError;
 
     const brevoRes = await fetch("https://api.brevo.com/v3/smtp/email", {
