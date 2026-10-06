@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # HandyFix
 
 HandyFix is a home-services marketplace that connects customers with verified local professionals. The repository contains three Vite + React applications: a customer-facing booking experience, a dedicated provider dashboard, and a standalone admin operations panel, all backed by Supabase.
@@ -39,7 +38,11 @@ handy-fix/
 │   └── functions/
 │       ├── send-welcome-email/       # Edge Function: welcome email on signup
 │       ├── send-provider-otp/        # Edge Function: OTP for provider login
-│       └── verify-provider-otp/      # Edge Function: OTP verification
+│       ├── verify-provider-otp/      # Edge Function: OTP verification
+│       ├── delete-customer-account/  # Edge Function: in-app account deletion (Play Store requirement)
+│       ├── create-razorpay-order/    # Edge Function: server-priced Razorpay order for a completed booking
+│       ├── verify-razorpay-payment/  # Edge Function: checks signature + asks Razorpay, then marks paid
+│       └── razorpay-webhook/         # Edge Function: Razorpay -> us, source of truth for "paid" (deploy with --no-verify-jwt)
 └── docs/
     ├── customer-app-preview.png
     └── provider-app-preview.png
@@ -178,6 +181,3 @@ Run these from either `customer-app` or `provider-app`:
 ## License
 
 Add a license before making the repository public.
-=======
-# Handy-Fixx
->>>>>>> 40f08aba694f1c3dbf46563b3803c4193325acca

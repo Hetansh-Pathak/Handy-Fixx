@@ -590,7 +590,30 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      public_providers: {
+        Row: {
+          id: string | null
+          name: string | null
+          full_name: string | null
+          avatar_url: string | null
+          bio: string | null
+          rating: number | null
+          total_reviews: number | null
+          total_jobs: number | null
+          experience_years: number | null
+          pincodes: string[] | null
+          service_ids: string[] | null
+          is_online: boolean | null
+          is_verified: boolean | null
+          is_email_verified: boolean | null
+          status: string | null
+          kyc_status: string | null
+          city: string | null
+          created_at: string | null
+          updated_at: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       is_customer_email_verified: {

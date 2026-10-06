@@ -1,254 +1,256 @@
-import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { ArrowDownToLine, Check, Wallet } from 'lucide-react';
 import { useProvider } from '@/contexts/ProviderContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { motion } from 'framer-motion';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
-import { DollarSign, TrendingUp, Clock, Loader2, Wallet, ArrowDownToLine } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import LockedPage from '@/components/provider/LockedPage';
+import CountUp from '@/components/CountUp';
+import { Drawer, DrawerContent, DrawerDescription, DrawerTitle } from '@/components/ui/drawer';
+import { groupByDay, inr, monthBuckets, statusText, totalsOf, type EarningRow } from '@/lib/earningsView';
 
-const Earnings: React.FC = () => {
+type Earning = EarningRow & { id: string };
+type Payout = { id: string; amount: number; status: string; requested_at: string };
+
+const TABS = ['overview', 'activity', 'payouts'] as const;
+type Tab = typeof TABS[number];
+const TAB_LABEL: Record<Tab, string> = { overview: 'Overview', activity: 'Activity', payouts: 'Payouts' };
+
+const PILL: Record<string, string> = {
+  pending: 'bg-gold/15 text-gold-foreground ring-1 ring-gold/40',
+  processing: 'bg-primary text-primary-foreground',
+  paid: 'bg-emerald-500/15 text-emerald-700 ring-1 ring-emerald-500/30',
+  failed: 'bg-red-500/10 text-red-600 ring-1 ring-red-500/30',
+};
+const buzz = (ms = 10) => { try { navigator.vibrate?.(ms); } catch { /* unsupported */ } };
+
+const Earnings = () => {
   const { provider, refreshProvider } = useProvider();
   const { toast } = useToast();
-  const [earnings, setEarnings] = useState<any[]>([]);
-  const [payouts, setPayouts] = useState<any[]>([]);
-  const [withdrawOpen, setWithdrawOpen] = useState(false);
-  const [withdrawing, setWithdrawing] = useState(false);
-  const [tab, setTab] = useState('overview');
+  const [earnings, setEarnings] = useState<Earning[]>([]);
+  const [payouts, setPayouts] = useState<Payout[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [failed, setFailed] = useState(false);
+  const [tab, setTab] = useState<Tab>('overview');
+  const [sheet, setSheet] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [done, setDone] = useState(false);
+  const [picked, setPicked] = useState<number | null>(null);
 
-  const fetchEarnings = useCallback(async () => {
+  const load = useCallback(async () => {
     if (!provider) return;
-    const { data } = await supabase
-      .from('provider_earnings')
-      .select('*')
-      .eq('provider_id', provider.id)
-      .order('created_at', { ascending: false });
-    setEarnings(data || []);
+    const [e, p] = await Promise.all([
+      supabase.from('provider_earnings').select('*').eq('provider_id', provider.id).order('created_at', { ascending: false }),
+      supabase.from('payout_requests').select('*').eq('provider_id', provider.id).order('requested_at', { ascending: false }),
+    ]);
+    if (e.error || p.error) setFailed(true);
+    else { setFailed(false); setEarnings((e.data ?? []) as unknown as Earning[]); setPayouts((p.data ?? []) as unknown as Payout[]); }
+    setLoading(false);
   }, [provider]);
 
-  const fetchPayouts = useCallback(async () => {
-    if (!provider) return;
-    const { data } = await supabase
-      .from('payout_requests')
-      .select('*')
-      .eq('provider_id', provider.id)
-      .order('requested_at', { ascending: false });
-    setPayouts(data || []);
-  }, [provider]);
-
-  useEffect(() => { fetchEarnings(); fetchPayouts(); }, [fetchEarnings, fetchPayouts]);
-
-  // Realtime: refresh when DB trigger auto-inserts an earnings row on booking completion
-  // or when payout status is updated by admin
   useEffect(() => {
     if (!provider) return;
-    const channel = supabase.channel('earnings-live')
-      .on('postgres_changes', {
-        event: '*', schema: 'public', table: 'provider_earnings',
-        filter: `provider_id=eq.${provider.id}`,
-      }, () => { fetchEarnings(); refreshProvider(); })
-      .on('postgres_changes', {
-        event: '*', schema: 'public', table: 'payout_requests',
-        filter: `provider_id=eq.${provider.id}`,
-      }, () => fetchPayouts())
+    void load();
+    const ch = supabase.channel(`earnings-live-${provider.id}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'provider_earnings', filter: `provider_id=eq.${provider.id}` }, () => { void load(); void refreshProvider(); })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'payout_requests', filter: `provider_id=eq.${provider.id}` }, () => void load())
       .subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, [provider, fetchEarnings, fetchPayouts, refreshProvider]);
+    return () => { void supabase.removeChannel(ch); };
+  }, [provider, load, refreshProvider]);
 
-  const totals = useMemo(() => {
-    const total = earnings.reduce((s, e) => s + Number(e.provider_amount), 0);
-    const pending = earnings.filter(e => e.status === 'pending').reduce((s, e) => s + Number(e.provider_amount), 0);
-    const paid = earnings.filter(e => e.status === 'paid').reduce((s, e) => s + Number(e.provider_amount), 0);
-    return { total, pending, paid };
-  }, [earnings]);
+  const totals = useMemo(() => totalsOf(earnings), [earnings]);
+  const months = useMemo(() => monthBuckets(earnings), [earnings]);
+  const groups = useMemo(() => groupByDay(earnings), [earnings]);
+  const maxMonth = Math.max(1, ...months.map(m => m.amount));
+  const hasDest = Boolean(provider?.bank_account_number || provider?.upi_id);
 
-  const monthlyData = useMemo(() => {
-    return Array.from({ length: 6 }, (_, i) => {
-      const d = new Date();
-      d.setMonth(d.getMonth() - (5 - i));
-      const month = d.toLocaleString('default', { month: 'short' });
-      const year = d.getFullYear();
-      const monthNum = d.getMonth();
-      const amount = earnings
-        .filter(e => { const eD = new Date(e.created_at); return eD.getMonth() === monthNum && eD.getFullYear() === year; })
-        .reduce((sum, e) => sum + Number(e.provider_amount), 0);
-      return { month, amount };
-    });
-  }, [earnings]);
-
-  const handleWithdraw = async () => {
-    if (!provider) return;
-    if (!provider.bank_account_number && !provider.upi_id) {
-      toast({ title: 'Add bank details first', description: 'Go to Profile → Bank Details', variant: 'destructive' });
+  const withdraw = async () => {
+    if (!provider || busy) return;
+    setBusy(true); buzz();
+    // The database does the whole thing in one locked transaction (request_payout); the client cannot set an amount.
+    const { data, error } = await (supabase as any).rpc('request_payout');
+    setBusy(false);
+    const res = data as { ok: boolean; reason?: string; amount?: number } | null;
+    if (error || !res?.ok) {
+      const why: Record<string, string> = {
+        no_destination: 'Add a bank account or UPI ID in Profile first.',
+        nothing_to_withdraw: 'Your balance may have just changed.',
+        not_approved: 'Your account must be approved to withdraw.',
+        unauthorized: 'Please sign in again.',
+      };
+      toast({ title: 'Withdrawal not started', description: (res?.reason && why[res.reason]) || error?.message || 'Please try again.', variant: 'destructive' });
+      void load();
       return;
     }
-    if (totals.pending <= 0) {
-      toast({ title: 'No pending earnings', description: 'Nothing to withdraw right now.', variant: 'destructive' });
-      return;
-    }
-    setWithdrawing(true);
-    const { error } = await supabase.from('payout_requests').insert({
-      provider_id: provider.id,
-      amount: totals.pending,
-      bank_account_name: provider.bank_account_name,
-      bank_account_number: provider.bank_account_number,
-      bank_ifsc: provider.bank_ifsc,
-      upi_id: provider.upi_id,
-    });
-    if (!error) {
-      await supabase.from('provider_earnings')
-        .update({ status: 'processing' })
-        .eq('provider_id', provider.id)
-        .eq('status', 'pending');
-
-      // Insert a notification for the provider
-      await supabase.from('provider_notifications').insert({
-        provider_id: provider.id,
-        type: 'payment',
-        title: 'Withdrawal Requested 💸',
-        message: `₹${totals.pending.toLocaleString()} withdrawal request submitted. Funds arrive in 1-2 business days.`,
-        data: {},
-      });
-
-      toast({ title: 'Withdrawal Requested! 💸', description: 'Funds will arrive in 1-2 business days.' });
-      setWithdrawOpen(false);
-      fetchEarnings();
-      fetchPayouts();
-      refreshProvider();
-    } else {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
-    }
-    setWithdrawing(false);
+    setDone(true); buzz(25);
+    void load(); void refreshProvider();
+    setTimeout(() => { setSheet(false); setDone(false); }, 1600);
   };
 
-  const payoutStatusColors: Record<string, string> = {
-    pending: 'bg-warning/20 text-warning',
-    processing: 'bg-blue-500/20 text-blue-400',
-    paid: 'bg-success/20 text-success',
-    failed: 'bg-destructive/20 text-destructive',
-  };
+  const go = (dir: 1 | -1) => setTab(t => TABS[Math.min(TABS.length - 1, Math.max(0, TABS.indexOf(t) + dir))]);
 
-  if (provider?.kyc_status !== 'approved') {
-    return <LockedPage pageName="Earnings" />;
-  }
+  if (provider && provider.kyc_status !== 'approved') return <LockedPage pageName="Earnings" />;
 
   return (
-    <div className="space-y-6">
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {[
-          { label: 'Total Earnings', value: totals.total, icon: DollarSign, color: 'text-primary' },
-          { label: 'Pending', value: totals.pending, icon: Clock, color: 'text-warning' },
-          { label: 'Paid Out', value: totals.paid, icon: TrendingUp, color: 'text-success' },
-        ].map((s, i) => (
-          <motion.div key={s.label} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
-            <Card className="glass-card p-4">
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-xs text-muted-foreground uppercase tracking-wider">{s.label}</span>
-                <s.icon className={`h-4 w-4 ${s.color}`} />
-              </div>
-              <p className="text-2xl font-bold">₹{s.value.toLocaleString()}</p>
-            </Card>
-          </motion.div>
+    <div className="mx-auto max-w-3xl space-y-5 pb-28 md:pb-6">
+      {/* Balance: the one rich moment on this screen */}
+      <motion.section
+        initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+        className="relative overflow-hidden rounded-[28px] bg-primary p-6 text-primary-foreground"
+      >
+        <div aria-hidden className="pointer-events-none absolute -right-16 -top-20 h-56 w-56 rounded-full bg-gold/25 blur-3xl" />
+        <p className="relative text-sm font-medium opacity-70">Ready to withdraw</p>
+        <p className="relative mt-1 text-[44px] font-extrabold leading-none tracking-tight">
+          ₹<CountUp value={loading ? 0 : totals.available} />
+        </p>
+        <div className="relative mt-5 grid grid-cols-2 gap-3 text-sm">
+          <div className="rounded-2xl bg-white/10 px-3 py-2.5"><p className="opacity-60">Processing</p><p className="font-bold">{inr(totals.processing)}</p></div>
+          <div className="rounded-2xl bg-white/10 px-3 py-2.5"><p className="opacity-60">Paid out</p><p className="font-bold">{inr(totals.paid)}</p></div>
+        </div>
+        {totals.awaitingPayment > 0 && (
+          <p className="relative mt-3 rounded-2xl bg-gold/15 px-3 py-2 text-xs font-semibold text-gold">
+            {inr(totals.awaitingPayment)} from finished jobs is waiting for the customer to pay. It unlocks automatically.
+          </p>
+        )}
+        <button
+          disabled={totals.available <= 0 || loading}
+          onClick={() => { buzz(8); setSheet(true); }}
+          className="press relative mt-5 flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-gold text-base font-extrabold text-gold-foreground shadow-gold disabled:opacity-40"
+        >
+          <Wallet className="h-5 w-5" /> {totals.available > 0 ? `Withdraw ${inr(totals.available)}` : 'Nothing to withdraw yet'}
+        </button>
+      </motion.section>
+
+      {/* Segmented control with a sliding indicator */}
+      <div className="relative grid grid-cols-3 rounded-full bg-secondary p-1" role="tablist">
+        {TABS.map(t => (
+          <button key={t} role="tab" aria-selected={tab === t} onClick={() => { buzz(6); setTab(t); }}
+            className={cn('relative z-10 h-10 rounded-full text-sm font-semibold transition-colors', tab === t ? 'text-primary-foreground' : 'text-muted-foreground')}>
+            {tab === t && <motion.span layoutId="earn-tab" transition={{ type: 'spring', stiffness: 460, damping: 36 }} className="absolute inset-0 -z-10 rounded-full bg-primary" />}
+            {TAB_LABEL[t]}
+          </button>
         ))}
       </div>
 
-      {/* Withdraw Button */}
-      <Dialog open={withdrawOpen} onOpenChange={setWithdrawOpen}>
-        <DialogTrigger asChild>
-          <Button className="gold-gradient text-primary-foreground font-semibold" disabled={totals.pending <= 0}>
-            <Wallet className="h-4 w-4 mr-2" />
-            Withdraw ₹{totals.pending.toLocaleString()}
-          </Button>
-        </DialogTrigger>
-        <DialogContent className="bg-card border-border">
-          <DialogHeader>
-            <DialogTitle>Confirm Withdrawal</DialogTitle>
-            <DialogDescription>₹{totals.pending.toLocaleString()} will be transferred to your account within 1-2 business days.</DialogDescription>
-          </DialogHeader>
-          <div className="py-4">
-            <p className="text-sm font-medium mb-1">Paying to:</p>
-            {provider?.bank_account_number ? (
-              <>
-                <p className="font-semibold">{provider.bank_account_name}</p>
-                <p className="text-sm text-muted-foreground">{provider.bank_ifsc} · **** {provider.bank_account_number?.slice(-4)}</p>
-              </>
-            ) : provider?.upi_id ? (
-              <p className="font-semibold">UPI: {provider.upi_id}</p>
-            ) : (
-              <p className="text-destructive text-sm">⚠️ No payment details. Add them in Profile first.</p>
-            )}
+      {loading ? (
+        <div className="space-y-3">{[0, 1, 2].map(i => <div key={i} className="h-16 animate-pulse rounded-2xl bg-secondary" />)}</div>
+      ) : failed ? (
+        <div className="rounded-3xl bg-secondary p-8 text-center">
+          <p className="font-bold">Couldn't load earnings</p>
+          <p className="mt-1 text-sm text-muted-foreground">Check your connection and try again.</p>
+          <button onClick={() => { setLoading(true); void load(); }} className="press mt-4 h-11 rounded-xl bg-primary px-6 font-bold text-primary-foreground">Try again</button>
+        </div>
+      ) : (
+        // Swipe left/right to change tab; vertical scroll stays native.
+        <motion.div
+          drag="x" dragDirectionLock dragConstraints={{ left: 0, right: 0 }} dragElastic={0.12} style={{ touchAction: 'pan-y' }}
+          onDragEnd={(_, i) => { if (i.offset.x < -70 || i.velocity.x < -500) go(1); else if (i.offset.x > 70 || i.velocity.x > 500) go(-1); }}
+        >
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.div key={tab} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }}>
+              {tab === 'overview' && (
+                <section className="rounded-3xl bg-secondary p-5">
+                  <div className="flex items-baseline justify-between">
+                    <h2 className="text-lg font-extrabold tracking-tight">Last 6 months</h2>
+                    <p className="text-sm text-muted-foreground">{inr(totals.lifetime)} lifetime</p>
+                  </div>
+                  <div className="mt-6 flex h-44 items-end gap-3">
+                    {months.map((m, i) => {
+                      const sel = picked === i, h = Math.max(m.amount > 0 ? 8 : 3, (m.amount / maxMonth) * 100);
+                      return (
+                        <button key={`${m.y}-${m.m}`} onClick={() => { buzz(6); setPicked(sel ? null : i); }} aria-label={`${m.label}: ${inr(m.amount)}`} className="press flex h-full flex-1 flex-col items-center justify-end gap-2">
+                          <span className={cn('text-[11px] font-bold transition-opacity', sel ? 'opacity-100' : 'opacity-0')}>{inr(m.amount)}</span>
+                          <motion.span initial={{ height: 0 }} animate={{ height: `${h}%` }} transition={{ type: 'spring', damping: 22, stiffness: 160, delay: i * 0.04 }}
+                            className={cn('w-full rounded-xl', sel || (picked === null && m.isCurrent) ? 'bg-gold' : 'bg-primary/15')} />
+                          <span className="text-xs font-semibold text-muted-foreground">{m.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </section>
+              )}
+
+              {tab === 'activity' && (groups.length === 0 ? (
+                <div className="rounded-3xl bg-secondary p-10 text-center"><p className="text-lg font-extrabold">No earnings yet</p><p className="mt-1 text-sm text-muted-foreground">Finish a job and it shows up here.</p></div>
+              ) : (
+                <div className="space-y-5">
+                  {groups.map(g => (
+                    <div key={g.key}>
+                      <div className="mb-2 flex items-baseline justify-between px-1"><h3 className="text-sm font-bold">{g.label}</h3><span className="text-sm text-muted-foreground">{inr(g.total)}</span></div>
+                      <div className="divide-y divide-border overflow-hidden rounded-3xl bg-secondary">
+                        {g.items.map(e => (
+                          <div key={e.id} className="flex items-center gap-3 px-4 py-3.5">
+                            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-background"><ArrowDownToLine className="h-5 w-5" /></span>
+                            <div className="min-w-0 flex-1">
+                              <p className="font-bold">Job payment</p>
+                              <p className="text-xs text-muted-foreground">{new Date(e.created_at).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' })}</p>
+                            </div>
+                            <div className="text-right">
+                              <p className="font-extrabold">+{inr(Number(e.provider_amount))}</p>
+                              <span className={cn('mt-0.5 inline-block rounded-full px-2 py-0.5 text-[11px] font-bold', PILL[e.status] ?? PILL.pending)}>{statusText(e.status)}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ))}
+
+              {tab === 'payouts' && (payouts.length === 0 ? (
+                <div className="rounded-3xl bg-secondary p-10 text-center"><p className="text-lg font-extrabold">No payouts yet</p><p className="mt-1 text-sm text-muted-foreground">Withdrawals you request will be tracked here.</p></div>
+              ) : (
+                <div className="divide-y divide-border overflow-hidden rounded-3xl bg-secondary">
+                  {payouts.map(p => (
+                    <div key={p.id} className="flex items-center justify-between px-4 py-4">
+                      <div><p className="text-lg font-extrabold">{inr(Number(p.amount))}</p><p className="text-xs text-muted-foreground">{new Date(p.requested_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</p></div>
+                      <span className={cn('rounded-full px-2.5 py-1 text-xs font-bold', PILL[p.status] ?? PILL.pending)}>{statusText(p.status)}</span>
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </motion.div>
+          </AnimatePresence>
+        </motion.div>
+      )}
+
+      {/* Withdraw bottom sheet */}
+      <Drawer open={sheet} onOpenChange={o => { if (!busy) { setSheet(o); if (!o) setDone(false); } }}>
+        <DrawerContent className="px-5 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
+          <div className="mx-auto w-full max-w-md pt-4">
+            <AnimatePresence mode="wait" initial={false}>
+              {done ? (
+                <motion.div key="ok" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="flex flex-col items-center py-10 text-center">
+                  <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 260, damping: 16 }} className="flex h-20 w-20 items-center justify-center rounded-full bg-emerald-500 text-white"><Check className="h-10 w-10" strokeWidth={3} /></motion.span>
+                  <DrawerTitle className="mt-5 text-2xl font-extrabold">Withdrawal requested</DrawerTitle>
+                  <DrawerDescription className="mt-1">Funds arrive in 1-2 business days.</DrawerDescription>
+                </motion.div>
+              ) : (
+                <motion.div key="form" exit={{ opacity: 0 }}>
+                  <DrawerTitle className="text-sm font-semibold text-muted-foreground">Withdraw</DrawerTitle>
+                  <p className="mt-1 text-[40px] font-extrabold leading-none tracking-tight">{inr(totals.available)}</p>
+                  <DrawerDescription className="mt-2">Arrives in 1-2 business days.</DrawerDescription>
+                  <div className="mt-5 rounded-2xl bg-secondary p-4">
+                    <p className="text-xs font-semibold text-muted-foreground">Paying to</p>
+                    {provider?.bank_account_number ? (
+                      <><p className="mt-1 font-bold">{provider.bank_account_name}</p><p className="text-sm text-muted-foreground">{provider.bank_ifsc} · •••• {provider.bank_account_number.slice(-4)}</p></>
+                    ) : provider?.upi_id ? (
+                      <p className="mt-1 font-bold">UPI · {provider.upi_id}</p>
+                    ) : (
+                      <p className="mt-1 text-sm font-semibold text-red-600">No payout details. Add a bank account or UPI ID in Profile.</p>
+                    )}
+                  </div>
+                  <button onClick={withdraw} disabled={busy || !hasDest || totals.available <= 0}
+                    className="press mt-5 flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-gold text-base font-extrabold text-gold-foreground disabled:opacity-50">
+                    {busy ? <span className="h-5 w-5 animate-spin rounded-full border-2 border-current border-t-transparent" /> : 'Confirm withdrawal'}
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setWithdrawOpen(false)}>Cancel</Button>
-            <Button className="gold-gradient text-primary-foreground font-semibold" onClick={handleWithdraw} disabled={withdrawing || (!provider?.bank_account_number && !provider?.upi_id)}>
-              {withdrawing ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Confirm Withdrawal'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Tabs value={tab} onValueChange={setTab}>
-        <TabsList className="bg-secondary/50">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="transactions">Transactions</TabsTrigger>
-          <TabsTrigger value="payouts">Payout History</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="overview" className="mt-4">
-          <Card className="glass-card p-4">
-            <h3 className="font-semibold mb-4">Monthly Earnings</h3>
-            <ResponsiveContainer width="100%" height={250}>
-              <BarChart data={monthlyData}>
-                <XAxis dataKey="month" stroke="hsl(40 6% 55%)" fontSize={12} />
-                <YAxis stroke="hsl(40 6% 55%)" fontSize={12} tickFormatter={v => `₹${v}`} />
-                <Tooltip contentStyle={{ background: 'hsl(30 5% 12%)', border: '1px solid hsl(30 5% 20%)', borderRadius: '8px', color: 'hsl(40 10% 90%)' }}
-                  formatter={(v: number) => [`₹${v}`, 'Earnings']} />
-                <Bar dataKey="amount" fill="hsl(45 100% 50%)" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="transactions" className="mt-4 space-y-2">
-          {earnings.length === 0 ? (
-            <Card className="glass-card p-8 text-center text-muted-foreground">No earnings yet</Card>
-          ) : earnings.map((e, i) => (
-            <motion.div key={e.id} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }}>
-              <Card className="glass-card p-3 flex items-center justify-between">
-                <div>
-                  <p className="font-medium text-sm">₹{Number(e.provider_amount).toLocaleString()}</p>
-                  <p className="text-xs text-muted-foreground">{new Date(e.created_at).toLocaleDateString()}</p>
-                </div>
-                <Badge className={e.status === 'paid' ? 'bg-success/20 text-success' : e.status === 'processing' ? 'bg-blue-500/20 text-blue-400' : 'bg-warning/20 text-warning'} variant="secondary">
-                  {e.status}
-                </Badge>
-              </Card>
-            </motion.div>
-          ))}
-        </TabsContent>
-
-        <TabsContent value="payouts" className="mt-4 space-y-2">
-          {payouts.length === 0 ? (
-            <Card className="glass-card p-8 text-center text-muted-foreground">No payout history</Card>
-          ) : payouts.map((p, i) => (
-            <motion.div key={p.id} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }}>
-              <Card className="glass-card p-3 flex items-center justify-between">
-                <div>
-                  <p className="font-medium text-sm">₹{Number(p.amount).toLocaleString()}</p>
-                  <p className="text-xs text-muted-foreground">{new Date(p.requested_at).toLocaleDateString()}</p>
-                </div>
-                <Badge className={payoutStatusColors[p.status] || ''} variant="secondary">{p.status}</Badge>
-              </Card>
-            </motion.div>
-          ))}
-        </TabsContent>
-      </Tabs>
+        </DrawerContent>
+      </Drawer>
     </div>
   );
 };

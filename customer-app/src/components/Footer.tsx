@@ -23,9 +23,9 @@ const Footer = () => {
       { label: "Become a Pro", href: "/become-a-pro"},
     ],
     Legal: [
-      { label: "Terms",   href: "#" },
-      { label: "Privacy", href: "#" },
-      { label: "Cookies", href: "#" },
+      { label: "Terms",   href: "/terms" },
+      { label: "Privacy", href: "/privacy" },
+      { label: "Delete account", href: "/delete-account" },
     ],
   };
 

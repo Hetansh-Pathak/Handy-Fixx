@@ -1,308 +1,319 @@
-import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Mail, Lock, User, Eye, EyeOff, ArrowLeft } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { supabase } from "@/integrations/supabase/client";
+import { FormEvent, useEffect, useRef, useState } from "react";
+import { motion, useReducedMotion } from "framer-motion";
+import { AlertCircle, Loader2 } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import AuthLayout from "@/components/auth/AuthLayout";
+import GoogleIcon from "@/components/auth/GoogleIcon";
+import TextField, { PasswordField } from "@/components/form/TextField";
+import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import logo from "@/assets/logo.png";
+import { BRAND } from "@/lib/brand";
+import { EASE } from "@/lib/motion";
+import { friendlyAuthError, isValidEmail, type FriendlyAuthError } from "@/lib/authErrors";
+
+type Mode = "login" | "signup";
+type Field = "name" | "email" | "password";
+type Errors = Partial<Record<Field, string>>;
+
+const FIELD_ORDER: Field[] = ["name", "email", "password"];
+
+/** Only allow in-app paths as a post-login destination (no external or protocol-relative URLs). */
+const safeRedirect = (value: string | null) => (value && value.startsWith("/") && !value.startsWith("//") ? value : "/");
+
+const validate = (mode: Mode, v: Record<Field, string>): Errors => {
+  const e: Errors = {};
+  if (mode === "signup" && v.name.trim().length < 2) e.name = "Enter your full name.";
+  if (!v.email.trim()) e.email = "Enter your email.";
+  else if (!isValidEmail(v.email)) e.email = "Enter a valid email, like name@example.com.";
+  if (!v.password) e.password = mode === "login" ? "Enter your password." : "Choose a password.";
+  else if (mode === "signup" && v.password.length < 6) e.password = "Use at least 6 characters.";
+  return e;
+};
 
 const Auth = () => {
   const [searchParams] = useSearchParams();
-  const redirectTo = searchParams.get("redirect") || "/";
-  const [isLogin, setIsLogin] = useState(searchParams.get("mode") !== "signup");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [displayName, setDisplayName] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const redirectTo = safeRedirect(searchParams.get("redirect"));
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
+  const reduce = useReducedMotion();
 
-  const handleGoogleSignIn = async () => {
-    setLoading(true);
-    localStorage.setItem("handyfix_google_auth_mode", isLogin ? "login" : "signup");
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
-        queryParams: { prompt: "select_account" },
-      },
-    });
+  const [mode, setMode] = useState<Mode>(searchParams.get("mode") === "signup" ? "signup" : "login");
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [errors, setErrors] = useState<Errors>({});
+  const [formError, setFormError] = useState<FriendlyAuthError | null>(() =>
+    searchParams.get("error") === "account_not_found"
+      ? { kind: "other", message: `No ${BRAND.name} account uses that Google account yet. Create one to continue.` }
+      : null,
+  );
+  const [loading, setLoading] = useState<"password" | "google" | null>(null);
 
-    if (error) {
-      toast({ title: "Google sign-in failed", description: error.message, variant: "destructive" });
-      setLoading(false);
-    }
-  };
+  // While a submit is in flight we decide where to go ourselves (profile setup vs. redirect),
+  // so the "already signed in" effect below must stay out of the way.
+  const submitting = useRef(false);
 
   useEffect(() => {
-    if (user) navigate(redirectTo, { replace: true });
+    if (user && !submitting.current) navigate(redirectTo, { replace: true });
   }, [user, navigate, redirectTo]);
 
-  // Show error toasts passed as URL query params (e.g. from AuthCallback)
+  // Clear the ?error= param (set by AuthCallback) so a refresh doesn't show it again.
   useEffect(() => {
-    const errorParam = searchParams.get("error");
-    if (errorParam === "account_not_found") {
-      toast({
-        title: "Account not found",
-        description: "No HandyFix account was found for this Google account. Please use Sign Up first.",
-        variant: "destructive",
-      });
-      // Clean the param from the URL without causing a re-render loop
-      const params = new URLSearchParams(searchParams);
-      params.delete("error");
-      navigate({ search: params.toString() }, { replace: true });
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    if (!searchParams.get("error")) return;
+    const params = new URLSearchParams(searchParams);
+    params.delete("error");
+    navigate({ search: params.toString() }, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const switchMode = (next: Mode) => {
+    if (next === mode) return;
+    setMode(next);
+    setErrors({});
+    setFormError(null);
+  };
+
+  const checkField = (field: Field) => {
+    const found = validate(mode, { name, email, password });
+    setErrors((prev) => ({ ...prev, [field]: found[field] }));
+  };
+
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    setLoading(true);
+    if (loading) return;
+
+    const found = validate(mode, { name, email, password });
+    setErrors(found);
+    setFormError(null);
+    const firstInvalid = FIELD_ORDER.find((f) => found[f]);
+    if (firstInvalid) {
+      document.getElementById(`auth-${firstInvalid}`)?.focus();
+      return;
+    }
+
+    const cleanEmail = email.trim();
+    const cleanName = name.trim();
+    setLoading("password");
+    submitting.current = true;
 
     try {
-      if (isLogin) {
-        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      if (mode === "login") {
+        const { data, error } = await supabase.auth.signInWithPassword({ email: cleanEmail, password });
         if (error) throw error;
 
         const { data: profile } = await supabase
           .from("profiles")
           .select("full_name, phone")
           .eq("user_id", data.user.id)
-          .single();
+          .maybeSingle();
 
-        toast({ title: "Welcome back!", description: `Welcome back, ${profile?.full_name ?? "there"}!` });
-
-        if (!profile?.full_name || !profile?.phone) {
-          navigate("/profile?setup=true");
-        } else {
-          navigate(redirectTo, { replace: true });
-        }
+        if (!profile?.full_name || !profile?.phone) navigate("/profile?setup=true", { replace: true });
+        else navigate(redirectTo, { replace: true });
       } else {
-        // 1. Create the account
-        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-          email,
+        const { error: signUpError } = await supabase.auth.signUp({
+          email: cleanEmail,
           password,
-          options: {
-            data: { display_name: displayName },
-          },
+          options: { data: { display_name: cleanName } },
         });
         if (signUpError) throw signUpError;
 
-        // 2. Immediately sign them in (email confirmation is disabled in Supabase)
-        const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+        // Email confirmation is disabled in Supabase, so sign in straight away.
+        const { error: signInError } = await supabase.auth.signInWithPassword({ email: cleanEmail, password });
         if (signInError) throw signInError;
 
-        // 3. Fire welcome email (non-blocking — we don't await the result to avoid delay)
-        supabase.functions.invoke("send-welcome-email", {
-          body: { email, display_name: displayName },
-        }).catch(() => {
-          // Silently ignore — email is best-effort
-        });
+        // Best-effort welcome email; never block or fail sign-up on it.
+        supabase.functions.invoke("send-welcome-email", { body: { email: cleanEmail, display_name: cleanName } }).catch(() => {});
 
-        toast({
-          title: "Welcome to HandyFix! 🎉",
-          description: "Your account has been created successfully.",
-        });
-
+        toast({ title: `Welcome to ${BRAND.name}`, description: "Your account is ready." });
         navigate(redirectTo, { replace: true });
       }
-    } catch (error: unknown) {
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "An unexpected error occurred.",
-        variant: "destructive",
-      });
+    } catch (err) {
+      submitting.current = false;
+      setFormError(friendlyAuthError(err));
     } finally {
-      setLoading(false);
+      setLoading(null);
     }
   };
 
+  const handleGoogle = async () => {
+    if (loading) return;
+    setFormError(null);
+    setLoading("google");
+    try {
+      // AuthCallback reads this to tell "log in" from "sign up" after Google returns.
+      localStorage.setItem("handyfix_google_auth_mode", mode);
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+          queryParams: { prompt: "select_account" },
+        },
+      });
+      if (error) throw error;
+    } catch (err) {
+      setFormError(friendlyAuthError(err));
+      setLoading(null);
+    }
+  };
+
+  const isLogin = mode === "login";
+
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4 relative overflow-hidden">
-      {/* Background decorative elements */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-80 h-80 rounded-full bg-primary/5 blur-3xl" />
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 rounded-full bg-primary/5 blur-3xl" />
+    <AuthLayout
+      headline="Book a verified pro in minutes."
+      sub="Electricians, plumbers, cleaners and more, near you."
+      skip={{ label: "Browse as guest", onClick: () => navigate("/") }}
+    >
+      <div
+        role="tablist"
+        aria-label="Log in or sign up"
+        className="relative mb-7 grid grid-cols-2 rounded-xl bg-secondary p-1"
+      >
+        {(["login", "signup"] as const).map((m) => (
+          <button
+            key={m}
+            type="button"
+            role="tab"
+            aria-selected={mode === m}
+            onClick={() => switchMode(m)}
+            className={`relative z-10 h-10 rounded-lg text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+              mode === m ? "text-foreground" : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            {mode === m && (
+              <motion.span
+                layoutId="auth-segment"
+                transition={{ duration: 0.25, ease: EASE }}
+                className="absolute inset-0 -z-10 rounded-lg bg-background shadow-sm"
+              />
+            )}
+            {m === "login" ? "Log in" : "Sign up"}
+          </button>
+        ))}
       </div>
 
-      <motion.div
-        initial={{ opacity: 0, y: 30 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, ease: "easeOut" }}
-        className="w-full max-w-md relative z-10"
-      >
-        {/* Back to home */}
-        <motion.button
-          onClick={() => navigate("/")}
-          className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors mb-8"
-          whileHover={{ x: -4 }}
-        >
-          <ArrowLeft className="w-4 h-4" />
-          <span className="text-sm">Back to Home</span>
-        </motion.button>
-
-        {/* Card */}
-        <div className="bg-card border border-border rounded-2xl p-8 shadow-xl">
-          {/* Logo */}
-          <motion.div
-            className="flex items-center justify-center gap-3 mb-8"
-            initial={{ scale: 0.8 }}
-            animate={{ scale: 1 }}
-            transition={{ duration: 0.5, delay: 0.1 }}
-          >
-            <div className="w-11 h-11 rounded-lg bg-gradient-gold flex items-center justify-center overflow-hidden">
-              <img src={logo} alt="HandyFix" className="w-full h-full object-cover" />
-            </div>
-            <span className="text-2xl font-bold text-foreground">HandyFix</span>
+      <form onSubmit={handleSubmit} noValidate className="space-y-4">
+        {!isLogin && (
+          <motion.div initial={reduce ? false : { opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2, ease: EASE }}>
+            <TextField
+              id="auth-name"
+              name="name"
+              label="Full name"
+              autoComplete="name"
+              autoCapitalize="words"
+              enterKeyHint="next"
+              placeholder="Your full name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              onBlur={() => name && checkField("name")}
+              error={errors.name}
+            />
           </motion.div>
+        )}
 
-          {/* Tabs */}
-          <div className="flex bg-secondary rounded-xl p-1 mb-8">
-            {["Log In", "Sign Up"].map((tab, i) => (
+        <TextField
+          id="auth-email"
+          name="email"
+          type="email"
+          label="Email"
+          inputMode="email"
+          autoComplete="email"
+          autoCapitalize="none"
+          autoCorrect="off"
+          spellCheck={false}
+          enterKeyHint="next"
+          placeholder="name@example.com"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          onBlur={() => email && checkField("email")}
+          error={errors.email}
+        />
+
+        <PasswordField
+          id="auth-password"
+          name="password"
+          label="Password"
+          autoComplete={isLogin ? "current-password" : "new-password"}
+          enterKeyHint="go"
+          placeholder={isLogin ? "Your password" : "At least 6 characters"}
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          onBlur={() => password && !isLogin && checkField("password")}
+          error={errors.password}
+          labelAction={
+            isLogin ? (
               <button
-                key={tab}
-                onClick={() => setIsLogin(i === 0)}
-                className={`flex-1 py-2.5 text-sm font-semibold rounded-lg transition-all duration-300 ${
-                  (i === 0 ? isLogin : !isLogin)
-                    ? "bg-gradient-gold text-primary-foreground shadow-md"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                {tab}
-              </button>
-            ))}
-          </div>
-
-          <AnimatePresence mode="wait">
-            <motion.form
-              key={isLogin ? "login" : "signup"}
-              initial={{ opacity: 0, x: isLogin ? -20 : 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: isLogin ? 20 : -20 }}
-              transition={{ duration: 0.3 }}
-              onSubmit={handleSubmit}
-              className="space-y-5"
-            >
-              {!isLogin && (
-                <div className="space-y-2">
-                  <Label htmlFor="name" className="text-foreground">Full Name</Label>
-                  <div className="relative">
-                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input
-                      id="name"
-                      type="text"
-                      placeholder="John Doe"
-                      value={displayName}
-                      onChange={(e) => setDisplayName(e.target.value)}
-                      className="pl-10 bg-secondary border-border text-foreground placeholder:text-muted-foreground focus:ring-primary h-12 rounded-xl"
-                      required
-                    />
-                  </div>
-                </div>
-              )}
-
-              <div className="space-y-2">
-                <Label htmlFor="email" className="text-foreground">Email</Label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="you@example.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="pl-10 bg-secondary border-border text-foreground placeholder:text-muted-foreground focus:ring-primary h-12 rounded-xl"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="password" className="text-foreground">Password</Label>
-                  {isLogin && (
-                    <button
-                      type="button"
-                      onClick={() => navigate("/forgot-password")}
-                      className="text-xs text-primary hover:underline"
-                    >
-                      Forgot password?
-                    </button>
-                  )}
-                </div>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input
-                    id="password"
-                    type={showPassword ? "text" : "password"}
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="pl-10 pr-10 bg-secondary border-border text-foreground placeholder:text-muted-foreground focus:ring-primary h-12 rounded-xl"
-                    required
-                    minLength={6}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                  >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
-              </div>
-
-              <Button
-                type="submit"
-                disabled={loading}
-                className="w-full bg-gradient-gold text-primary-foreground font-bold text-base py-6 rounded-xl shadow-gold hover:opacity-90 transition-opacity"
-              >
-                {loading ? (
-                  <motion.div
-                    animate={{ rotate: 360 }}
-                    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                    className="w-5 h-5 border-2 border-primary-foreground border-t-transparent rounded-full"
-                  />
-                ) : isLogin ? "Log In" : "Create Account"}
-              </Button>
-
-              <div className="relative flex items-center gap-3 py-1">
-                <div className="h-px flex-1 bg-border" />
-                <span className="text-xs text-muted-foreground">OR</span>
-                <div className="h-px flex-1 bg-border" />
-              </div>
-
-              <Button
                 type="button"
-                variant="outline"
-                disabled={loading}
-                onClick={handleGoogleSignIn}
-                className="w-full border-primary/40 bg-secondary text-foreground font-semibold text-base py-6 rounded-xl hover:bg-primary/10"
+                onClick={() => navigate(email.trim() ? `/forgot-password?email=${encodeURIComponent(email.trim())}` : "/forgot-password")}
+                className="rounded text-[13px] font-semibold text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
-                <span className="mr-2 flex h-5 w-5 items-center justify-center rounded-full bg-white text-sm font-bold text-[#4285F4]">G</span>
-                Continue with Google
-              </Button>
-            </motion.form>
-          </AnimatePresence>
+                Forgot password?
+              </button>
+            ) : undefined
+          }
+        />
 
-          <p className="text-center text-sm text-muted-foreground mt-6">
-            {isLogin ? "Don't have an account? " : "Already have an account? "}
-            <button
-              onClick={() => setIsLogin(!isLogin)}
-              className="text-primary font-semibold hover:underline"
-            >
-              {isLogin ? "Sign Up" : "Log In"}
-            </button>
-          </p>
+        {formError && (
+          <div role="alert" className="flex items-start gap-3 rounded-xl bg-destructive/10 px-4 py-3 text-sm text-red-700">
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
+            <div className="space-y-1">
+              <p className="font-medium">{formError.message}</p>
+              {formError.kind === "exists" && (
+                <button type="button" onClick={() => switchMode("login")} className="font-semibold underline underline-offset-2">
+                  Log in instead
+                </button>
+              )}
+              {formError.kind === "invalid" && (
+                <button
+                  type="button"
+                  onClick={() => navigate(email.trim() ? `/forgot-password?email=${encodeURIComponent(email.trim())}` : "/forgot-password")}
+                  className="font-semibold underline underline-offset-2"
+                >
+                  Reset your password
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
+        <Button type="submit" size="lg" className="w-full" disabled={loading !== null} aria-busy={loading === "password"}>
+          {loading === "password" ? (
+            <>
+              <Loader2 className="animate-spin" /> {isLogin ? "Logging in…" : "Creating account…"}
+            </>
+          ) : isLogin ? (
+            "Log in"
+          ) : (
+            "Create account"
+          )}
+        </Button>
+
+        <div className="flex items-center gap-3 py-1 text-xs text-muted-foreground" aria-hidden="true">
+          <span className="h-px flex-1 bg-border" />
+          or
+          <span className="h-px flex-1 bg-border" />
         </div>
-      </motion.div>
-    </div>
+
+        <Button type="button" variant="outline" size="lg" className="w-full" disabled={loading !== null} onClick={handleGoogle}>
+          {loading === "google" ? <Loader2 className="animate-spin" /> : <GoogleIcon className="!h-5 !w-5" />}
+          Continue with Google
+        </Button>
+      </form>
+
+      <p className="mt-7 text-center text-sm text-muted-foreground">
+        {isLogin ? `New to ${BRAND.name}?` : "Already have an account?"}{" "}
+        <button
+          type="button"
+          onClick={() => switchMode(isLogin ? "signup" : "login")}
+          className="rounded font-semibold text-foreground underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          {isLogin ? "Create an account" : "Log in"}
+        </button>
+      </p>
+    </AuthLayout>
   );
 };
 

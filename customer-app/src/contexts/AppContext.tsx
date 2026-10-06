@@ -1,6 +1,8 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, ReactNode } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./AuthContext";
+import { qk } from "@/lib/queries";
 
 
 interface Profile {
@@ -40,116 +42,120 @@ export const useApp = () => useContext(AppContext);
 
 export const AppProvider = ({ children }: { children: ReactNode }) => {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const userId = user?.id;
   const [pincode, setPincodeState] = useState(() => localStorage.getItem("hf_pincode") || "");
-  const [upcomingBookingsCount, setUpcomingBookingsCount] = useState(0);
-  const [unreadNotificationsCount, setUnreadNotificationsCount] = useState(0);
-  const [profile, setProfile] = useState<Profile | null>(null);
 
-  const setPincode = (pin: string) => {
+  const setPincode = useCallback((pin: string) => {
     setPincodeState(pin);
     localStorage.setItem("hf_pincode", pin);
-  };
+  }, []);
 
-  const fetchProfile = async () => {
-    if (!user) { setProfile(null); return; }
-    const { data } = await supabase
-    .from("profiles")
-    .select("id, user_id, full_name, avatar_url, phone, pincode, address, city")
-    .eq("user_id", user.id)
-    .single();
-    setProfile(data as Profile | null);
-  };
+  // Everything below is cached in memory by react-query (never written to disk), so the navbar,
+  // tab-bar badges and avatar paint instantly on every page instead of refetching per navigation.
+  const { data: profile = null } = useQuery({
+    queryKey: qk.profile(userId ?? ""),
+    enabled: Boolean(userId),
+    staleTime: 1000 * 60 * 5,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("profiles")
+        .select("id, user_id, full_name, avatar_url, phone, pincode, address, city")
+        .eq("user_id", userId as string)
+        .maybeSingle();
+      return (data as Profile | null) ?? null;
+    },
+  });
 
-  const refetchBookingsCount = async () => {
-    if (!user) { setUpcomingBookingsCount(0); return; }
-    const today = new Date().toISOString().split("T")[0];
-    const { count } = await supabase
-      .from("bookings")
-      .select("*", { count: "exact", head: true })
-      .eq("customer_id", user.id)
-      .in("status", ["pending", "confirmed"])
-      .gte("booking_date", today);
-    setUpcomingBookingsCount(count || 0);
-  };
+  const { data: upcomingBookingsCount = 0 } = useQuery({
+    queryKey: qk.bookingCount(userId ?? ""),
+    enabled: Boolean(userId),
+    staleTime: 1000 * 30,
+    queryFn: async () => {
+      // Local calendar date: toISOString() is UTC, which is yesterday for Indian users before 5:30 AM. Jobs that
+      // are already on the way or in progress are still upcoming/active for the customer.
+      const d = new Date();
+      const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      const { count } = await supabase
+        .from("bookings")
+        .select("*", { count: "exact", head: true })
+        .eq("customer_id", userId as string)
+        .in("status", ["pending", "confirmed", "on_the_way", "in_progress"])
+        .gte("booking_date", today);
+      return count || 0;
+    },
+  });
 
-  const refetchNotificationsCount = async () => {
-    if (!user) { setUnreadNotificationsCount(0); return; }
-    const { count } = await supabase
-      .from("customer_notifications")
-      .select("*", { count: "exact", head: true })
-      .eq("user_id", user.id)
-      .eq("is_read", false);
-    setUnreadNotificationsCount(count || 0);
-  };
+  const { data: unreadNotificationsCount = 0 } = useQuery({
+    queryKey: qk.notifCount(userId ?? ""),
+    enabled: Boolean(userId),
+    staleTime: 1000 * 30,
+    queryFn: async () => {
+      const { count } = await supabase
+        .from("customer_notifications")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", userId as string)
+        .eq("is_read", false);
+      return count || 0;
+    },
+  });
 
-  useEffect(() => { fetchProfile(); }, [user]);
-  useEffect(() => { refetchBookingsCount(); }, [user]);
-  useEffect(() => { refetchNotificationsCount(); }, [user]);
+  const refetchProfile = useCallback(() => {
+    if (userId) void queryClient.invalidateQueries({ queryKey: qk.profile(userId) });
+  }, [queryClient, userId]);
+  const refetchBookingsCount = useCallback(() => {
+    if (userId) void queryClient.invalidateQueries({ queryKey: qk.bookingCount(userId) });
+  }, [queryClient, userId]);
+  const refetchNotificationsCount = useCallback(() => {
+    if (userId) void queryClient.invalidateQueries({ queryKey: qk.notifCount(userId) });
+  }, [queryClient, userId]);
 
   // Sync profile pincode → AppContext if user has one saved
   useEffect(() => {
     if (profile?.pincode && !localStorage.getItem("hf_pincode")) {
       setPincode(profile.pincode);
     }
-  }, [profile]);
+  }, [profile, setPincode]);
 
-  // Realtime: booking count
+  // Realtime: one channel for bookings + notifications; each event just refreshes the cached count.
   useEffect(() => {
-    if (!user) return;
+    if (!userId) return;
     const channel = supabase
-      .channel("app-bookings-count")
+      .channel("app-realtime-counts")
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "bookings", filter: `customer_id=eq.${user.id}` },
-        () => refetchBookingsCount()
+        { event: "*", schema: "public", table: "bookings", filter: `customer_id=eq.${userId}` },
+        () => void queryClient.invalidateQueries({ queryKey: qk.bookingCount(userId) }),
+      )
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "customer_notifications", filter: `user_id=eq.${userId}` },
+        () => queryClient.setQueryData<number>(qk.notifCount(userId), (prev) => (prev ?? 0) + 1),
+      )
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "customer_notifications", filter: `user_id=eq.${userId}` },
+        () => void queryClient.invalidateQueries({ queryKey: qk.notifCount(userId) }),
       )
       .subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, [user]);
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [userId, queryClient]);
 
-  // Realtime: notification count
-  useEffect(() => {
-    if (!user) return;
-    const channel = supabase
-      .channel("app-notif-count")
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "customer_notifications",
-          filter: `user_id=eq.${user.id}`,
-        },
-        () => setUnreadNotificationsCount((prev) => prev + 1)
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "UPDATE",
-          schema: "public",
-          table: "customer_notifications",
-          filter: `user_id=eq.${user.id}`,
-        },
-        () => refetchNotificationsCount()
-      )
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, [user]);
-
-  return (
-    <AppContext.Provider
-      value={{
-        pincode,
-        setPincode,
-        upcomingBookingsCount,
-        refetchBookingsCount,
-        profile,
-        refetchProfile: fetchProfile,
-        unreadNotificationsCount,
-        refetchNotificationsCount,
-      }}
-    >
-      {children}
-    </AppContext.Provider>
+  const value = useMemo(
+    () => ({
+      pincode,
+      setPincode,
+      upcomingBookingsCount,
+      refetchBookingsCount,
+      profile,
+      refetchProfile,
+      unreadNotificationsCount,
+      refetchNotificationsCount,
+    }),
+    [pincode, setPincode, upcomingBookingsCount, refetchBookingsCount, profile, refetchProfile, unreadNotificationsCount, refetchNotificationsCount],
   );
+
+  return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 };

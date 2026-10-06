@@ -1,14 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
-import { addDays, format } from "date-fns";
-import { motion } from "framer-motion";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { addDays, format, isSameDay } from "date-fns";
+import { AnimatePresence, motion } from "framer-motion";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import LiveMap from "@/components/LiveMap";
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useEmailVerification } from "@/hooks/useEmailVerification";
@@ -17,7 +13,7 @@ import AttachmentViewer, { useBookingAttachments } from "@/components/Attachment
 import { uploadPendingDraftFiles } from "@/utils/draftAttachmentStore";
 import { supabase } from "@/integrations/supabase/client";
 import { Tables, TablesInsert } from "@/integrations/supabase/types";
-import { CheckCircle2, LocateFixed, Mic, ImageIcon, X } from "lucide-react";
+import { ArrowLeft, ImageIcon, LocateFixed, Mic, ShieldCheck, X } from "lucide-react";
 
 type Service = Tables<"services">;
 type Provider = Tables<"service_providers"> & {
@@ -77,7 +73,9 @@ const Booking = () => {
   const pincodeFromQuery = searchParams.get("pincode") ?? "";
   const subItemId = searchParams.get("sub_item") ?? null;
   const subItemName = searchParams.get("sub_name") ?? null;
-  const subItemPrice = searchParams.get("sub_price") ? Number(searchParams.get("sub_price")) : null;
+  // The price is NEVER taken from the URL. It is read from the database below, and the database
+  // re-prices the booking on insert anyway, so what the customer sees is what they are charged.
+  const [subItemPrice, setSubItemPrice] = useState<number | null>(null);
   const draftId = searchParams.get("draft") ?? null;
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -126,8 +124,8 @@ const Booking = () => {
           .eq("slug", serviceSlug)
           .maybeSingle(),
         supabase
-          .from("service_providers")
-          .select("*")
+          .from("public_providers")
+          .select("id, name, full_name, is_email_verified")
           .eq("id", providerId)
           .maybeSingle(),
         supabase.from("profiles")
@@ -137,7 +135,14 @@ const Booking = () => {
       ]);
 
       setService(serviceData);
-      setProvider(providerData as Provider | null);
+      setProvider(providerData as unknown as Provider | null);
+
+      if (subItemId && serviceData) {
+        const { data: sub } = await (supabase as unknown as {
+          from: (t: string) => { select: (c: string) => { eq: (c: string, v: string) => { eq: (c: string, v: string) => { maybeSingle: () => Promise<{ data: { base_price: number | null } | null }> } } } };
+        }).from("service_sub_items").select("base_price").eq("id", subItemId).eq("service_id", (serviceData as { id: string }).id).maybeSingle();
+        setSubItemPrice(sub?.base_price ?? null);
+      }
 
       if (profileData) {
         setAddress(profileData.address ?? "");
@@ -311,7 +316,14 @@ const Booking = () => {
 
       if (error && (error.code === "42501" || /row-level security/i.test(error.message))) {
         await refreshVerified();
-        toast({ title: "Verify your email first", description: "Email verification is required before booking.", variant: "destructive" });
+        // Any RLS refusal used to be reported as "verify your email", even for people who were already verified,
+        // which hid the real cause (a missing/old booking policy, for example).
+        console.error("Booking insert refused:", error);
+        if (verified === false) {
+          toast({ title: "Verify your email first", description: "Email verification is required before booking.", variant: "destructive" });
+        } else {
+          toast({ title: "Booking was refused", description: `The database rejected this booking (${error.code ?? "RLS"}). Please try again; if it repeats, contact support.`, variant: "destructive" });
+        }
         setSaving(false);
         return;
       }
@@ -367,269 +379,219 @@ const Booking = () => {
   const hasDraftFiles = Boolean(draftId && user?.id);
   void draftAttachments; // suppress unused warning — we use the storage list approach
 
+  const STEPS = ["When", "Where", "Confirm"];
+  const prevStep = useRef(step);
+  const dir = step >= prevStep.current ? 1 : -1;
+  useEffect(() => { prevStep.current = step; }, [step]);
+
+  const days = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(new Date(), i)), []);
+  const now = new Date();
+  const isToday = selectedDate ? isSameDay(selectedDate, now) : false;
+  const freeSlots = slots.filter((slot) => !isToday || Number(slot.slice(0, 2)) > now.getHours() + 1);
+  // A chosen option must have its real price loaded before the customer can confirm.
+  const priceReady = !subItemId || subItemPrice != null;
+  const ctaDisabled = step === 1 ? !canGoStep2 : step === 2 ? !canGoStep3 : saving || !priceReady || totalAmount <= 0;
+  const ctaLabel = step === 1 ? "Continue" : step === 2 ? "Review booking" : saving ? "Confirming…" : `Confirm · ₹${totalAmount}`;
+  const onCta = () => (step === 1 ? setStep(2) : step === 2 ? setStep(3) : confirmBooking());
+  const fieldCls = "mt-1.5 w-full rounded-2xl border-0 bg-secondary px-4 py-3.5 text-base outline-none focus:ring-2 focus:ring-gold";
+  const providerName = provider?.full_name ?? (provider as { name?: string } | null)?.name;
+
   return (
-    <div className="min-h-screen bg-background">
-      <Navbar />
-      <motion.main
-        initial={{ opacity: 0, y: 14 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="container mx-auto pt-28 pb-16 px-4 max-w-3xl"
-      >
-        <h1 className="text-3xl font-bold mb-1">Book Service</h1>
-        <p className="text-muted-foreground mb-8">
-          {service?.name} · {provider?.full_name ?? (provider as { name?: string } | null)?.name}
-        </p>
-
-        {verified === null && (
-          <div className="flex justify-center py-16"><div className="w-8 h-8 rounded-full border-2 border-primary border-t-transparent animate-spin" /></div>
-        )}
-        {verified === false && (
-          <EmailVerificationCard onVerified={refreshVerified} onCancel={() => navigate(-1)} />
-        )}
-        {verified === true && (
-        <div className="bg-card border border-border rounded-2xl p-5 md:p-8">
-          {/* Step progress */}
-          <div className="flex items-center gap-2 mb-8">
-            {["Date & Time", "Address", "Review"].map((label, idx) => {
-              const s = idx + 1;
-              return (
-                <div key={s} className="flex items-center gap-2 flex-1">
-                  <div
-                    className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 transition-all ${
-                      s < step
-                        ? "bg-green-500 text-white"
-                        : s === step
-                        ? "bg-primary text-primary-foreground shadow-gold"
-                        : "bg-secondary text-muted-foreground"
-                    }`}
-                  >
-                    {s < step ? "✓" : s}
-                  </div>
-                  <span className={`text-xs hidden sm:block ${s === step ? "text-foreground font-medium" : "text-muted-foreground"}`}>
-                    {label}
-                  </span>
-                  {s < 3 && <div className={`h-px flex-1 ${s < step ? "bg-green-500/40" : "bg-border"}`} />}
-                </div>
-              );
-            })}
+    <div className="min-h-dvh bg-background">
+      {/* Top bar + progress */}
+      <header className="sticky top-0 z-30 bg-background/90 px-3 pb-3 pt-[max(0.5rem,env(safe-area-inset-top))] backdrop-blur-2xl">
+        <div className="mx-auto flex max-w-xl items-center gap-1">
+          <button
+            onClick={() => (step > 1 ? setStep((v) => v - 1) : navigate(-1))}
+            aria-label="Back"
+            className="press flex h-11 w-11 items-center justify-center rounded-full hover:bg-secondary"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </button>
+          <div className="min-w-0 flex-1 px-1">
+            <p className="truncate text-sm font-bold">{service?.name}{subItemName ? ` · ${subItemName}` : ""}</p>
+            <p className="truncate text-xs text-muted-foreground">with {providerName}</p>
           </div>
-
-          {step === 1 && (
-            <div className="grid md:grid-cols-[auto,1fr] gap-8">
-              <div>
-                <h2 className="text-xl font-semibold mb-3">Select Date</h2>
-                <Calendar
-                  mode="single"
-                  selected={selectedDate}
-                  onSelect={setSelectedDate}
-                  disabled={(date) => date < new Date() || date > addDays(new Date(), 7)}
-                  className="rounded-xl border border-border bg-secondary"
-                />
-              </div>
-
-              <div>
-                <h2 className="text-xl font-semibold mb-3">Select Time Slot</h2>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                  {slots.map((slot) => (
-                    <button
-                      key={slot}
-                      type="button"
-                      onClick={() => setSelectedTime(slot)}
-                      className={`rounded-xl border px-4 py-3 text-sm transition ${
-                        selectedTime === slot
-                          ? "border-primary bg-primary/10 text-primary"
-                          : "border-border bg-secondary hover:border-primary/50"
-                      }`}
-                    >
-                      {slot}
-                    </button>
-                  ))}
-                </div>
-              </div>
+          <span className="pr-2 text-xs font-semibold text-muted-foreground">{step}/3</span>
+        </div>
+        <div className="mx-auto mt-1 flex max-w-xl gap-1.5 px-3">
+          {STEPS.map((_, i) => (
+            <div key={i} className="h-1 flex-1 overflow-hidden rounded-full bg-secondary">
+              <motion.div
+                className="h-full rounded-full bg-gold"
+                initial={false}
+                animate={{ width: i < step ? "100%" : "0%" }}
+                transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+              />
             </div>
-          )}
+          ))}
+        </div>
+      </header>
 
-          {step === 2 && (
-            <div className="space-y-4">
-              <h2 className="text-xl font-semibold mb-3">Address Details</h2>
-              <div>
-                <label className="text-sm text-muted-foreground">Full Address</label>
-                <Textarea value={address} onChange={(e) => setAddress(e.target.value)} className="mt-1 bg-secondary" />
-              </div>
-              <div className="space-y-2">
-                <Button type="button" variant="outline" onClick={useCurrentLocation} disabled={locating} className="border-primary/40">
-                  <LocateFixed className="mr-2 h-4 w-4" />
-                  {locating ? "Finding location..." : "Use my current location"}
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={usePincodeLocation}
-                  disabled={pincodeLocating || !/^\d{6}$/.test(pincode)}
-                  className="ml-2 border-primary/40"
-                >
-                  {pincodeLocating ? "Finding pincode..." : "Locate by pincode"}
-                </Button>
-                {latitude !== null && longitude !== null && (
-                  <>
-                    <LiveMap
-                      height="210px"
-                      markers={[{ latitude, longitude, label: "Service location", draggable: true }]}
-                      onMarkerDrag={(nextLatitude, nextLongitude) => {
-                        setLatitude(nextLatitude);
-                        setLongitude(nextLongitude);
-                        setLocationAccuracy(null);
-                        void reverseGeocode(nextLatitude, nextLongitude);
-                      }}
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Drag the marker to adjust the service location.
-                      {locationSource === "pincode" && " Pincode locations are approximate."}
-                    </p>
-                    {locationAccuracy !== null && locationAccuracy > 100 && (
-                      <p className="text-xs text-amber-400">Location may be approximate ({Math.round(locationAccuracy)}m accuracy). Drag the marker to adjust it.</p>
-                    )}
-                  </>
-                )}
-              </div>
-              <div className="grid md:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm text-muted-foreground">Pincode</label>
-                  <Input
-                    value={pincode}
-                    onChange={(e) => setPincode(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                    className="mt-1 bg-secondary"
-                  />
-                </div>
-                <div>
-                  <label className="text-sm text-muted-foreground">City</label>
-                  <Input value={city} onChange={(e) => setCity(e.target.value)} className="mt-1 bg-secondary" />
-                </div>
-              </div>
-              <div>
-                <label className="text-sm text-muted-foreground">Special Instructions (optional)</label>
-                <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} className="mt-1 bg-secondary" />
-              </div>
-            </div>
-          )}
+      <main className="mx-auto max-w-xl overflow-x-hidden px-5 pb-36 pt-4">
+        {verified === null && (
+          <div className="flex justify-center py-24"><div className="h-8 w-8 animate-spin rounded-full border-2 border-foreground border-t-transparent" /></div>
+        )}
+        {verified === false && <EmailVerificationCard onVerified={refreshVerified} onCancel={() => navigate(-1)} />}
 
-          {step === 3 && (
-            <div className="space-y-4">
-              <h2 className="text-xl font-semibold mb-3">Review & Confirm</h2>
-              <div className="bg-secondary rounded-xl p-4 space-y-2 text-sm">
-                <p>
-                  Service: <span className="text-foreground font-medium">{service?.name}</span>
-                </p>
-                {subItemName && (
-                  <p>
-                    Sub-service: <span className="text-foreground font-medium">{subItemName}</span>
-                  </p>
-                )}
-                <p>
-                  Provider: <span className="inline-flex items-center gap-1 text-foreground font-medium">{provider?.full_name ?? (provider as { name?: string } | null)?.name}{provider?.is_email_verified && <CheckCircle2 className="h-4 w-4 text-green-500" aria-label="Verified Provider" />}</span>
-                </p>
-                <p>
-                  Date: <span className="text-foreground font-medium">{selectedDate ? format(selectedDate, "EEEE, d MMMM yyyy") : "-"}</span>
-                </p>
-                <p>
-                  Time: <span className="text-foreground font-medium">{selectedTime}</span>
-                </p>
-                <p>
-                  Address: <span className="text-foreground font-medium">{address}, {city} - {pincode}</span>
-                </p>
-              </div>
-
-              <div className="bg-secondary rounded-xl p-4 text-sm">
-                <div className="flex justify-between mb-1">
-                  <span className="text-muted-foreground">Service Charge</span>
-                  <span className="text-foreground">₹{serviceCharge}</span>
-                </div>
-                <div className="flex justify-between mb-2">
-                  <span className="text-muted-foreground">Platform Fee</span>
-                  <span className="text-foreground">₹{platformFee}</span>
-                </div>
-                <div className="border-t border-border pt-2 flex justify-between font-bold text-primary text-base">
-                  <span>Total</span>
-                  <span>₹{totalAmount}</span>
-                </div>
-              </div>
-
-              {/* ── Draft attachment preview ── */}
-              {hasDraftFiles && !attachmentsRemoved && (
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm font-medium text-foreground">Attached Problem Description</p>
-                    <button
-                      type="button"
-                      onClick={() => setAttachmentsRemoved(true)}
-                      className="text-xs text-muted-foreground hover:text-destructive flex items-center gap-1"
-                    >
-                      <X className="w-3.5 h-3.5" /> Remove all
-                    </button>
+        {verified === true && (
+          <AnimatePresence mode="wait" initial={false} custom={dir}>
+            <motion.div
+              key={step}
+              custom={dir}
+              initial={{ opacity: 0, x: 40 * dir }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -40 * dir }}
+              transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+            >
+              {step === 1 && (
+                <section>
+                  <h1 className="text-[28px] font-extrabold tracking-tight">When should {providerName?.split(" ")[0] ?? "the pro"} arrive?</h1>
+                  <div className="no-scrollbar -mx-5 mt-6 flex gap-2 overflow-x-auto px-5">
+                    {days.map((d) => {
+                      const on = selectedDate ? isSameDay(selectedDate, d) : false;
+                      return (
+                        <button
+                          key={d.toISOString()}
+                          onClick={() => { setSelectedDate(d); setSelectedTime(""); }}
+                          className={`press flex h-20 w-16 shrink-0 flex-col items-center justify-center rounded-2xl transition-colors ${on ? "bg-primary text-primary-foreground" : "bg-secondary"}`}
+                        >
+                          <span className={`text-xs font-semibold ${on ? "text-gold" : "text-muted-foreground"}`}>{isSameDay(d, now) ? "Today" : format(d, "EEE")}</span>
+                          <span className="text-xl font-extrabold">{format(d, "d")}</span>
+                        </button>
+                      );
+                    })}
                   </div>
-                  {/* Show a summary since we can't easily get signed URLs here without booking_id */}
-                  <div className="flex gap-3 p-3 rounded-xl bg-primary/5 border border-primary/15 text-sm text-muted-foreground">
-                    {problemSummaryFromSearch(searchParams)}
-                  </div>
-                  {notes && (
-                    <div className="p-3 rounded-xl bg-secondary border border-border text-sm text-muted-foreground">
-                      <span className="font-medium text-foreground">Note: </span>{notes}
+                  <h2 className="mb-3 mt-8 text-lg font-extrabold tracking-tight">Time</h2>
+                  {freeSlots.length === 0 ? (
+                    <p className="rounded-2xl bg-secondary p-4 text-sm text-muted-foreground">No slots left today. Pick another day.</p>
+                  ) : (
+                    <div className="grid grid-cols-3 gap-2.5">
+                      {freeSlots.map((slot) => (
+                        <button
+                          key={slot}
+                          type="button"
+                          onClick={() => setSelectedTime(slot)}
+                          className={`press h-12 rounded-2xl text-sm font-bold transition-colors ${selectedTime === slot ? "bg-primary text-primary-foreground" : "bg-secondary"}`}
+                        >
+                          {slot}
+                        </button>
+                      ))}
                     </div>
                   )}
-                </div>
+                </section>
               )}
 
-              {attachmentsRemoved && (
-                <p className="text-xs text-muted-foreground">Attachments will not be sent with this booking.</p>
+              {step === 2 && (
+                <section className="space-y-5">
+                  <h1 className="text-[28px] font-extrabold tracking-tight">Where is the job?</h1>
+                  <div className="flex flex-wrap gap-2">
+                    <button type="button" onClick={useCurrentLocation} disabled={locating} className="press flex h-11 items-center gap-2 rounded-full bg-primary px-5 text-sm font-bold text-primary-foreground disabled:opacity-60">
+                      <LocateFixed className="h-4 w-4" />{locating ? "Locating…" : "Use current location"}
+                    </button>
+                    <button type="button" onClick={usePincodeLocation} disabled={pincodeLocating || !/^\d{6}$/.test(pincode)} className="press h-11 rounded-full bg-secondary px-5 text-sm font-bold disabled:opacity-40">
+                      {pincodeLocating ? "Finding…" : "Locate by pincode"}
+                    </button>
+                  </div>
+                  {latitude !== null && longitude !== null && (
+                    <div className="overflow-hidden rounded-3xl">
+                      <LiveMap
+                        height="210px"
+                        markers={[{ latitude, longitude, label: "Service location", draggable: true }]}
+                        onMarkerDrag={(nextLatitude, nextLongitude) => {
+                          setLatitude(nextLatitude);
+                          setLongitude(nextLongitude);
+                          setLocationAccuracy(null);
+                          void reverseGeocode(nextLatitude, nextLongitude);
+                        }}
+                      />
+                      <p className="bg-secondary px-4 py-2 text-xs text-muted-foreground">
+                        Drag the pin to adjust.{locationSource === "pincode" && " Pincode locations are approximate."}
+                        {locationAccuracy !== null && locationAccuracy > 100 && ` Accuracy ~${Math.round(locationAccuracy)}m.`}
+                      </p>
+                    </div>
+                  )}
+                  <label className="block text-sm font-semibold">Full address
+                    <Textarea value={address} onChange={(e) => setAddress(e.target.value)} className={fieldCls} rows={3} />
+                  </label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <label className="block text-sm font-semibold">Pincode
+                      <Input inputMode="numeric" value={pincode} onChange={(e) => setPincode(e.target.value.replace(/\D/g, "").slice(0, 6))} className={fieldCls + " h-auto"} />
+                    </label>
+                    <label className="block text-sm font-semibold">City
+                      <Input value={city} onChange={(e) => setCity(e.target.value)} className={fieldCls + " h-auto"} />
+                    </label>
+                  </div>
+                  <label className="block text-sm font-semibold">Instructions <span className="font-normal text-muted-foreground">(optional)</span>
+                    <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} className={fieldCls} rows={2} />
+                  </label>
+                </section>
               )}
-            </div>
-          )}
 
-          <div className="mt-8 flex gap-3">
-            {step > 1 && (
-              <Button
-                variant="outline"
-                className="border-border flex-shrink-0"
-                onClick={() => setStep((value) => value - 1)}
-              >
-                ← Back
-              </Button>
-            )}
+              {step === 3 && (
+                <section className="space-y-4">
+                  <h1 className="text-[28px] font-extrabold tracking-tight">Review &amp; confirm</h1>
+                  <div className="divide-y divide-border/70 rounded-3xl border border-border px-5">
+                    {[
+                      ["Service", `${service?.name ?? ""}${subItemName ? ` · ${subItemName}` : ""}`],
+                      ["Pro", providerName ?? ""],
+                      ["When", `${selectedDate ? format(selectedDate, "EEE, d MMM") : "-"} · ${selectedTime}`],
+                      ["Where", `${address}, ${city} - ${pincode}`],
+                    ].map(([k, v]) => (
+                      <div key={k} className="flex justify-between gap-6 py-3.5 text-sm">
+                        <span className="text-muted-foreground">{k}</span>
+                        <span className="text-right font-semibold">{v}</span>
+                      </div>
+                    ))}
+                  </div>
 
-            {step === 1 && (
-              <Button
-                className="bg-gradient-gold text-primary-foreground font-bold flex-1 py-6 rounded-xl shadow-gold hover:opacity-90"
-                disabled={!canGoStep2}
-                onClick={() => setStep(2)}
-              >
-                Continue to Address →
-              </Button>
-            )}
+                  <div className="rounded-3xl bg-secondary p-5 text-sm">
+                    <div className="flex justify-between"><span className="text-muted-foreground">Service charge</span><span className="font-semibold">₹{serviceCharge}</span></div>
+                    <div className="mt-2 flex justify-between"><span className="text-muted-foreground">Platform fee</span><span className="font-semibold">₹{platformFee}</span></div>
+                    <div className="mt-3 flex justify-between border-t border-border pt-3 text-lg font-extrabold"><span>Total</span><span>₹{totalAmount}</span></div>
+                  </div>
 
-            {step === 2 && (
-              <Button
-                className="bg-gradient-gold text-primary-foreground font-bold flex-1 py-6 rounded-xl shadow-gold hover:opacity-90"
-                disabled={!canGoStep3}
-                onClick={() => setStep(3)}
-              >
-                Review Booking →
-              </Button>
-            )}
+                  <div className="flex items-start gap-3 rounded-2xl bg-accent p-4 text-sm">
+                    <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0" />
+                    <p><span className="font-bold">Pay after the service.</span> Online only, by UPI or QR. Nothing is charged now.</p>
+                  </div>
 
-            {step === 3 && (
-              <Button
-                className="bg-gradient-gold text-primary-foreground font-bold flex-1 py-6 rounded-xl shadow-gold hover:opacity-90"
-                disabled={saving}
-                onClick={confirmBooking}
-              >
-                {saving ? "Confirming..." : `Confirm Booking · ₹${totalAmount}`}
-              </Button>
-            )}
-          </div>
-        </div>
+                  {hasDraftFiles && !attachmentsRemoved ? (
+                    <div className="rounded-2xl border border-border p-4 text-sm">
+                      <div className="flex items-center justify-between">
+                        <p className="font-bold">Problem details attached</p>
+                        <button type="button" onClick={() => setAttachmentsRemoved(true)} className="press flex items-center gap-1 text-xs text-muted-foreground">
+                          <X className="h-3.5 w-3.5" /> Remove
+                        </button>
+                      </div>
+                      <div className="mt-2 text-muted-foreground">{problemSummaryFromSearch(searchParams)}</div>
+                      {notes && <p className="mt-2 text-muted-foreground"><span className="font-semibold text-foreground">Note: </span>{notes}</p>}
+                    </div>
+                  ) : (
+                    attachmentsRemoved && <p className="text-xs text-muted-foreground">Attachments will not be sent with this booking.</p>
+                  )}
+                </section>
+              )}
+            </motion.div>
+          </AnimatePresence>
         )}
-      </motion.main>
-      <Footer />
+      </main>
+
+      {/* Sticky action bar */}
+      {verified === true && (
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border/60 bg-background/90 px-5 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur-2xl">
+          <button
+            onClick={onCta}
+            disabled={ctaDisabled}
+            className={`press mx-auto flex h-14 w-full max-w-xl items-center justify-center gap-2 rounded-2xl text-base font-bold transition-colors disabled:opacity-40 ${
+              step === 3 ? "bg-gold text-gold-foreground" : "bg-primary text-primary-foreground"
+            }`}
+          >
+            {saving && <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />}
+            {ctaLabel}
+          </button>
+        </div>
+      )}
     </div>
   );
 };
@@ -642,8 +604,8 @@ function problemSummaryFromSearch(params: URLSearchParams): React.ReactNode {
   // show a generic indicator instead.
   return (
     <span className="flex items-center gap-3 text-xs">
-      <span className="flex items-center gap-1"><Mic className="w-3.5 h-3.5 text-primary" /> Voice / photos may be attached</span>
-      <span className="flex items-center gap-1"><ImageIcon className="w-3.5 h-3.5 text-primary" /> Will be sent to provider</span>
+      <span className="flex items-center gap-1"><Mic className="w-3.5 h-3.5 text-foreground" /> Voice / photos may be attached</span>
+      <span className="flex items-center gap-1"><ImageIcon className="w-3.5 h-3.5 text-foreground" /> Will be sent to provider</span>
     </span>
   );
 }

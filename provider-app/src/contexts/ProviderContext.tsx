@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import React, { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './AuthContext';
 import type { KycStatus } from '@/lib/constants';
@@ -91,30 +91,38 @@ export const ProviderProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   useEffect(() => { fetchProvider(); }, [fetchProvider]);
 
+  // Depends on the provider's ID only. The 30s heartbeat below replaces the whole `provider` object every time,
+  // and depending on the object re-created this callback, tore down and re-opened the realtime channel and
+  // re-queried the counts every 30 seconds (events landing in that gap were lost).
+  const providerId = provider?.id;
   const refreshUnreadCount = useCallback(async () => {
-    if (!provider) return;
+    if (!providerId) return;
     const { count } = await supabase
       .from('provider_notifications')
       .select('*', { count: 'exact', head: true })
-      .eq('provider_id', provider.id)
+      .eq('provider_id', providerId)
       .eq('is_read', false);
     setUnreadNotificationsCount(count || 0);
 
     const { count: pendingCount } = await supabase
       .from('bookings')
       .select('*', { count: 'exact', head: true })
-      .eq('provider_id', provider.id)
+      .eq('provider_id', providerId)
       .eq('status', 'pending');
     setPendingBookingsCount(pendingCount || 0);
-  }, [provider]);
+  }, [providerId]);
 
   // Auto-set online — ONLY for approved providers
+  const wantOnlineRef = useRef(true);
   useEffect(() => {
     if (!provider) return;
     // Guard: only approved+active providers can go online
     if (provider.kyc_status !== 'approved' || provider.status !== 'active') return;
 
     const markOnline = async () => {
+      // The 30s heartbeat used to force is_online=true again, so a provider who switched themselves
+      // offline was silently put back online. Only keep the heartbeat while they WANT to be online.
+      if (!wantOnlineRef.current) return;
       const { data } = await supabase
         .from('service_providers')
         .update({ is_online: true })
@@ -163,28 +171,29 @@ export const ProviderProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   }, [provider?.id]);
 
   useEffect(() => {
-    if (!provider) return;
+    if (!providerId) return;
     refreshUnreadCount();
 
-    const channel = supabase.channel('provider-context-live')
+    const channel = supabase.channel(`provider-context-live-${providerId}`)
       .on('postgres_changes', {
         event: '*', schema: 'public', table: 'provider_notifications',
-        filter: `provider_id=eq.${provider.id}`
+        filter: `provider_id=eq.${providerId}`
       }, () => refreshUnreadCount())
       .on('postgres_changes', {
         event: '*', schema: 'public', table: 'bookings',
-        filter: `provider_id=eq.${provider.id}`
+        filter: `provider_id=eq.${providerId}`
       }, () => refreshUnreadCount())
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [provider, refreshUnreadCount]);
+  }, [providerId, refreshUnreadCount]);
 
   const toggleOnline = async () => {
     if (!provider) return;
     // Guard: DB trigger will silently reset to false anyway, but show a cleaner UX
     if (provider.kyc_status !== 'approved' || provider.status !== 'active') return;
     const newStatus = !provider.is_online;
+    wantOnlineRef.current = newStatus;
     const { data } = await supabase
       .from('service_providers')
       .update({ is_online: newStatus })

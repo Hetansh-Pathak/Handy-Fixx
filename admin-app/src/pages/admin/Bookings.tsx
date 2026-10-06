@@ -20,7 +20,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { cn, formatDate, formatDateTime, timeAgo, shortId, STATUS_STYLES, STATUS_LABELS, CANCEL_REASONS } from '@/lib/utils';
+import { cn, formatDate, formatDateTime, timeAgo, shortId, STATUS_STYLES, STATUS_LABELS, CANCEL_REASONS, safeSearch, isUuid } from '@/lib/utils';
 
 const PAGE_SIZE = 20;
 
@@ -79,7 +79,11 @@ const Bookings: React.FC = () => {
   const [page, setPage] = useState(0);
 
   // Filters
-  const [statusFilter, setStatusFilter] = useState<string>('all');
+  // The dashboard tiles link here as /bookings?status=pending; honour that instead of ignoring it.
+  const [statusFilter, setStatusFilter] = useState<string>(() => {
+    const q = new URLSearchParams(window.location.search).get('status');
+    return q && ['pending', 'confirmed', 'on_the_way', 'in_progress', 'completed', 'cancelled'].includes(q) ? q : 'all';
+  });
   const [search, setSearch] = useState('');
   const [cityFilter, setCityFilter] = useState('all');
   const [realtimeAlert, setRealtimeAlert] = useState(false);
@@ -122,8 +126,13 @@ const Bookings: React.FC = () => {
 
       if (statusFilter !== 'all') query = query.eq('status', statusFilter);
       if (cityFilter !== 'all') query = query.eq('city', cityFilter);
-      if (search.trim()) {
-        query = query.or(`id.ilike.%${search}%,address.ilike.%${search}%,customer_name.ilike.%${search}%`);
+      const term = safeSearch(search);
+      if (term) {
+        // bookings.id is a uuid: ILIKE on it throws "operator does not exist" and killed every search. Match it
+        // exactly when the text is a full uuid, and search the text columns otherwise.
+        query = isUuid(term)
+          ? query.eq('id', term)
+          : query.or(`address.ilike.%${term}%,customer_name.ilike.%${term}%`);
       }
 
       const { data, count, error } = await query

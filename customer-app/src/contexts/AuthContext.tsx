@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
+import { clearAllCaches } from "@/lib/queryClient";
 
 interface AuthContextType {
   session: Session | null;
@@ -26,7 +27,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     // ① Subscribe first so we don't miss events fired between mount and getSession
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
+      (event, session) => {
+        if (event === "SIGNED_OUT") clearAllCaches();
         // Only update session/user — do NOT touch loading here.
         // setLoading(false) is exclusively owned by getSession() below.
         setSession(session);
@@ -47,6 +49,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signOut = async () => {
     await supabase.auth.signOut();
+    clearAllCaches();
     // Eagerly clear state so PrivateRoute redirects without waiting for onAuthStateChange
     setSession(null);
     setUser(null);

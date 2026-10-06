@@ -8,6 +8,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
 import KycStatusBanner from '@/components/provider/KycStatusBanner';
+import RequestAlert from '@/components/provider/RequestAlert';
+import ActiveJob from '@/components/provider/ActiveJob';
 import {
   LayoutDashboard, Briefcase, DollarSign, CalendarDays,
   Star, Bell, User, Settings, LogOut, Menu, X, ChevronLeft,
@@ -189,6 +191,16 @@ const ProviderLayout: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-3">
+            {isApproved && (
+              <button
+                onClick={toggleOnline}
+                className={cn('press flex items-center gap-2 rounded-full px-3.5 py-2 text-xs font-bold lg:hidden',
+                  provider?.is_online ? 'bg-gold text-gold-foreground' : 'bg-secondary')}
+              >
+                <span className={cn('h-2 w-2 rounded-full', provider?.is_online ? 'bg-gold-foreground animate-pulse' : 'bg-muted-foreground')} />
+                {provider?.is_online ? 'Online' : 'Offline'}
+              </button>
+            )}
             <button
               onClick={() => navigate('/provider-panel/notifications')}
               className="relative p-2 rounded-lg hover:bg-secondary/50"
@@ -217,10 +229,45 @@ const ProviderLayout: React.FC = () => {
         <KycStatusBanner />
 
         {/* Page content */}
-        <main className="flex-1 p-4 md:p-6 overflow-y-auto">
+        <main className="flex-1 overflow-y-auto p-4 pb-28 md:p-6 lg:pb-6">
           <Outlet />
         </main>
       </div>
+      <RequestAlert />
+      <ActiveJob />
+
+      {/* Mobile tab bar */}
+      <nav aria-label="Primary" className="fixed inset-x-0 bottom-0 z-40 border-t border-border/70 bg-background/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-2xl lg:hidden">
+        <ul className="grid grid-cols-5 px-1">
+          {[
+            { path: '/provider-panel', label: 'Home', icon: LayoutDashboard },
+            { path: '/provider-panel/bookings', label: 'Jobs', icon: Briefcase, badge: pendingBookingsCount },
+            { path: '/provider-panel/earnings', label: 'Earnings', icon: DollarSign },
+            { path: '/provider-panel/notifications', label: 'Alerts', icon: Bell, badge: unreadNotificationsCount },
+            { path: '/provider-panel/profile', label: 'Profile', icon: User },
+          ].map((t) => {
+            const active = isActive(t.path);
+            return (
+              <li key={t.path}>
+                <button
+                  onClick={() => { try { navigator.vibrate?.(8); } catch { /* noop */ } handleNav(t.path); }}
+                  aria-current={active ? 'page' : undefined}
+                  className={cn('press relative flex h-16 w-full flex-col items-center justify-center gap-1 text-[11px] font-semibold', active ? 'text-foreground' : 'text-muted-foreground/80')}
+                >
+                  <span className="relative">
+                    <t.icon className="h-[22px] w-[22px]" strokeWidth={active ? 2.4 : 1.8} />
+                    {!!t.badge && t.badge > 0 && (
+                      <span className="absolute -right-2.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-gold px-1 text-[9px] font-bold text-gold-foreground">{t.badge > 9 ? '9+' : t.badge}</span>
+                    )}
+                  </span>
+                  {t.label}
+                  {active && <motion.span layoutId="ptab-dot" transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }} className="absolute top-1.5 h-1 w-1 rounded-full bg-gold" />}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      </nav>
     </div>
   );
 };
