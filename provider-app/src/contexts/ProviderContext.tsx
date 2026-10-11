@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState, useCallback } fr
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './AuthContext';
 import type { KycStatus } from '@/lib/constants';
+import { toast } from '@/hooks/use-toast';
 
 interface NotificationPreferences {
   new_booking: boolean;
@@ -191,7 +192,17 @@ export const ProviderProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       .eq('id', provider.id)
       .select()
       .single();
-    if (data) setProvider(data as unknown as ProviderProfile);
+    if (data) {
+      setProvider(data as unknown as ProviderProfile);
+      // The database refuses "online" while dues are over the limit (or a job's payment is missing)
+      if (newStatus && (data as { is_online?: boolean | null }).is_online === false) {
+        toast({
+          title: "You can't go online yet",
+          description: 'Open Wallet: pay your dues or record the payment of your last job.',
+          variant: 'destructive',
+        });
+      }
+    }
   };
 
   // loading is true if auth is still resolving OR provider fetch hasn't completed

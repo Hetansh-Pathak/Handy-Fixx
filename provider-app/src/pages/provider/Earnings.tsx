@@ -1,24 +1,21 @@
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { useProvider } from '@/contexts/ProviderContext';
 import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { motion } from 'framer-motion';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
-import { DollarSign, TrendingUp, Clock, Loader2, Wallet, ArrowDownToLine } from 'lucide-react';
+import { DollarSign, TrendingUp, Clock, Wallet } from 'lucide-react';
 import LockedPage from '@/components/provider/LockedPage';
+import { useNavigate } from 'react-router-dom';
 
 const Earnings: React.FC = () => {
   const { provider, refreshProvider } = useProvider();
-  const { toast } = useToast();
+  const navigate = useNavigate();
   const [earnings, setEarnings] = useState<any[]>([]);
   const [payouts, setPayouts] = useState<any[]>([]);
-  const [withdrawOpen, setWithdrawOpen] = useState(false);
-  const [withdrawing, setWithdrawing] = useState(false);
   const [tab, setTab] = useState('overview');
 
   const fetchEarnings = useCallback(async () => {
@@ -62,9 +59,9 @@ const Earnings: React.FC = () => {
 
   const totals = useMemo(() => {
     const total = earnings.reduce((s, e) => s + Number(e.provider_amount), 0);
-    const pending = earnings.filter(e => e.status === 'pending').reduce((s, e) => s + Number(e.provider_amount), 0);
-    const paid = earnings.filter(e => e.status === 'paid').reduce((s, e) => s + Number(e.provider_amount), 0);
-    return { total, pending, paid };
+    const monthStart = new Date(); monthStart.setDate(1); monthStart.setHours(0, 0, 0, 0);
+    const month = earnings.filter(e => new Date(e.created_at) >= monthStart).reduce((s, e) => s + Number(e.provider_amount), 0);
+    return { total, month, jobs: earnings.length };
   }, [earnings]);
 
   const monthlyData = useMemo(() => {
@@ -80,51 +77,6 @@ const Earnings: React.FC = () => {
       return { month, amount };
     });
   }, [earnings]);
-
-  const handleWithdraw = async () => {
-    if (!provider) return;
-    if (!provider.bank_account_number && !provider.upi_id) {
-      toast({ title: 'Add bank details first', description: 'Go to Profile → Bank Details', variant: 'destructive' });
-      return;
-    }
-    if (totals.pending <= 0) {
-      toast({ title: 'No pending earnings', description: 'Nothing to withdraw right now.', variant: 'destructive' });
-      return;
-    }
-    setWithdrawing(true);
-    const { error } = await supabase.from('payout_requests').insert({
-      provider_id: provider.id,
-      amount: totals.pending,
-      bank_account_name: provider.bank_account_name,
-      bank_account_number: provider.bank_account_number,
-      bank_ifsc: provider.bank_ifsc,
-      upi_id: provider.upi_id,
-    });
-    if (!error) {
-      await supabase.from('provider_earnings')
-        .update({ status: 'processing' })
-        .eq('provider_id', provider.id)
-        .eq('status', 'pending');
-
-      // Insert a notification for the provider
-      await supabase.from('provider_notifications').insert({
-        provider_id: provider.id,
-        type: 'payment',
-        title: 'Withdrawal Requested 💸',
-        message: `₹${totals.pending.toLocaleString()} withdrawal request submitted. Funds arrive in 1-2 business days.`,
-        data: {},
-      });
-
-      toast({ title: 'Withdrawal Requested! 💸', description: 'Funds will arrive in 1-2 business days.' });
-      setWithdrawOpen(false);
-      fetchEarnings();
-      fetchPayouts();
-      refreshProvider();
-    } else {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
-    }
-    setWithdrawing(false);
-  };
 
   const payoutStatusColors: Record<string, string> = {
     pending: 'bg-warning/20 text-warning',
@@ -142,9 +94,9 @@ const Earnings: React.FC = () => {
       {/* Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {[
-          { label: 'Total Earnings', value: totals.total, icon: DollarSign, color: 'text-primary' },
-          { label: 'Pending', value: totals.pending, icon: Clock, color: 'text-warning' },
-          { label: 'Paid Out', value: totals.paid, icon: TrendingUp, color: 'text-success' },
+          { label: 'Total Earned (jobs)', value: totals.total, icon: DollarSign, color: 'text-primary' },
+          { label: 'This Month', value: totals.month, icon: Clock, color: 'text-warning' },
+          { label: 'Jobs Completed', value: totals.jobs, icon: TrendingUp, color: 'text-success' },
         ].map((s, i) => (
           <motion.div key={s.label} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
             <Card className="glass-card p-4">
@@ -152,51 +104,22 @@ const Earnings: React.FC = () => {
                 <span className="text-xs text-muted-foreground uppercase tracking-wider">{s.label}</span>
                 <s.icon className={`h-4 w-4 ${s.color}`} />
               </div>
-              <p className="text-2xl font-bold">₹{s.value.toLocaleString()}</p>
+              <p className="text-2xl font-bold">{s.label === 'Jobs Completed' ? s.value : `₹${s.value.toLocaleString()}`}</p>
             </Card>
           </motion.div>
         ))}
       </div>
 
-      {/* Withdraw Button */}
-      <Dialog open={withdrawOpen} onOpenChange={setWithdrawOpen}>
-        <DialogTrigger asChild>
-          <Button className="gold-gradient text-primary-foreground font-semibold" disabled={totals.pending <= 0}>
-            <Wallet className="h-4 w-4 mr-2" />
-            Withdraw ₹{totals.pending.toLocaleString()}
-          </Button>
-        </DialogTrigger>
-        <DialogContent className="bg-card border-border">
-          <DialogHeader>
-            <DialogTitle>Confirm Withdrawal</DialogTitle>
-            <DialogDescription>₹{totals.pending.toLocaleString()} will be transferred to your account within 1-2 business days.</DialogDescription>
-          </DialogHeader>
-          <div className="py-4">
-            <p className="text-sm font-medium mb-1">Paying to:</p>
-            {provider?.bank_account_number ? (
-              <>
-                <p className="font-semibold">{provider.bank_account_name}</p>
-                <p className="text-sm text-muted-foreground">{provider.bank_ifsc} · **** {provider.bank_account_number?.slice(-4)}</p>
-              </>
-            ) : provider?.upi_id ? (
-              <p className="font-semibold">UPI: {provider.upi_id}</p>
-            ) : (
-              <p className="text-destructive text-sm">⚠️ No payment details. Add them in Profile first.</p>
-            )}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setWithdrawOpen(false)}>Cancel</Button>
-            <Button className="gold-gradient text-primary-foreground font-semibold" onClick={handleWithdraw} disabled={withdrawing || (!provider?.bank_account_number && !provider?.upi_id)}>
-              {withdrawing ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Confirm Withdrawal'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Money moves through the Wallet now */}
+      <Button className="gold-gradient text-primary-foreground font-semibold" onClick={() => navigate('/provider-panel/wallet')}>
+        <Wallet className="h-4 w-4 mr-2" />
+        Open Wallet (balance, dues, withdraw)
+      </Button>
 
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList className="bg-secondary/50">
           <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="transactions">Transactions</TabsTrigger>
+          <TabsTrigger value="transactions">Job earnings</TabsTrigger>
           <TabsTrigger value="payouts">Payout History</TabsTrigger>
         </TabsList>
 
@@ -225,9 +148,6 @@ const Earnings: React.FC = () => {
                   <p className="font-medium text-sm">₹{Number(e.provider_amount).toLocaleString()}</p>
                   <p className="text-xs text-muted-foreground">{new Date(e.created_at).toLocaleDateString()}</p>
                 </div>
-                <Badge className={e.status === 'paid' ? 'bg-success/20 text-success' : e.status === 'processing' ? 'bg-blue-500/20 text-blue-400' : 'bg-warning/20 text-warning'} variant="secondary">
-                  {e.status}
-                </Badge>
               </Card>
             </motion.div>
           ))}

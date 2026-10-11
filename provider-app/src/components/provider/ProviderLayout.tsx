@@ -8,10 +8,11 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
 import KycStatusBanner from '@/components/provider/KycStatusBanner';
+import CollectPaymentBar from '@/components/provider/CollectPaymentBar';
 import {
   LayoutDashboard, Briefcase, DollarSign, CalendarDays,
   Star, Bell, User, Settings, LogOut, Menu, X, ChevronLeft,
-  ClipboardList
+  ClipboardList, Wallet as WalletIcon
 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
@@ -30,6 +31,7 @@ const ProviderLayout: React.FC = () => {
     { path: '/provider-panel', label: 'Dashboard', icon: LayoutDashboard },
     { path: '/provider-panel/bookings', label: 'Bookings', icon: Briefcase, badge: pendingBookingsCount },
     { path: '/provider-panel/earnings', label: 'Earnings', icon: DollarSign },
+    { path: '/provider-panel/wallet', label: 'Wallet', icon: WalletIcon },
     { path: '/provider-panel/schedule', label: 'Schedule', icon: CalendarDays },
     { path: '/provider-panel/reviews', label: 'Reviews', icon: Star },
     { path: '/provider-panel/notifications', label: 'Notifications', icon: Bell, badge: unreadNotificationsCount },
@@ -217,9 +219,10 @@ const ProviderLayout: React.FC = () => {
         <KycStatusBanner />
 
         {/* Page content */}
-        <main className="flex-1 p-4 md:p-6 overflow-y-auto">
+        <main className="flex-1 p-4 md:p-6 pb-24 overflow-y-auto">
           <Outlet />
         </main>
+        {isApproved && <CollectPaymentBar />}
       </div>
     </div>
   );

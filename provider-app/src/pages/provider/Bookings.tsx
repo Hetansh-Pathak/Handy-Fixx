@@ -22,6 +22,7 @@ import AttachmentViewer, {
   type RawAttachment,
 } from '@/components/AttachmentViewer';
 import CompleteJobDialog from '@/components/provider/CompleteJobDialog';
+import PaymentStep from '@/components/provider/PaymentStep';
 import LockedPage from '@/components/provider/LockedPage';
 
 type BookingStatus = 'pending' | 'confirmed' | 'on_the_way' | 'in_progress' | 'completed' | 'cancelled';
@@ -159,6 +160,9 @@ const Bookings = () => {
   // Feature 2: Complete job dialog state
   const [completeDialogBookingId, setCompleteDialogBookingId] = useState<string | null>(null);
 
+  // Payment step (QR / cash) after completion
+  const [paymentBookingId, setPaymentBookingId] = useState<string | null>(null);
+
   const fetchBookings = useCallback(async () => {
     if (!provider?.id) return;
 
@@ -169,7 +173,7 @@ const Bookings = () => {
         booking_date, booking_time,
         scheduled_date, scheduled_time,
         address, city, pincode, latitude, longitude,
-        total_amount, platform_fee, provider_amount,
+        total_amount, platform_fee, provider_amount, payment_status,
         description, special_instructions, sub_item_id, sub_item_name,
         customer_name, customer_phone, created_at,
         cancelled_at, cancellation_reason, started_at, completed_at,
@@ -661,11 +665,24 @@ const Bookings = () => {
 
                         {/* COMPLETED */}
                         {status === 'completed' && (
-                          <div className="text-center p-2 rounded-xl bg-success/5 border border-success/20">
-                            <p className="text-xs text-success">
-                              ✅ Completed · ₹{earnings} earned
-                            </p>
-                          </div>
+                          booking.payment_status === 'paid' ? (
+                            <div className="text-center p-2 rounded-xl bg-success/5 border border-success/20">
+                              <p className="text-xs text-success">
+                                ✅ Completed · Payment recorded · ₹{earnings} earned
+                              </p>
+                            </div>
+                          ) : Number(booking.total_amount) > 0 ? (
+                            <Button
+                              className="w-full gold-gradient text-primary-foreground font-bold rounded-xl h-11"
+                              onClick={() => setPaymentBookingId(booking.id)}
+                            >
+                              Collect ₹{booking.total_amount}
+                            </Button>
+                          ) : (
+                            <div className="text-center p-2 rounded-xl bg-success/5 border border-success/20">
+                              <p className="text-xs text-success">✅ Completed</p>
+                            </div>
+                          )
                         )}
 
                         {/* CANCELLED */}
@@ -728,9 +745,20 @@ const Bookings = () => {
           open={!!completeDialogBookingId}
           bookingId={completeDialogBookingId}
           onClose={() => setCompleteDialogBookingId(null)}
-          onCompleted={fetchBookings}
+          onCompleted={() => {
+            void fetchBookings();
+            setPaymentBookingId(completeDialogBookingId);
+          }}
         />
       )}
+
+      {/* ── Payment step: QR or cash ── */}
+      <PaymentStep
+        open={!!paymentBookingId}
+        bookingId={paymentBookingId}
+        onClose={() => { setPaymentBookingId(null); void fetchBookings(); }}
+        onPaid={() => void fetchBookings()}
+      />
 
       {/* ── Chat Dialog ── */}
       {activeChatBookingId && user && (

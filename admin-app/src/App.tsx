@@ -12,6 +12,7 @@ import KycReview from '@/pages/admin/KycReview';
 import Providers from '@/pages/admin/Providers';
 import Bookings from '@/pages/admin/Bookings';
 import AuditLog from '@/pages/admin/AuditLog';
+import Wallets from '@/pages/admin/Wallets';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -41,6 +42,7 @@ export default function App() {
               <Route path="/kyc" element={<KycReview />} />
               <Route path="/providers" element={<Providers />} />
               <Route path="/bookings" element={<Bookings />} />
+              <Route path="/wallets" element={<Wallets />} />
               <Route path="/audit" element={<AuditLog />} />
             </Route>
 

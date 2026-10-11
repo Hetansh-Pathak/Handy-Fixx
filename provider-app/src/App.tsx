@@ -16,6 +16,7 @@ import AdminRoute from "./components/provider/AdminRoute";
 import Dashboard from "./pages/provider/Dashboard";
 import Bookings from "./pages/provider/Bookings";
 import Earnings from "./pages/provider/Earnings";
+import Wallet from "./pages/provider/Wallet";
 import Schedule from "./pages/provider/Schedule";
 import Reviews from "./pages/provider/Reviews";
 import Notifications from "./pages/provider/Notifications";
@@ -47,6 +48,7 @@ const App = () => (
                 <Route path="terms" element={<TermsAndConditions />} />
                 <Route path="bookings" element={<Bookings />} />
                 <Route path="earnings" element={<Earnings />} />
+                <Route path="wallet" element={<Wallet />} />
                 <Route path="schedule" element={<Schedule />} />
                 <Route path="reviews" element={<Reviews />} />
                 <Route path="notifications" element={<Notifications />} />

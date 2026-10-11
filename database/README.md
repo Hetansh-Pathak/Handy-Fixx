@@ -15,6 +15,11 @@ database/
     └── verify-provider-otp/    # Verifies the OTP and returns a session
 ```
 
+## Wallet & payments
+
+See `docs/WALLET_SETUP_GUIDE.md`. Verification scripts live in `database/verify/`.
+New functions: `create-qr-payment`, `close-booking-qr`, `create-wallet-topup-order`, `razorpay-webhook` (deploy with `--no-verify-jwt`).
+
 ## Applying migrations
 
 Apply migrations in chronological order (files are prefixed with a timestamp).

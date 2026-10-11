@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import AttachmentViewer, { useBookingAttachments, AttachmentBadges } from "@/components/AttachmentViewer";
+import PaymentStatusCard from "@/components/PaymentStatusCard";
 
 const sb = supabase as any;
 
@@ -593,6 +594,7 @@ const MyBookings = () => {
                               </div>
                             </div>
                           </div>
+                          {card.status === "completed" && <PaymentStatusCard bookingId={card.booking_id} />}
                           {(card.status === "on_the_way" || card.status === "in_progress") && (
                             <BookingTracker
                               bookingId={card.booking_id}

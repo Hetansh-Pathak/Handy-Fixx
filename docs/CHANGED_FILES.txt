@@ -1,0 +1,26 @@
+Files added (NEW) or modified (CHANGED) by the wallet update:
+
+CHANGED  admin-app/src/App.tsx
+CHANGED  admin-app/src/components/admin/AdminLayout.tsx
+CHANGED  customer-app/src/pages/MyBookings.tsx
+CHANGED  database/README.md
+CHANGED  provider-app/src/App.tsx
+CHANGED  provider-app/src/components/provider/CompleteJobDialog.tsx
+CHANGED  provider-app/src/components/provider/ProviderLayout.tsx
+CHANGED  provider-app/src/contexts/ProviderContext.tsx
+CHANGED  provider-app/src/pages/provider/Bookings.tsx
+CHANGED  provider-app/src/pages/provider/Earnings.tsx
+NEW      admin-app/src/pages/admin/Wallets.tsx
+NEW      customer-app/src/components/PaymentStatusCard.tsx
+NEW      database/migrations/provider/20261015000000_wallet_ledger.sql
+NEW      database/supabase/functions/close-booking-qr
+NEW      database/supabase/functions/create-qr-payment
+NEW      database/supabase/functions/create-wallet-topup-order
+NEW      database/supabase/functions/razorpay-webhook
+NEW      database/verify
+NEW      docs/WALLET_SETUP_GUIDE.md
+NEW      provider-app/src/components/provider/CollectPaymentBar.tsx
+NEW      provider-app/src/components/provider/PaymentStep.tsx
+NEW      provider-app/src/hooks/useWallet.ts
+NEW      provider-app/src/lib/wallet.ts
+NEW      provider-app/src/pages/provider/Wallet.tsx

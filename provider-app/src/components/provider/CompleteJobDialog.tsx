@@ -82,7 +82,7 @@ export default function CompleteJobDialog({ open, bookingId, onClose, onComplete
       const result = data as RpcResult;
 
       if (result.ok) {
-        toast({ title: '🎉 Job Completed!', description: 'Earnings have been credited.' });
+        toast({ title: '🎉 Job Completed!', description: 'Now collect the payment from the customer.' });
         onCompleted();
         onClose();
       } else if (result.reason === 'wrong_code') {
