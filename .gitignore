@@ -40,3 +40,10 @@ coverage/
 
 # Supabase local CLI (do not commit)
 supabase/.temp/
+database/supabase/.temp/
+**/.temp/
+
+# Debug output
+tsc_*.txt
+errors.json
+git_status.txt

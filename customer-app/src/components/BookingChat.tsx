@@ -27,6 +27,7 @@ const BookingChat = ({ bookingId, currentUserId, senderType }: BookingChatProps)
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -39,8 +40,14 @@ const BookingChat = ({ bookingId, currentUserId, senderType }: BookingChatProps)
       .select("*")
       .eq("booking_id", bookingId)
       .order("created_at", { ascending: true })
-      .then(({ data }: any) => {
-        if (data) setMessages(data as Message[]);
+      .then(({ data, error }: any) => {
+        if (error) { setSendError("Could not load the conversation. Check your connection."); return; }
+        if (data) {
+          setMessages((prev) => {
+            const ids = new Set((data as Message[]).map((m) => m.id));
+            return [...(data as Message[]), ...prev.filter((m) => !ids.has(m.id))];
+          });
+        }
         setTimeout(scrollToBottom, 100);
       });
 
@@ -65,7 +72,7 @@ const BookingChat = ({ bookingId, currentUserId, senderType }: BookingChatProps)
         { event: "INSERT", schema: "public", table: "messages", filter: `booking_id=eq.${bookingId}` },
         (payload) => {
           const newMsg = payload.new as Message;
-          setMessages((prev) => [...prev, newMsg]);
+          setMessages((prev) => (prev.some((m) => m.id === newMsg.id) ? prev : [...prev, newMsg]));
           setTimeout(scrollToBottom, 50);
           // Mark as read if we're the recipient
           if (newMsg.sender_type !== senderType) {
@@ -83,17 +90,28 @@ const BookingChat = ({ bookingId, currentUserId, senderType }: BookingChatProps)
   }, [bookingId, senderType]);
 
   const sendMessage = async () => {
-    if (!input.trim() || sending) return;
+    const content = input.trim().slice(0, 2000);
+    if (!content || sending) return;
     setSending(true);
-    const content = input.trim();
-    setInput("");
-    await sb.from("messages").insert({
-      booking_id: bookingId,
-      sender_id: currentUserId,
-      sender_type: senderType,
-      content,
-    });
+    setSendError(null);
+    // Keep the text in the box until the server confirms it. It used to be cleared first and the insert result was
+    // ignored, so a failed send (RLS, offline) silently swallowed what the person typed.
+    const { data, error } = await sb
+      .from("messages")
+      .insert({ booking_id: bookingId, sender_id: currentUserId, sender_type: senderType, content })
+      .select()
+      .single();
     setSending(false);
+    if (error) {
+      setSendError("Message not sent. Please try again.");
+      return;
+    }
+    setInput("");
+    if (data) {
+      // Show it immediately even if the realtime event is slow; the id check stops a duplicate when it arrives.
+      setMessages((prev) => (prev.some((m) => m.id === data.id) ? prev : [...prev, data as Message]));
+      setTimeout(scrollToBottom, 50);
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -131,7 +149,7 @@ const BookingChat = ({ bookingId, currentUserId, senderType }: BookingChatProps)
                       : "bg-secondary text-foreground rounded-bl-sm"
                   )}
                 >
-                  <p>{msg.content}</p>
+                  <p className="whitespace-pre-wrap break-words">{msg.content}</p>
                   <p className="text-[10px] opacity-60 mt-1 text-right">
                     {new Date(msg.created_at).toLocaleTimeString([], {
                       hour: "2-digit",
@@ -146,11 +164,14 @@ const BookingChat = ({ bookingId, currentUserId, senderType }: BookingChatProps)
         <div ref={messagesEndRef} />
       </div>
 
+      {sendError && <p role="alert" className="px-4 pb-1 text-xs text-destructive">{sendError}</p>}
+
       {/* Input */}
       <div className="p-3 border-t border-border flex gap-2 bg-card/50">
         <input
           value={input}
-          onChange={(e) => setInput(e.target.value)}
+          onChange={(e) => { setInput(e.target.value); if (sendError) setSendError(null); }}
+          maxLength={2000}
           onKeyDown={handleKeyDown}
           placeholder="Type a message..."
           className="flex-1 bg-secondary rounded-xl px-4 py-2.5 text-sm text-foreground outline-none border border-border focus:border-primary transition-colors"

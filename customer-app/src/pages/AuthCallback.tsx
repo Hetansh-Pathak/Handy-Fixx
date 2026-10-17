@@ -86,7 +86,7 @@ const AuthCallback = () => {
     });
   }, [navigate, toast]);
 
-  return <div className="min-h-screen bg-background flex items-center justify-center text-muted-foreground">{message}</div>;
+  return <div className="min-h-dvh bg-background flex items-center justify-center text-muted-foreground">{message}</div>;
 };
 
 export default AuthCallback;

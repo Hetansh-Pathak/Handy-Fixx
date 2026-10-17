@@ -1,138 +1,141 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
+import { AlertTriangle, Bell, KeyRound, LogOut, ScrollText } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { useProvider } from '@/contexts/ProviderContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { motion } from 'framer-motion';
-import { Bell, Lock, AlertTriangle } from 'lucide-react';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
-const prefItems = [
-  { key: 'new_booking', label: 'New Bookings', desc: 'When a customer books your service' },
-  { key: 'booking_update', label: 'Booking Updates', desc: 'Status changes on your bookings' },
-  { key: 'reviews', label: 'Reviews', desc: 'When customers leave a review' },
+type PrefKey = 'new_booking' | 'booking_update' | 'reviews' | 'payments' | 'marketing';
+type Prefs = Record<PrefKey, boolean>;
+
+const ITEMS: { key: PrefKey; label: string; desc: string }[] = [
+  { key: 'new_booking', label: 'New requests', desc: 'When a customer books you' },
+  { key: 'booking_update', label: 'Booking updates', desc: 'Cancellations and changes' },
+  { key: 'reviews', label: 'Reviews', desc: 'When a customer rates you' },
   { key: 'payments', label: 'Payments', desc: 'Earnings and payout updates' },
-  { key: 'marketing', label: 'Promotions', desc: 'Tips, offers, and platform news' },
+  { key: 'marketing', label: 'Tips and offers', desc: 'Platform news. Off by default' },
 ];
+const DEFAULTS: Prefs = { new_booking: true, booking_update: true, reviews: true, payments: true, marketing: false };
 
-const ProviderSettings: React.FC = () => {
-  const { provider, refreshProvider } = useProvider();
-  const { signOut } = useAuth();
+const Group = ({ icon: Icon, title, danger, children }: { icon: typeof Bell; title: string; danger?: boolean; children: React.ReactNode }) => (
+  <section className={`rounded-3xl bg-card p-4 ring-1 ${danger ? 'ring-red-500/30' : 'ring-border'}`}>
+    <h2 className={`mb-3 flex items-center gap-2 text-sm font-extrabold uppercase tracking-wider ${danger ? 'text-red-600' : 'text-muted-foreground'}`}>
+      <Icon className="h-4 w-4" aria-hidden="true" /> {title}
+    </h2>
+    {children}
+  </section>
+);
+
+const ProviderSettings = () => {
+  const { provider } = useProvider();
+  const { user, signOut } = useAuth();
   const { toast } = useToast();
-
-  const [prefs, setPrefs] = useState({
-    new_booking: true, booking_update: true, reviews: true, payments: true, marketing: false,
-  });
+  const [prefs, setPrefs] = useState<Prefs>(DEFAULTS);
+  const [confirmOut, setConfirmOut] = useState(false);
+  const [confirmOff, setConfirmOff] = useState(false);
+  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    if (provider?.notification_preferences) {
-      const np = provider.notification_preferences as unknown as Record<string, boolean>;
-      setPrefs({
-        new_booking: np.new_booking ?? true,
-        booking_update: np.booking_update ?? true,
-        reviews: np.reviews ?? true,
-        payments: np.payments ?? true,
-        marketing: np.marketing ?? false,
+    const np = provider?.notification_preferences as Partial<Prefs> | null | undefined;
+    if (np) setPrefs({ ...DEFAULTS, ...Object.fromEntries(Object.entries(np).filter(([k, v]) => k in DEFAULTS && typeof v === 'boolean')) });
+  }, [provider?.notification_preferences]);
+
+  const toggle = async (key: PrefKey, value: boolean) => {
+    if (!provider?.id) return;
+    const before = prefs;
+    const next = { ...prefs, [key]: value };
+    setPrefs(next);
+    const { error } = await supabase.from('service_providers').update({ notification_preferences: next }).eq('id', provider.id);
+    if (error) { setPrefs(before); toast({ title: 'Could not save', description: 'Check your connection and try again.', variant: 'destructive' }); }
+  };
+
+  const changePassword = async () => {
+    const email = user?.email;
+    if (!email || busy) return;
+    setBusy(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: `${window.location.origin}/reset-password` });
+    setBusy(false);
+    if (error) toast({ title: 'Could not send the email', description: 'Wait a minute and try again.', variant: 'destructive' });
+    else toast({ title: 'Check your email', description: `We sent a reset link to ${email}.` });
+  };
+
+  const deactivate = async () => {
+    setBusy(true);
+    const { error } = await supabase.rpc('deactivate_my_provider_account' as never);
+    setBusy(false);
+    setConfirmOff(false);
+    if (error) {
+      toast({
+        title: error.message.includes('ACTIVE_BOOKINGS') ? 'Finish your jobs first' : 'Could not deactivate',
+        description: error.message.includes('ACTIVE_BOOKINGS') ? 'You have requests or jobs in progress. Complete or decline them, then try again.' : 'Please try again, or contact support.',
+        variant: 'destructive',
       });
+      return;
     }
-  }, [provider]);
-
-  const updatePref = async (key: string, value: boolean) => {
-    if (!provider) return;
-    const updated = { ...prefs, [key]: value };
-    setPrefs(updated);
-    await supabase.from('service_providers').update({ notification_preferences: updated }).eq('id', provider.id);
-  };
-
-  const handleChangePassword = async () => {
-    const { error } = await supabase.auth.resetPasswordForEmail(
-      provider?.email || '',
-      { redirectTo: `${window.location.origin}/reset-password` }
-    );
-    if (!error) toast({ title: 'Reset email sent 📧', description: 'Check your inbox for password reset link.' });
-    else toast({ title: 'Error', description: error.message, variant: 'destructive' });
-  };
-
-  const handleDeactivate = async () => {
-    if (!provider) return;
-    await supabase.from('service_providers').update({ status: 'inactive' }).eq('id', provider.id);
-    toast({ title: 'Account deactivated', description: 'Contact support to reactivate.' });
+    toast({ title: 'Account deactivated', description: 'Contact support to come back.' });
     await signOut();
   };
 
   return (
-    <div className="space-y-6 max-w-2xl">
-      {/* Notification Preferences */}
-      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
-        <Card className="glass-card p-4">
-          <div className="flex items-center gap-2 mb-4">
-            <Bell className="h-5 w-5 text-primary" />
-            <h3 className="font-semibold">Notification Preferences</h3>
-          </div>
-          <div className="space-y-4">
-            {prefItems.map(item => (
-              <div key={item.key} className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium">{item.label}</p>
-                  <p className="text-xs text-muted-foreground">{item.desc}</p>
-                </div>
-                <Switch
-                  checked={prefs[item.key as keyof typeof prefs]}
-                  onCheckedChange={v => updatePref(item.key, v)}
-                  className="data-[state=checked]:bg-success"
-                />
+    <div className="max-w-2xl space-y-4 pb-28 md:pb-6">
+      <h1 className="text-2xl font-extrabold tracking-tight">Settings</h1>
+
+      <Group icon={Bell} title="Notifications">
+        <div className="divide-y divide-border">
+          {ITEMS.map(i => (
+            <div key={i.key} className="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0">
+              <div>
+                <p id={`pref-${i.key}`} className="text-sm font-bold">{i.label}</p>
+                <p className="text-xs text-muted-foreground">{i.desc}</p>
               </div>
-            ))}
-          </div>
-        </Card>
-      </motion.div>
+              <Switch checked={prefs[i.key]} onCheckedChange={v => void toggle(i.key, v)} aria-labelledby={`pref-${i.key}`} />
+            </div>
+          ))}
+        </div>
+      </Group>
 
-      {/* Security */}
-      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-        <Card className="glass-card p-4">
-          <div className="flex items-center gap-2 mb-4">
-            <Lock className="h-5 w-5 text-primary" />
-            <h3 className="font-semibold">Security</h3>
-          </div>
-          <Button variant="outline" onClick={handleChangePassword}>
-            Change Password
-          </Button>
-        </Card>
-      </motion.div>
+      <Group icon={KeyRound} title="Account">
+        <div className="space-y-2">
+          <button type="button" onClick={() => void changePassword()} disabled={busy || !user?.email}
+            className="press flex h-12 w-full items-center justify-between rounded-xl bg-secondary px-4 text-sm font-semibold disabled:opacity-50">
+            Change password <span className="text-xs text-muted-foreground">Email me a link</span>
+          </button>
+          <Link to="/provider-panel/terms" className="press flex h-12 w-full items-center justify-between rounded-xl bg-secondary px-4 text-sm font-semibold">
+            <span className="flex items-center gap-2"><ScrollText className="h-4 w-4" aria-hidden="true" /> Terms and conditions</span>
+          </Link>
+          <button type="button" onClick={() => setConfirmOut(true)} className="press flex h-12 w-full items-center gap-2 rounded-xl bg-secondary px-4 text-sm font-semibold">
+            <LogOut className="h-4 w-4" aria-hidden="true" /> Log out
+          </button>
+        </div>
+      </Group>
 
-      {/* Danger Zone */}
-      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
-        <Card className="glass-card p-4 border-destructive/30">
-          <div className="flex items-center gap-2 mb-4">
-            <AlertTriangle className="h-5 w-5 text-destructive" />
-            <h3 className="font-semibold text-destructive">Danger Zone</h3>
-          </div>
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button variant="outline" className="border-destructive/50 text-destructive hover:bg-destructive/10">
-                Deactivate Account
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent className="bg-card border-border">
-              <AlertDialogHeader>
-                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  Your account will be deactivated. You won't receive new bookings. This can be reversed by contacting support.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={handleDeactivate} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                  Yes, Deactivate
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        </Card>
-      </motion.div>
+      <Group icon={AlertTriangle} title="Danger zone" danger>
+        <p className="mb-3 text-sm text-muted-foreground">Deactivating stops new requests and takes you offline. You can't do it while you have open jobs.</p>
+        <button type="button" onClick={() => setConfirmOff(true)} className="press h-12 w-full rounded-xl bg-red-500/10 text-sm font-bold text-red-600">Deactivate account</button>
+      </Group>
+
+      <AlertDialog open={confirmOut} onOpenChange={setConfirmOut}>
+        <AlertDialogContent>
+          <AlertDialogHeader><AlertDialogTitle>Log out?</AlertDialogTitle><AlertDialogDescription>You will go offline and stop receiving requests.</AlertDialogDescription></AlertDialogHeader>
+          <AlertDialogFooter><AlertDialogCancel>Stay</AlertDialogCancel><AlertDialogAction onClick={() => void signOut()}>Log out</AlertDialogAction></AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={confirmOff} onOpenChange={setConfirmOff}>
+        <AlertDialogContent>
+          <AlertDialogHeader><AlertDialogTitle>Deactivate your account?</AlertDialogTitle><AlertDialogDescription>You will stop receiving requests and be logged out. Only support can turn it back on. Your earnings and payout history are kept.</AlertDialogDescription></AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep my account</AlertDialogCancel>
+            <AlertDialogAction disabled={busy} onClick={() => void deactivate()} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Deactivate</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

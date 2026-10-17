@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <rect width="1024" height="1024" rx="230" fill="#121212"/>
+  <mask id="m" maskUnits="userSpaceOnUse" x="0" y="0" width="1024" height="1024">
+    <rect width="1024" height="1024" fill="#fff"/>
+    <circle cx="609.6" cy="500.4" r="110.4" fill="#000"/>
+    <line x1="609.6" y1="500.4" x2="341.6" y2="768.4" stroke="#000" stroke-width="95.7" stroke-linecap="round"/>
+    <polygon points="692.8,349.5 760.5,417.2 643.4,534.2 575.8,466.6" fill="#fff"/>
+    <circle cx="609.6" cy="500.4" r="47.8" fill="#fff"/>
+  </mask>
+  <polygon points="512.0,196.0 832.0,472.0 832.0,832.0 192.0,832.0 192.0,472.0" fill="#FAB60A" stroke="#FAB60A" stroke-width="48" stroke-linejoin="round" mask="url(#m)"/>
+</svg>

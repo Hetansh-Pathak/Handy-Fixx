@@ -105,3 +105,9 @@ export const STATUS_LABELS: Record<string, string> = {
   rejected:      'Rejected',
   not_submitted: 'Not submitted',
 };
+
+
+/** Strip characters that would break a PostgREST `.or()` filter string (commas, parentheses, wildcards, quotes). */
+export const safeSearch = (v: string): string => v.replace(/[,()*%\\"'`]/g, ' ').replace(/\s+/g, ' ').trim();
+
+export const isUuid = (v: string): boolean => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v.trim());

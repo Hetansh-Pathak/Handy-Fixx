@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { usePrefetchService } from "@/hooks/usePrefetchService";
 import { useApp } from "@/contexts/AppContext";
 import { Wrench, Zap, Sparkles, PaintBucket, Wind, Hammer, Bug, Settings, Scissors, Thermometer } from "lucide-react";
 import plumbingImg from "@/assets/service-plumbing.jpg";
@@ -22,11 +23,14 @@ const imgFallback: Record<string, string> = {
 };
 
 const ServicesGrid = () => {
+  const prefetchService = usePrefetchService();
   const navigate = useNavigate();
   const { pincode } = useApp();
 
   const { data: services } = useQuery({
     queryKey: ["services-grid"],
+    staleTime: 1000 * 60 * 10,
+    meta: { persist: true },
     queryFn: async () => {
       const { data } = await supabase.from("services").select("id, name, slug, icon_name").eq("is_active", true).limit(8);
       return data || [];
@@ -62,6 +66,7 @@ const ServicesGrid = () => {
               <motion.div key={service.slug || service.name} initial={{ opacity: 0, scale: 0.9 }}
                 whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true }}
                 transition={{ duration: 0.4, delay: i * 0.05 }} whileHover={{ scale: 1.05, y: -5 }}
+                onPointerEnter={() => prefetchService(service.slug)} onTouchStart={() => prefetchService(service.slug)}
                 onClick={() => navigate(`/services/${service.slug}${pincode ? `?pincode=${pincode}` : ""}`)}
                 className="group relative rounded-xl overflow-hidden cursor-pointer aspect-square">
                 <img src={img} alt={service.name} loading="lazy" width={512} height={512}

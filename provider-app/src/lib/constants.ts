@@ -128,15 +128,6 @@ export function maskPAN(pan: string): string {
 
 /** Compute a salted SHA-256 hash of absolute Aadhaar number for duplicate detection.
  *  NEVER log or store the raw number — only this hash and last4 are persisted. */
-export async function hashAadhaar(aadhaarNumber: string): Promise<string> {
-  const salt = 'handyfix-kyc-2026-salt';
-  const data = new TextEncoder().encode(salt + aadhaarNumber);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-  return Array.from(new Uint8Array(hashBuffer))
-    .map(b => b.toString(16).padStart(2, '0'))
-    .join('');
-}
-
 /** Compress an image file to max dimension × quality (returns same file if it's a PDF) */
 export async function compressImage(
   file: File,

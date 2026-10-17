@@ -4,8 +4,6 @@ import { Briefcase, TrendingUp, Shield, BookOpen, ChevronRight, Loader2, IndianR
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -100,8 +98,7 @@ const BecomePro = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <Navbar />
+    <div className="min-h-dvh bg-background">
 
       {/* Hero */}
       <section className="pt-32 pb-20 bg-gradient-to-b from-primary/5 to-transparent">
@@ -331,7 +328,6 @@ const BecomePro = () => {
         </div>
       </section>
 
-      <Footer />
     </div>
   );
 };

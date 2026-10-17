@@ -1,6 +1,9 @@
 // Supabase resolves this remote import in its Deno Edge Function runtime.
 // @ts-expect-error The workspace TypeScript server cannot resolve Deno URL imports.
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+// @ts-expect-error The workspace TypeScript server cannot resolve Deno URL imports.
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { getCorsHeaders, escapeHtml } from "../_shared/cors.ts";
 
 declare const Deno: {
   env: {
@@ -8,28 +11,34 @@ declare const Deno: {
   };
 };
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
 
 serve(async (req: Request) => {
+  const corsHeaders = getCorsHeaders(req);
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
 
   try {
-    const { email, display_name, event = "signup" } = await req.json();
-
-    if (!email) {
-      return new Response(
-        JSON.stringify({ error: "Email is required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    // Identify the caller from their JWT. The recipient is ALWAYS the authenticated user's own
+    // email — never a value from the request body — so this cannot be used as a mail relay.
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
+    if (!supabaseUrl || !anonKey) {
+      return new Response(JSON.stringify({ error: "Not configured" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+    const authClient = createClient(supabaseUrl, anonKey, { global: { headers: { Authorization: req.headers.get("Authorization") ?? "" } } });
+    const { data: { user } } = await authClient.auth.getUser();
+    if (!user || !user.email) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    const name = display_name || email.split("@")[0];
+    const body = await req.json().catch(() => ({}));
+    const email = user.email.trim().toLowerCase();
+    const event = body?.event === "login" ? "login" : "signup";
+    const rawName = String(body?.display_name ?? "").slice(0, 60) || email.split("@")[0];
+    const name = escapeHtml(rawName);
+
     const isLogin = event === "login";
     const brevoKey = Deno.env.get("BREVO_API_KEY");
     const senderEmail = Deno.env.get("BREVO_SENDER_EMAIL");
@@ -150,7 +159,7 @@ serve(async (req: Request) => {
         body: JSON.stringify({
           sender: { name: senderName, email: senderEmail },
           to: [{ email }],
-          subject: isLogin ? `Welcome back to HandyFix, ${name}!` : `Welcome to HandyFix, ${name}! 🏠`,
+          subject: isLogin ? "Welcome back to HandyFix!" : "Welcome to HandyFix! 🏠",
           htmlContent: htmlBody,
         }),
       });
@@ -170,7 +179,7 @@ serve(async (req: Request) => {
     }
 
     // ── Option B: No Brevo key/sender — log and return success (Supabase SMTP handles it) ──
-    console.log(`[send-welcome-email] No BREVO_API_KEY/BREVO_SENDER_EMAIL set. Skipping for: ${email}`);
+    console.log(`[send-welcome-email] No BREVO_API_KEY/BREVO_SENDER_EMAIL set. Skipping.`);
     return new Response(
       JSON.stringify({ success: true, message: "No email provider configured — skipped." }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -179,7 +188,7 @@ serve(async (req: Request) => {
   } catch (err) {
     console.error("[send-welcome-email] Unexpected error:", err);
     return new Response(
-      JSON.stringify({ error: String(err) }),
+      JSON.stringify({ error: "Unable to send email" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }

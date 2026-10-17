@@ -1,174 +1,191 @@
-import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
+import { ArrowDownToLine, Wallet } from 'lucide-react';
 import { useProvider } from '@/contexts/ProviderContext';
 import { supabase } from '@/integrations/supabase/client';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { motion } from 'framer-motion';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
-import { DollarSign, TrendingUp, Clock, Wallet } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import LockedPage from '@/components/provider/LockedPage';
-import { useNavigate } from 'react-router-dom';
+import CountUp from '@/components/CountUp';
+import { groupByDay, inr, monthBuckets, statusText, totalsOf, type EarningRow } from '@/lib/earningsView';
 
-const Earnings: React.FC = () => {
+type Earning = EarningRow & { id: string };
+type Payout = { id: string; amount: number; status: string; requested_at: string };
+
+const TABS = ['overview', 'activity', 'payouts'] as const;
+type Tab = typeof TABS[number];
+const TAB_LABEL: Record<Tab, string> = { overview: 'Overview', activity: 'Activity', payouts: 'Payouts' };
+
+const PILL: Record<string, string> = {
+  pending: 'bg-gold/15 text-gold-foreground ring-1 ring-gold/40',
+  processing: 'bg-primary text-primary-foreground',
+  paid: 'bg-emerald-500/15 text-emerald-700 ring-1 ring-emerald-500/30',
+  failed: 'bg-red-500/10 text-red-600 ring-1 ring-red-500/30',
+};
+const buzz = (ms = 10) => { try { navigator.vibrate?.(ms); } catch { /* unsupported */ } };
+
+const Earnings = () => {
   const { provider, refreshProvider } = useProvider();
   const navigate = useNavigate();
-  const [earnings, setEarnings] = useState<any[]>([]);
-  const [payouts, setPayouts] = useState<any[]>([]);
-  const [tab, setTab] = useState('overview');
+  const [earnings, setEarnings] = useState<Earning[]>([]);
+  const [payouts, setPayouts] = useState<Payout[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [failed, setFailed] = useState(false);
+  const [tab, setTab] = useState<Tab>('overview');
+  const [picked, setPicked] = useState<number | null>(null);
 
-  const fetchEarnings = useCallback(async () => {
+  const load = useCallback(async () => {
     if (!provider) return;
-    const { data } = await supabase
-      .from('provider_earnings')
-      .select('*')
-      .eq('provider_id', provider.id)
-      .order('created_at', { ascending: false });
-    setEarnings(data || []);
+    const [e, p] = await Promise.all([
+      supabase.from('provider_earnings').select('*').eq('provider_id', provider.id).order('created_at', { ascending: false }),
+      supabase.from('payout_requests').select('*').eq('provider_id', provider.id).order('requested_at', { ascending: false }),
+    ]);
+    if (e.error || p.error) setFailed(true);
+    else { setFailed(false); setEarnings((e.data ?? []) as unknown as Earning[]); setPayouts((p.data ?? []) as unknown as Payout[]); }
+    setLoading(false);
   }, [provider]);
 
-  const fetchPayouts = useCallback(async () => {
-    if (!provider) return;
-    const { data } = await supabase
-      .from('payout_requests')
-      .select('*')
-      .eq('provider_id', provider.id)
-      .order('requested_at', { ascending: false });
-    setPayouts(data || []);
-  }, [provider]);
-
-  useEffect(() => { fetchEarnings(); fetchPayouts(); }, [fetchEarnings, fetchPayouts]);
-
-  // Realtime: refresh when DB trigger auto-inserts an earnings row on booking completion
-  // or when payout status is updated by admin
   useEffect(() => {
     if (!provider) return;
-    const channel = supabase.channel('earnings-live')
-      .on('postgres_changes', {
-        event: '*', schema: 'public', table: 'provider_earnings',
-        filter: `provider_id=eq.${provider.id}`,
-      }, () => { fetchEarnings(); refreshProvider(); })
-      .on('postgres_changes', {
-        event: '*', schema: 'public', table: 'payout_requests',
-        filter: `provider_id=eq.${provider.id}`,
-      }, () => fetchPayouts())
+    void load();
+    const ch = supabase.channel(`earnings-live-${provider.id}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'provider_earnings', filter: `provider_id=eq.${provider.id}` }, () => { void load(); void refreshProvider(); })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'payout_requests', filter: `provider_id=eq.${provider.id}` }, () => void load())
       .subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, [provider, fetchEarnings, fetchPayouts, refreshProvider]);
+    return () => { void supabase.removeChannel(ch); };
+  }, [provider, load, refreshProvider]);
 
-  const totals = useMemo(() => {
-    const total = earnings.reduce((s, e) => s + Number(e.provider_amount), 0);
-    const monthStart = new Date(); monthStart.setDate(1); monthStart.setHours(0, 0, 0, 0);
-    const month = earnings.filter(e => new Date(e.created_at) >= monthStart).reduce((s, e) => s + Number(e.provider_amount), 0);
-    return { total, month, jobs: earnings.length };
-  }, [earnings]);
+  const totals = useMemo(() => totalsOf(earnings), [earnings]);
+  const months = useMemo(() => monthBuckets(earnings), [earnings]);
+  const groups = useMemo(() => groupByDay(earnings), [earnings]);
+  const maxMonth = Math.max(1, ...months.map(m => m.amount));
 
-  const monthlyData = useMemo(() => {
-    return Array.from({ length: 6 }, (_, i) => {
-      const d = new Date();
-      d.setMonth(d.getMonth() - (5 - i));
-      const month = d.toLocaleString('default', { month: 'short' });
-      const year = d.getFullYear();
-      const monthNum = d.getMonth();
-      const amount = earnings
-        .filter(e => { const eD = new Date(e.created_at); return eD.getMonth() === monthNum && eD.getFullYear() === year; })
-        .reduce((sum, e) => sum + Number(e.provider_amount), 0);
-      return { month, amount };
-    });
-  }, [earnings]);
+  const go = (dir: 1 | -1) => setTab(t => TABS[Math.min(TABS.length - 1, Math.max(0, TABS.indexOf(t) + dir))]);
 
-  const payoutStatusColors: Record<string, string> = {
-    pending: 'bg-warning/20 text-warning',
-    processing: 'bg-blue-500/20 text-blue-400',
-    paid: 'bg-success/20 text-success',
-    failed: 'bg-destructive/20 text-destructive',
-  };
-
-  if (provider?.kyc_status !== 'approved') {
-    return <LockedPage pageName="Earnings" />;
-  }
+  if (provider && provider.kyc_status !== 'approved') return <LockedPage pageName="Earnings" />;
 
   return (
-    <div className="space-y-6">
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {[
-          { label: 'Total Earned (jobs)', value: totals.total, icon: DollarSign, color: 'text-primary' },
-          { label: 'This Month', value: totals.month, icon: Clock, color: 'text-warning' },
-          { label: 'Jobs Completed', value: totals.jobs, icon: TrendingUp, color: 'text-success' },
-        ].map((s, i) => (
-          <motion.div key={s.label} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
-            <Card className="glass-card p-4">
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-xs text-muted-foreground uppercase tracking-wider">{s.label}</span>
-                <s.icon className={`h-4 w-4 ${s.color}`} />
-              </div>
-              <p className="text-2xl font-bold">{s.label === 'Jobs Completed' ? s.value : `₹${s.value.toLocaleString()}`}</p>
-            </Card>
-          </motion.div>
+    <div className="mx-auto max-w-3xl space-y-5 pb-28 md:pb-6">
+      {/* Balance: the one rich moment on this screen */}
+      <motion.section
+        initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+        className="relative overflow-hidden rounded-[28px] bg-primary p-6 text-primary-foreground"
+      >
+        <div aria-hidden className="pointer-events-none absolute -right-16 -top-20 h-56 w-56 rounded-full bg-gold/25 blur-3xl" />
+        <p className="relative text-sm font-medium opacity-70">Earned from jobs</p>
+        <p className="relative mt-1 text-[44px] font-extrabold leading-none tracking-tight">
+          ₹<CountUp value={loading ? 0 : totals.available} />
+        </p>
+        <div className="relative mt-5 grid grid-cols-2 gap-3 text-sm">
+          <div className="rounded-2xl bg-white/10 px-3 py-2.5"><p className="opacity-60">Processing</p><p className="font-bold">{inr(totals.processing)}</p></div>
+          <div className="rounded-2xl bg-white/10 px-3 py-2.5"><p className="opacity-60">Paid out</p><p className="font-bold">{inr(totals.paid)}</p></div>
+        </div>
+        {totals.awaitingPayment > 0 && (
+          <p className="relative mt-3 rounded-2xl bg-gold/15 px-3 py-2 text-xs font-semibold text-gold">
+            {inr(totals.awaitingPayment)} from finished jobs is waiting for the customer to pay. It unlocks automatically.
+          </p>
+        )}
+        {/* Money (balance, dues, withdrawals) is handled in the Wallet */}
+        <button
+          onClick={() => { buzz(8); navigate('/provider-panel/wallet'); }}
+          className="press relative mt-5 flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-gold text-base font-extrabold text-gold-foreground shadow-gold"
+        >
+          <Wallet className="h-5 w-5" /> Open Wallet to withdraw
+        </button>
+      </motion.section>
+
+      {/* Segmented control with a sliding indicator */}
+      <div className="relative grid grid-cols-3 rounded-full bg-secondary p-1" role="tablist">
+        {TABS.map(t => (
+          <button key={t} role="tab" aria-selected={tab === t} onClick={() => { buzz(6); setTab(t); }}
+            className={cn('relative z-10 h-10 rounded-full text-sm font-semibold transition-colors', tab === t ? 'text-primary-foreground' : 'text-muted-foreground')}>
+            {tab === t && <motion.span layoutId="earn-tab" transition={{ type: 'spring', stiffness: 460, damping: 36 }} className="absolute inset-0 -z-10 rounded-full bg-primary" />}
+            {TAB_LABEL[t]}
+          </button>
         ))}
       </div>
 
-      {/* Money moves through the Wallet now */}
-      <Button className="gold-gradient text-primary-foreground font-semibold" onClick={() => navigate('/provider-panel/wallet')}>
-        <Wallet className="h-4 w-4 mr-2" />
-        Open Wallet (balance, dues, withdraw)
-      </Button>
+      {loading ? (
+        <div className="space-y-3">{[0, 1, 2].map(i => <div key={i} className="h-16 animate-pulse rounded-2xl bg-secondary" />)}</div>
+      ) : failed ? (
+        <div className="rounded-3xl bg-secondary p-8 text-center">
+          <p className="font-bold">Couldn't load earnings</p>
+          <p className="mt-1 text-sm text-muted-foreground">Check your connection and try again.</p>
+          <button onClick={() => { setLoading(true); void load(); }} className="press mt-4 h-11 rounded-xl bg-primary px-6 font-bold text-primary-foreground">Try again</button>
+        </div>
+      ) : (
+        // Swipe left/right to change tab; vertical scroll stays native.
+        <motion.div
+          drag="x" dragDirectionLock dragConstraints={{ left: 0, right: 0 }} dragElastic={0.12} style={{ touchAction: 'pan-y' }}
+          onDragEnd={(_, i) => { if (i.offset.x < -70 || i.velocity.x < -500) go(1); else if (i.offset.x > 70 || i.velocity.x > 500) go(-1); }}
+        >
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.div key={tab} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }}>
+              {tab === 'overview' && (
+                <section className="rounded-3xl bg-secondary p-5">
+                  <div className="flex items-baseline justify-between">
+                    <h2 className="text-lg font-extrabold tracking-tight">Last 6 months</h2>
+                    <p className="text-sm text-muted-foreground">{inr(totals.lifetime)} lifetime</p>
+                  </div>
+                  <div className="mt-6 flex h-44 items-end gap-3">
+                    {months.map((m, i) => {
+                      const sel = picked === i, h = Math.max(m.amount > 0 ? 8 : 3, (m.amount / maxMonth) * 100);
+                      return (
+                        <button key={`${m.y}-${m.m}`} onClick={() => { buzz(6); setPicked(sel ? null : i); }} aria-label={`${m.label}: ${inr(m.amount)}`} className="press flex h-full flex-1 flex-col items-center justify-end gap-2">
+                          <span className={cn('text-[11px] font-bold transition-opacity', sel ? 'opacity-100' : 'opacity-0')}>{inr(m.amount)}</span>
+                          <motion.span initial={{ height: 0 }} animate={{ height: `${h}%` }} transition={{ type: 'spring', damping: 22, stiffness: 160, delay: i * 0.04 }}
+                            className={cn('w-full rounded-xl', sel || (picked === null && m.isCurrent) ? 'bg-gold' : 'bg-primary/15')} />
+                          <span className="text-xs font-semibold text-muted-foreground">{m.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </section>
+              )}
 
-      <Tabs value={tab} onValueChange={setTab}>
-        <TabsList className="bg-secondary/50">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="transactions">Job earnings</TabsTrigger>
-          <TabsTrigger value="payouts">Payout History</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="overview" className="mt-4">
-          <Card className="glass-card p-4">
-            <h3 className="font-semibold mb-4">Monthly Earnings</h3>
-            <ResponsiveContainer width="100%" height={250}>
-              <BarChart data={monthlyData}>
-                <XAxis dataKey="month" stroke="hsl(40 6% 55%)" fontSize={12} />
-                <YAxis stroke="hsl(40 6% 55%)" fontSize={12} tickFormatter={v => `₹${v}`} />
-                <Tooltip contentStyle={{ background: 'hsl(30 5% 12%)', border: '1px solid hsl(30 5% 20%)', borderRadius: '8px', color: 'hsl(40 10% 90%)' }}
-                  formatter={(v: number) => [`₹${v}`, 'Earnings']} />
-                <Bar dataKey="amount" fill="hsl(45 100% 50%)" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="transactions" className="mt-4 space-y-2">
-          {earnings.length === 0 ? (
-            <Card className="glass-card p-8 text-center text-muted-foreground">No earnings yet</Card>
-          ) : earnings.map((e, i) => (
-            <motion.div key={e.id} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }}>
-              <Card className="glass-card p-3 flex items-center justify-between">
-                <div>
-                  <p className="font-medium text-sm">₹{Number(e.provider_amount).toLocaleString()}</p>
-                  <p className="text-xs text-muted-foreground">{new Date(e.created_at).toLocaleDateString()}</p>
+              {tab === 'activity' && (groups.length === 0 ? (
+                <div className="rounded-3xl bg-secondary p-10 text-center"><p className="text-lg font-extrabold">No earnings yet</p><p className="mt-1 text-sm text-muted-foreground">Finish a job and it shows up here.</p></div>
+              ) : (
+                <div className="space-y-5">
+                  {groups.map(g => (
+                    <div key={g.key}>
+                      <div className="mb-2 flex items-baseline justify-between px-1"><h3 className="text-sm font-bold">{g.label}</h3><span className="text-sm text-muted-foreground">{inr(g.total)}</span></div>
+                      <div className="divide-y divide-border overflow-hidden rounded-3xl bg-secondary">
+                        {g.items.map(e => (
+                          <div key={e.id} className="flex items-center gap-3 px-4 py-3.5">
+                            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-background"><ArrowDownToLine className="h-5 w-5" /></span>
+                            <div className="min-w-0 flex-1">
+                              <p className="font-bold">Job payment</p>
+                              <p className="text-xs text-muted-foreground">{new Date(e.created_at).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' })}</p>
+                            </div>
+                            <div className="text-right">
+                              <p className="font-extrabold">+{inr(Number(e.provider_amount))}</p>
+                              <span className={cn('mt-0.5 inline-block rounded-full px-2 py-0.5 text-[11px] font-bold', PILL[e.status] ?? PILL.pending)}>{statusText(e.status)}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              </Card>
-            </motion.div>
-          ))}
-        </TabsContent>
+              ))}
 
-        <TabsContent value="payouts" className="mt-4 space-y-2">
-          {payouts.length === 0 ? (
-            <Card className="glass-card p-8 text-center text-muted-foreground">No payout history</Card>
-          ) : payouts.map((p, i) => (
-            <motion.div key={p.id} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }}>
-              <Card className="glass-card p-3 flex items-center justify-between">
-                <div>
-                  <p className="font-medium text-sm">₹{Number(p.amount).toLocaleString()}</p>
-                  <p className="text-xs text-muted-foreground">{new Date(p.requested_at).toLocaleDateString()}</p>
+              {tab === 'payouts' && (payouts.length === 0 ? (
+                <div className="rounded-3xl bg-secondary p-10 text-center"><p className="text-lg font-extrabold">No payouts yet</p><p className="mt-1 text-sm text-muted-foreground">Withdrawals you request will be tracked here.</p></div>
+              ) : (
+                <div className="divide-y divide-border overflow-hidden rounded-3xl bg-secondary">
+                  {payouts.map(p => (
+                    <div key={p.id} className="flex items-center justify-between px-4 py-4">
+                      <div><p className="text-lg font-extrabold">{inr(Number(p.amount))}</p><p className="text-xs text-muted-foreground">{new Date(p.requested_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</p></div>
+                      <span className={cn('rounded-full px-2.5 py-1 text-xs font-bold', PILL[p.status] ?? PILL.pending)}>{statusText(p.status)}</span>
+                    </div>
+                  ))}
                 </div>
-                <Badge className={payoutStatusColors[p.status] || ''} variant="secondary">{p.status}</Badge>
-              </Card>
+              ))}
             </motion.div>
-          ))}
-        </TabsContent>
-      </Tabs>
+          </AnimatePresence>
+        </motion.div>
+      )}
     </div>
   );
 };

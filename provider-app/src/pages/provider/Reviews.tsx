@@ -1,139 +1,132 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { motion } from 'framer-motion';
+import { MessageSquare, Star } from 'lucide-react';
 import { useProvider } from '@/contexts/ProviderContext';
 import { supabase } from '@/integrations/supabase/client';
-import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { motion } from 'framer-motion';
-import { Star, MessageSquare } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { REVIEW_FILTERS, applyFilter, shortName, summarize, type ReviewFilter, type ReviewSort } from '@/lib/reviewView';
 
-const Reviews: React.FC = () => {
+type Review = {
+  id: string; rating: number; comment: string | null; created_at: string;
+  reviewer_name: string | null; service_name: string | null;
+  bookings: { services: { name: string } | null } | null;
+};
+
+const SORTS: { key: ReviewSort; label: string }[] = [
+  { key: 'latest', label: 'Latest' }, { key: 'highest', label: 'Highest' }, { key: 'lowest', label: 'Lowest' },
+];
+
+const Stars = ({ value, size = 'h-4 w-4' }: { value: number; size?: string }) => (
+  <span className="flex gap-0.5" role="img" aria-label={`${value} out of 5 stars`}>
+    {[1, 2, 3, 4, 5].map(s => <Star key={s} className={cn(size, s <= Math.round(value) ? 'fill-gold text-gold' : 'text-border')} aria-hidden="true" />)}
+  </span>
+);
+
+const Reviews = () => {
   const { provider } = useProvider();
-  const [reviews, setReviews] = useState<any[]>([]);
-  const [filter, setFilter] = useState('all');
-  const [sort, setSort] = useState('latest');
+  const [rows, setRows] = useState<Review[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [failed, setFailed] = useState(false);
+  const [filter, setFilter] = useState<ReviewFilter>('all');
+  const [sort, setSort] = useState<ReviewSort>('latest');
 
-  const fetchReviews = useCallback(async () => {
-    if (!provider) return;
-    const { data } = await supabase
-      .from('reviews')
-      .select('*, bookings(services(name)), profiles!reviews_customer_id_fkey(full_name)')
-      .eq('provider_id', provider.id)
-      .order('created_at', { ascending: false });
-    setReviews(data || []);
-  }, [provider]);
+  const load = useCallback(async () => {
+    if (!provider?.id) return;
+    // Customer names come from reviews.reviewer_name: customers' profile rows are private to them.
+    const { data, error } = await supabase.from('reviews')
+      .select('id, rating, comment, created_at, reviewer_name, service_name, bookings(services(name))')
+      .eq('provider_id', provider.id).order('created_at', { ascending: false });
+    if (error) setFailed(true); else { setFailed(false); setRows((data ?? []) as unknown as Review[]); }
+    setLoading(false);
+  }, [provider?.id]);
+  useEffect(() => { void load(); }, [load]);
 
-  useEffect(() => { fetchReviews(); }, [fetchReviews]);
-
-  const filtered = reviews
-    .filter(r => {
-      if (filter === 'all') return true;
-      if (filter === '5') return r.rating === 5;
-      if (filter === '4') return r.rating === 4;
-      if (filter === 'low') return r.rating <= 3;
-      if (filter === 'comments') return !!r.comment;
-      return true;
-    })
-    .sort((a, b) => {
-      if (sort === 'highest') return b.rating - a.rating;
-      if (sort === 'lowest') return a.rating - b.rating;
-      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-    });
-
-  const ratingBreakdown = [5, 4, 3, 2, 1].map(r => ({
-    rating: r,
-    count: reviews.filter(rv => rv.rating === r).length,
-    pct: reviews.length ? Math.round((reviews.filter(rv => rv.rating === r).length / reviews.length) * 100) : 0,
-  }));
+  const summary = useMemo(() => summarize(rows), [rows]);
+  const list = useMemo(() => applyFilter(rows, filter, sort), [rows, filter, sort]);
 
   return (
-    <div className="space-y-6">
-      {/* Summary */}
-      <div className="grid sm:grid-cols-2 gap-4">
-        <Card className="glass-card p-4 text-center">
-          <p className="text-4xl font-bold gold-text">{Number(provider?.rating || 0).toFixed(1)}</p>
-          <div className="flex justify-center gap-0.5 my-2">
-            {[1, 2, 3, 4, 5].map(s => (
-              <Star key={s} className={`h-5 w-5 ${s <= Math.round(Number(provider?.rating || 0)) ? 'fill-primary text-primary' : 'text-muted-foreground'}`} />
-            ))}
-          </div>
-          <p className="text-sm text-muted-foreground">{provider?.total_reviews || 0} reviews</p>
-        </Card>
+    <div className="space-y-4 pb-28 md:pb-6">
+      <h1 className="text-2xl font-extrabold tracking-tight">Reviews</h1>
 
-        <Card className="glass-card p-4">
-          <h4 className="font-semibold mb-2 text-sm">Rating Breakdown</h4>
-          {ratingBreakdown.map(r => (
-            <div key={r.rating} className="flex items-center gap-2 text-sm mb-1">
-              <span className="w-3">{r.rating}</span>
-              <Star className="h-3 w-3 fill-primary text-primary" />
-              <div className="flex-1 h-2 bg-secondary rounded-full overflow-hidden">
-                <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${r.pct}%` }} />
-              </div>
-              <span className="text-xs text-muted-foreground w-6 text-right">{r.count}</span>
-            </div>
-          ))}
-        </Card>
-      </div>
-
-      {/* Filters */}
-      <div className="flex flex-wrap gap-3 items-center">
-        <Tabs value={filter} onValueChange={setFilter}>
-          <TabsList className="bg-secondary/50">
-            <TabsTrigger value="all">All</TabsTrigger>
-            <TabsTrigger value="5">5★</TabsTrigger>
-            <TabsTrigger value="4">4★</TabsTrigger>
-            <TabsTrigger value="low">≤3★</TabsTrigger>
-            <TabsTrigger value="comments">With Comments</TabsTrigger>
-          </TabsList>
-        </Tabs>
-        <Select value={sort} onValueChange={setSort}>
-          <SelectTrigger className="w-32 glass-input h-8 text-xs">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="latest">Latest</SelectItem>
-            <SelectItem value="highest">Highest</SelectItem>
-            <SelectItem value="lowest">Lowest</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* Review list */}
-      {filtered.length === 0 ? (
-        <Card className="glass-card p-8 text-center text-muted-foreground">No reviews yet</Card>
-      ) : (
-        <div className="space-y-3">
-          {filtered.map((r, i) => (
-            <motion.div key={r.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
-              <Card className="glass-card p-4">
-                <div className="flex items-start justify-between mb-2">
-                    <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-full bg-primary/20 flex items-center justify-center text-primary font-semibold text-sm">
-                      {((r as any).profiles?.full_name || r.reviewer_name || 'C')[0].toUpperCase()}
-                    </div>
-                    <div>
-                      <p className="font-medium text-sm">{(r as any).profiles?.full_name || r.reviewer_name || 'Anonymous Customer'}</p>
-                      <p className="text-xs text-muted-foreground">{(r as any).bookings?.services?.name || r.service_name || 'Service'}</p>
-                    </div>
-                  </div>
-                  <span className="text-xs text-muted-foreground">{new Date(r.created_at).toLocaleDateString()}</span>
-                </div>
-                <div className="flex gap-0.5 mb-2">
-                  {[1, 2, 3, 4, 5].map(s => (
-                    <Star key={s} className={`h-4 w-4 ${s <= r.rating ? 'fill-primary text-primary' : 'text-muted-foreground'}`} />
-                  ))}
-                </div>
-                {r.comment && (
-                  <p className="text-sm text-muted-foreground italic flex items-start gap-2">
-                    <MessageSquare className="h-4 w-4 mt-0.5 shrink-0" />
-                    "{r.comment}"
-                  </p>
-                )}
-              </Card>
-            </motion.div>
-          ))}
+      {loading ? (
+        <div className="space-y-3"><div className="h-44 animate-pulse rounded-3xl bg-secondary" />{[0, 1].map(i => <div key={i} className="h-28 animate-pulse rounded-2xl bg-secondary" />)}</div>
+      ) : failed ? (
+        <div className="rounded-3xl bg-secondary p-8 text-center">
+          <p className="font-bold">Couldn't load reviews</p>
+          <button type="button" onClick={() => { setLoading(true); void load(); }} className="press mt-4 h-11 rounded-xl bg-primary px-6 font-bold text-primary-foreground">Try again</button>
         </div>
+      ) : (
+        <>
+          <section className="grid grid-cols-[auto_1fr] items-center gap-5 rounded-3xl bg-primary p-5 text-primary-foreground">
+            <div className="text-center">
+              <p className="text-5xl font-extrabold text-gold">{summary.total ? summary.avg.toFixed(1) : '–'}</p>
+              <div className="mt-1 flex justify-center"><Stars value={summary.avg} size="h-3.5 w-3.5" /></div>
+              <p className="mt-1 text-xs opacity-70">{summary.total} {summary.total === 1 ? 'review' : 'reviews'}</p>
+            </div>
+            <div className="space-y-1.5" aria-label="Rating breakdown">
+              {summary.bars.map(b => (
+                <div key={b.star} className="flex items-center gap-2 text-xs">
+                  <span className="w-3 text-right font-bold">{b.star}</span>
+                  <div className="h-2 flex-1 overflow-hidden rounded-full bg-white/15">
+                    <motion.div className="h-full rounded-full bg-gold" initial={{ width: 0 }} animate={{ width: `${b.pct}%` }} transition={{ type: 'spring', damping: 24, stiffness: 120 }} />
+                  </div>
+                  <span className="w-5 tabular-nums opacity-70">{b.count}</span>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          {rows.length === 0 ? (
+            <div className="rounded-3xl bg-secondary p-10 text-center">
+              <Star className="mx-auto mb-2 h-8 w-8 text-muted-foreground" aria-hidden="true" />
+              <p className="text-lg font-extrabold">No reviews yet</p>
+              <p className="mt-1 text-sm text-muted-foreground">Finish a job and ask the customer to rate you. Reviews appear here.</p>
+            </div>
+          ) : (
+            <>
+              <div className="no-scrollbar -mx-1 flex gap-2 overflow-x-auto px-1" role="tablist" aria-label="Filter reviews">
+                {REVIEW_FILTERS.map(f => (
+                  <button key={f.key} type="button" role="tab" aria-selected={filter === f.key} onClick={() => setFilter(f.key)}
+                    className={cn('press h-10 shrink-0 rounded-full px-4 text-sm font-semibold transition-colors',
+                      filter === f.key ? 'bg-primary text-primary-foreground' : 'bg-secondary text-muted-foreground')}>{f.label}</button>
+                ))}
+              </div>
+              <div className="flex items-center gap-2 text-sm">
+                <span className="text-muted-foreground">Sort</span>
+                {SORTS.map(s => (
+                  <button key={s.key} type="button" aria-pressed={sort === s.key} onClick={() => setSort(s.key)}
+                    className={cn('press rounded-full px-3 py-1 font-semibold', sort === s.key ? 'bg-gold/25 text-foreground' : 'text-muted-foreground')}>{s.label}</button>
+                ))}
+              </div>
+
+              {list.length === 0 ? (
+                <p className="rounded-2xl bg-secondary p-6 text-center text-sm text-muted-foreground">No reviews match this filter.</p>
+              ) : list.map((r, i) => {
+                const name = shortName(r.reviewer_name);
+                return (
+                  <motion.article key={r.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+                    transition={{ type: 'spring', damping: 26, stiffness: 300, delay: Math.min(i, 6) * 0.04 }}
+                    className="rounded-2xl bg-card p-4 ring-1 ring-border">
+                    <div className="flex items-center gap-3">
+                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-bold text-primary-foreground">{name[0].toUpperCase()}</span>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate font-bold leading-tight">{name}</p>
+                        <p className="truncate text-xs text-muted-foreground">{r.bookings?.services?.name ?? r.service_name ?? 'Service'}</p>
+                      </div>
+                      <span className="shrink-0 text-xs text-muted-foreground">{new Date(r.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</span>
+                    </div>
+                    <div className="mt-3"><Stars value={r.rating} /></div>
+                    {r.comment?.trim() && (
+                      <p className="mt-2 flex items-start gap-2 text-sm text-muted-foreground">
+                        <MessageSquare className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" /><span>{r.comment}</span>
+                      </p>
+                    )}
+                  </motion.article>
+                );
+              })}
+            </>
+          )}
+        </>
       )}
     </div>
   );

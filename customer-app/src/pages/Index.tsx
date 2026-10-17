@@ -1,21 +1,15 @@
-import { useEffect } from "react";
-import Navbar from "@/components/Navbar";
+import { lazy, Suspense, useEffect } from "react";
 import HeroSection from "@/components/HeroSection";
 import StatsBar from "@/components/StatsBar";
-import ServicesGrid from "@/components/ServicesGrid";
-import MostBooked from "@/components/MostBooked";
-import PromoCards from "@/components/PromoCards";
-import HowItWorks from "@/components/HowItWorks";
-import WhyChoose from "@/components/WhyChoose";
-import ExpertSection from "@/components/ExpertSection";
-import EarnSection from "@/components/EarnSection";
-import Testimonials from "@/components/Testimonials";
-import CTASection from "@/components/CTASection";
-import Footer from "@/components/Footer";
+import HomeApp from "@/components/home/HomeApp";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { useToast } from "@/hooks/use-toast";
+
+const BelowFold = lazy(() => import("@/components/HomeBelowFold"));
 
 const Index = () => {
   const { toast } = useToast();
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     const raw = sessionStorage.getItem("booking-toast");
@@ -32,21 +26,15 @@ const Index = () => {
     }
   }, [toast]);
 
+  if (isMobile) return <HomeApp />;
+
   return (
-    <div className="min-h-screen bg-background">
-      <Navbar />
+    <div className="bg-background">
       <HeroSection />
       <StatsBar />
-      <ServicesGrid />
-      <MostBooked />
-      <PromoCards />
-      <HowItWorks />
-      <WhyChoose />
-      <ExpertSection />
-      <EarnSection />
-      <Testimonials />
-      <CTASection />
-      <Footer />
+      <Suspense fallback={<div className="h-96" aria-hidden />}>
+        <BelowFold />
+      </Suspense>
     </div>
   );
 };

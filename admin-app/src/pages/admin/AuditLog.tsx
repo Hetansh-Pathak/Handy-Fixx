@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { cn, formatDateTime, timeAgo, shortId } from '@/lib/utils';
+import { cn, formatDateTime, timeAgo, shortId, isUuid } from '@/lib/utils';
 
 const PAGE_SIZE = 25;
 
@@ -53,7 +53,11 @@ const AuditLog: React.FC = () => {
 
       if (actionFilter !== 'all') query = query.eq('action', actionFilter);
       if (entityFilter !== 'all') query = query.eq('entity_type', entityFilter);
-      if (searchEntityId.trim()) query = query.ilike('entity_id', `%${searchEntityId.trim()}%`);
+      if (searchEntityId.trim()) {
+        // entity_id is a uuid column, so partial ILIKE matching cannot work; require the full id.
+        const id = searchEntityId.trim();
+        if (isUuid(id)) query = query.eq('entity_id', id);
+      }
 
       const { data, count, error } = await query
         .order('created_at', { ascending: false })

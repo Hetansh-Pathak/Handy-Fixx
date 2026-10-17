@@ -18,7 +18,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { cn, formatDate, formatDateTime, timeAgo, maskAadhaar, maskPAN, STATUS_STYLES, STATUS_LABELS, SUSPEND_REASONS } from '@/lib/utils';
+import { cn, formatDate, formatDateTime, timeAgo, maskAadhaar, maskPAN, STATUS_STYLES, STATUS_LABELS, SUSPEND_REASONS, safeSearch } from '@/lib/utils';
 
 const PAGE_SIZE = 20;
 
@@ -66,7 +66,10 @@ const Providers: React.FC = () => {
 
   // Filters
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState(() => {
+    const q = new URLSearchParams(window.location.search).get('status');
+    return q && ['active', 'suspended', 'pending_approval', 'inactive'].includes(q) ? q : 'all';
+  });
   const [kycFilter, setKycFilter] = useState('all');
   const searchTimer = useRef<ReturnType<typeof setTimeout>>();
 
@@ -100,8 +103,9 @@ const Providers: React.FC = () => {
 
       if (statusFilter !== 'all') query = query.eq('status', statusFilter);
       if (kycFilter !== 'all') query = query.eq('kyc_status', kycFilter);
-      if (search.trim()) {
-        query = query.or(`full_name.ilike.%${search}%,email.ilike.%${search}%,phone.ilike.%${search}%`);
+      const term = safeSearch(search);
+      if (term) {
+        query = query.or(`full_name.ilike.%${term}%,email.ilike.%${term}%,phone.ilike.%${term}%`);
       }
 
       const { data, count, error } = await query

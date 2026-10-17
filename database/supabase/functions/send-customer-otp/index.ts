@@ -2,15 +2,10 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 // @ts-expect-error Supabase resolves Deno URL imports at deploy time.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { getCorsHeaders, makeJson } from "../_shared/cors.ts";
 
 declare const Deno: { env: { get: (name: string) => string | undefined } };
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
-const json = (body: unknown, status = 200) =>
-  new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
 const RESEND_COOLDOWN_SECONDS = 60;
 const MAX_SENDS_PER_HOUR = 5;
@@ -32,6 +27,8 @@ const emailHtml = (code: string, email: string) => `<!doctype html>
 <p style="color:#a0a0a0;font-size:13px">Never share this code. HandyFix will never ask for it. If you didn't request it, ignore this email.</p></div></div></div></body></html>`;
 
 serve(async (req: Request) => {
+  const corsHeaders = getCorsHeaders(req);
+  const json = makeJson(corsHeaders);
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   try {
     const url = Deno.env.get("SUPABASE_URL");

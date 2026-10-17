@@ -2,8 +2,6 @@ import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
 import { Shield, Star, Users, Award, CheckCircle, Quote } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -27,9 +25,8 @@ const About = () => {
     queryKey: ["provider-count"],
     queryFn: async () => {
       const { count } = await supabase
-        .from("service_providers")
-        .select("*", { count: "exact", head: true })
-        .eq("is_active", true);
+        .from("public_providers")
+        .select("*", { count: "exact", head: true });
       return count || 0;
     },
   });
@@ -74,8 +71,7 @@ const About = () => {
   const displayTestimonials = testimonials && testimonials.length >= 2 ? testimonials : fallbackTestimonials;
 
   return (
-    <div className="min-h-screen bg-background">
-      <Navbar />
+    <div className="min-h-dvh bg-background">
 
       {/* Hero */}
       <section className="pt-32 pb-20 relative overflow-hidden">
@@ -225,7 +221,6 @@ const About = () => {
         </div>
       </section>
 
-      <Footer />
     </div>
   );
 };

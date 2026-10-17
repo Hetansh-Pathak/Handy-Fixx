@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Bell, CalendarDays, LogOut, Menu, User, X } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { prefetchRoute } from "@/lib/routeModules";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -22,6 +23,8 @@ const navLinks = [
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const closeOnRoute = useLocation().pathname;
+  useEffect(() => { setIsOpen(false); }, [closeOnRoute]);
   const navigate = useNavigate();
   const location = useLocation();
   const { user, signOut } = useAuth();
@@ -45,9 +48,8 @@ const Navbar = () => {
   const isActive = (href: string) => location.pathname === href || (href !== "/" && location.pathname.startsWith(href));
 
   return (
-    <motion.nav
-      initial={{ y: -100 }} animate={{ y: 0 }} transition={{ duration: 0.5, ease: "easeOut" }}
-      className="fixed top-0 left-0 right-0 z-50 border-b border-border/50 backdrop-blur-xl bg-background/80"
+    <nav
+      className="fixed top-0 left-0 right-0 z-50 border-b border-border/50 backdrop-blur-xl bg-background/80 pt-[env(safe-area-inset-top)]"
     >
       <div className="container mx-auto flex items-center justify-between py-3">
         {/* Logo */}
@@ -60,6 +62,7 @@ const Navbar = () => {
         <div className="hidden md:flex items-center gap-6">
           {navLinks.map((link) => (
             <button type="button" key={link.label} onClick={() => handleNavClick(link)}
+              onPointerEnter={() => prefetchRoute(link.href)} onFocus={() => prefetchRoute(link.href)}
               className={`relative text-sm transition-colors ${isActive(link.href) ? "text-primary font-semibold" : "text-muted-foreground hover:text-foreground"}`}>
               {link.label}
               {link.label === "My Bookings" && upcomingBookingsCount > 0 && (
@@ -133,7 +136,7 @@ const Navbar = () => {
         </div>
 
         {/* Mobile hamburger */}
-        <button className="md:hidden text-foreground p-1" onClick={() => setIsOpen(!isOpen)}>
+        <button className="md:hidden text-foreground h-11 w-11 -mr-2 flex items-center justify-center active:scale-95 transition-transform" aria-label={isOpen ? "Close menu" : "Open menu"} aria-expanded={isOpen} onClick={() => setIsOpen(!isOpen)}>
           {isOpen ? <X size={24} /> : <Menu size={24} />}
         </button>
       </div>
@@ -144,7 +147,7 @@ const Navbar = () => {
           <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }} className="md:hidden overflow-hidden bg-card border-t border-border">
             <div className="container mx-auto py-4 flex flex-col gap-1">
-              {navLinks.map((link) => (
+              {navLinks.filter((l) => !["/services", "/my-bookings"].includes(l.href)).map((link) => (
                 <button type="button" key={link.label} onClick={() => handleNavClick(link)}
                   className={`relative text-left py-3 px-3 rounded-lg text-sm transition-colors flex items-center justify-between ${isActive(link.href) ? "bg-primary/10 text-primary font-semibold" : "text-muted-foreground hover:bg-secondary hover:text-foreground"}`}>
                   {link.label}
@@ -186,7 +189,7 @@ const Navbar = () => {
           </motion.div>
         )}
       </AnimatePresence>
-    </motion.nav>
+    </nav>
   );
 };
 

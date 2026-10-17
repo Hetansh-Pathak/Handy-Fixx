@@ -4,8 +4,6 @@ import { Mail, Phone, MessageCircle, ChevronDown, ChevronUp, Send, Loader2 } fro
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -78,8 +76,7 @@ const Contact = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <Navbar />
+    <div className="min-h-dvh bg-background">
       <div className="pt-28 pb-16 container mx-auto px-4">
 
         {/* Header */}
@@ -180,7 +177,6 @@ const Contact = () => {
           </motion.div>
         </div>
       </div>
-      <Footer />
     </div>
   );
 };

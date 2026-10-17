@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import {
   GUJARAT_CITIES, SERVICE_ICONS, KYC_TOTAL_STEPS, KYC_STEP_LABELS, TERMS_VERSION,
-  validateAadhaar, validatePAN, maskAadhaar, maskPAN, hashAadhaar, compressImage,
+  validateAadhaar, validatePAN, maskAadhaar, maskPAN, compressImage,
   validateKycFile
 } from '@/lib/constants';
 import TermsAndConditions from './TermsAndConditions';
@@ -50,7 +50,6 @@ const KycOnboarding: React.FC = () => {
   // Aadhaar
   const [aadhaarNumber, setAadhaarNumber] = useState('');
   const [existingAadhaarLast4, setExistingAadhaarLast4] = useState<string | null>(null);
-  const [existingAadhaarHash, setExistingAadhaarHash] = useState<string | null>(null);
   const [aadhaarFrontFile, setAadhaarFrontFile] = useState<File | null>(null);
   const [aadhaarBackFile, setAadhaarBackFile] = useState<File | null>(null);
   const [aadhaarFrontPath, setAadhaarFrontPath] = useState('');
@@ -113,16 +112,17 @@ const KycOnboarding: React.FC = () => {
       setLastName(parts.slice(1).join(' ') || '');
     }
 
-    // Fetch existing KYC row
+    // Fetch existing KYC row. aadhaar_hash is deliberately not selected — the client
+    // has no legitimate use for it now that hashing happens server-side, and there's
+    // no reason to put a sensitive value in browser memory that doesn't need to be there.
     const { data: kycRow } = await supabase
       .from('provider_kyc')
-      .select('*')
+      .select('aadhaar_last4, pan_number, aadhaar_front_path, aadhaar_back_path, selfie_path, pan_path, certificate_path, consent_accepted_at, terms_version')
       .eq('provider_id', provider.id)
       .maybeSingle();
 
     if (kycRow) {
       if (kycRow.aadhaar_last4) setExistingAadhaarLast4(kycRow.aadhaar_last4);
-      if (kycRow.aadhaar_hash) setExistingAadhaarHash(kycRow.aadhaar_hash);
       if (kycRow.pan_number) setPanNumber(kycRow.pan_number);
       if (kycRow.aadhaar_front_path) setAadhaarFrontPath(kycRow.aadhaar_front_path);
       if (kycRow.aadhaar_back_path) setAadhaarBackPath(kycRow.aadhaar_back_path);
@@ -277,23 +277,15 @@ const KycOnboarding: React.FC = () => {
         setCertificateFile(null);
       }
 
-      // Compute Aadhaar Hash if number is complete or fallback to existing
-      let aHash = existingAadhaarHash;
-      let aLast4 = existingAadhaarLast4;
-      if (aadhaarNumber && validateAadhaar(aadhaarNumber)) {
-        aLast4 = aadhaarNumber.slice(-4);
-        aHash = await hashAadhaar(aadhaarNumber);
-      } else if (fPath || aadhaarFrontPath) {
-        aLast4 = aLast4 || 'XXXX';
-      }
-
-      // Upsert provider_kyc draft row
+      // Upsert provider_kyc draft row. The Aadhaar number itself is NOT sent here:
+      // it is hashed server-side by submit_aadhaar_kyc() below, keyed by a secret
+      // that never reaches the browser. aadhaar_last4/aadhaar_hash are therefore
+      // left out of this payload entirely so this upsert can't blank them out —
+      // Supabase's upsert only overwrites the columns you include on conflict.
       const { error: kycErr } = await supabase
         .from('provider_kyc')
         .upsert({
           provider_id: provider.id,
-          aadhaar_last4: aLast4,
-          aadhaar_hash: aHash,
           pan_number: panNumber ? panNumber.toUpperCase() : null,
           aadhaar_front_path: fPath || null,
           aadhaar_back_path: bPath || null,
@@ -315,6 +307,36 @@ const KycOnboarding: React.FC = () => {
           return false;
         }
         throw kycErr;
+      }
+
+      // Submit the Aadhaar number (if a new, valid one was typed) to the server-side
+      // hashing RPC. Only sent when changed — re-submitting an unchanged number is
+      // harmless but needless network/DB work on every autosave.
+      if (aadhaarNumber && validateAadhaar(aadhaarNumber)) {
+        const { data: aadhaarRes, error: aadhaarErr } = await (supabase as any).rpc('submit_aadhaar_kyc', { p_aadhaar: aadhaarNumber });
+        if (aadhaarErr) {
+          toast({ title: 'Save Failed', description: aadhaarErr.message, variant: 'destructive' });
+          setSaving(false);
+          return false;
+        }
+        const aRes = aadhaarRes as { ok: boolean; reason?: string; last4?: string } | null;
+        if (!aRes?.ok) {
+          const aadhaarWhy: Record<string, string> = {
+            invalid_format: 'Enter a valid 12-digit Aadhaar number.',
+            not_a_provider: 'Your provider profile could not be found. Please sign in again.',
+            unauthorized: 'Please sign in again.',
+            duplicate_aadhaar: 'This Aadhaar number is already registered to another account.',
+            not_configured: 'Aadhaar verification is temporarily unavailable. Please try again shortly or contact support.',
+          };
+          toast({
+            title: 'Aadhaar Not Saved',
+            description: (aRes?.reason && aadhaarWhy[aRes.reason]) || 'Please check the number and try again.',
+            variant: 'destructive',
+          });
+          setSaving(false);
+          return false;
+        }
+        setExistingAadhaarLast4(aRes.last4 ?? null);
       }
 
       await refreshProvider();
