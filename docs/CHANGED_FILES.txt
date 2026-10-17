@@ -2,6 +2,7 @@ Files added (NEW) or modified (CHANGED) by the wallet update:
 
 CHANGED  admin-app/src/App.tsx
 CHANGED  admin-app/src/components/admin/AdminLayout.tsx
+CHANGED  customer-app/src/components/ProblemDescription.tsx  (photo upload fix)
 CHANGED  customer-app/src/pages/MyBookings.tsx
 CHANGED  database/README.md
 CHANGED  provider-app/src/App.tsx
