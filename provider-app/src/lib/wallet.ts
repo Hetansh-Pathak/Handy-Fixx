@@ -46,7 +46,9 @@ export async function callEdge<T>(name: string, body: unknown): Promise<T> {
       const ctx = (error as unknown as { context?: Response }).context;
       if (ctx && typeof ctx.json === 'function') {
         const parsed = await ctx.json();
-        if (parsed?.error) message = parsed.error as string;
+        // Our functions reply { error }, the Supabase gateway replies { message } (e.g. "Invalid JWT")
+        const detail = parsed?.error ?? parsed?.message;
+        if (detail) message = typeof detail === 'string' ? detail : JSON.stringify(detail);
       }
     } catch {
       /* keep default message */

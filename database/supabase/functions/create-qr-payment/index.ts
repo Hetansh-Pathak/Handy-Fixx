@@ -23,7 +23,15 @@ async function razorpay(path: string, method: "GET" | "POST", body?: unknown) {
     body: body ? JSON.stringify(body) : undefined,
   });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data?.error?.description ?? `Razorpay error ${res.status}`);
+  if (!res.ok) {
+    console.error("razorpay error", res.status, JSON.stringify(data));
+    const desc = data?.error?.description ?? `Razorpay error ${res.status}`;
+    if (res.status === 401) throw new Error(`Razorpay rejected the API keys (${desc}). Check RAZORPAY_KEY_ID / RAZORPAY_KEY_SECRET secrets.`);
+    if (res.status === 404 || /not found|not enabled|not allowed|feature/i.test(desc)) {
+      throw new Error(`Razorpay: ${desc}. UPI QR Codes may not be enabled on this Razorpay account (they only work with Live keys).`);
+    }
+    throw new Error(`Razorpay: ${desc}`);
+  }
   return data;
 }
 
