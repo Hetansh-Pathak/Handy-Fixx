@@ -445,6 +445,11 @@ export default function ProblemDescription({ userId, draftId, state, onChange }:
   const [imageUploading, setImageUploading] = useState<Record<number, boolean>>({});
   const [imageErrors, setImageErrors] = useState<Record<number, string>>({});
 
+  // Always holds the newest state. Async upload callbacks must read this, not the
+  // `state` captured when the upload started (that copy is stale by the time it finishes).
+  const stateRef = useRef(state);
+  stateRef.current = state;
+
   // ── Audio ──────────────────────────────────────────────────────────────────
 
   const handleRecord = useCallback(async (blob: Blob, mimeType: string, duration: number) => {
@@ -481,7 +486,7 @@ export default function ProblemDescription({ userId, draftId, state, onChange }:
     setAudioUploading(true);
     try {
       const path = await uploadToStorage(userId, draftId, filename, blob, mimeType);
-      onChange({ ...state, audio: { ...attachment, storagePath: path } });
+      onChange({ ...stateRef.current, audio: { ...attachment, storagePath: path } });
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Upload failed";
       const isBucketErr = /bucket not found/i.test(msg);
@@ -533,7 +538,7 @@ export default function ProblemDescription({ userId, draftId, state, onChange }:
 
     for (const file of validFiles) {
       const localUrl = URL.createObjectURL(file);
-      const idx = state.images.length;
+      const idx = stateRef.current.images.length;
       const stub: UploadedAttachment = {
         type: "image",
         storagePath: "",
@@ -543,8 +548,9 @@ export default function ProblemDescription({ userId, draftId, state, onChange }:
       };
 
       // Show thumbnail immediately
-      const nextImages = [...state.images, stub];
-      onChange({ ...state, images: nextImages });
+      const withStub = { ...stateRef.current, images: [...stateRef.current.images, stub] };
+      stateRef.current = withStub;
+      onChange(withStub);
 
       const compressed = await compressImage(file);
       const filename = `photo_${Date.now()}_${idx}.jpg`;
@@ -572,10 +578,13 @@ export default function ProblemDescription({ userId, draftId, state, onChange }:
           sizeBytes: compressed.size,
           storagePath: path,
         };
-        safeonChange({
-          ...state,
-          images: state.images.map((img, i) => i === idx ? finalAttachment : img)
-        });
+        const latest = stateRef.current;
+        const updated = {
+          ...latest,
+          images: latest.images.map((img) => (img.localUrl === stub.localUrl ? finalAttachment : img)),
+        };
+        stateRef.current = updated;
+        onChange(updated);
       } catch (e) {
         const rawMsg = e instanceof Error ? e.message : "Upload failed";
         const isBucketErr = /bucket not found/i.test(rawMsg);

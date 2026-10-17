@@ -13,7 +13,7 @@ import ActiveJob from '@/components/provider/ActiveJob';
 import {
   LayoutDashboard, Briefcase, DollarSign, CalendarDays,
   Star, Bell, User, Settings, LogOut, Menu, X, ChevronLeft,
-  ClipboardList
+  ClipboardList, Wallet as WalletIcon
 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
@@ -32,6 +32,7 @@ const ProviderLayout: React.FC = () => {
     { path: '/provider-panel', label: 'Dashboard', icon: LayoutDashboard },
     { path: '/provider-panel/bookings', label: 'Bookings', icon: Briefcase, badge: pendingBookingsCount },
     { path: '/provider-panel/earnings', label: 'Earnings', icon: DollarSign },
+    { path: '/provider-panel/wallet', label: 'Wallet', icon: WalletIcon },
     { path: '/provider-panel/schedule', label: 'Schedule', icon: CalendarDays },
     { path: '/provider-panel/reviews', label: 'Reviews', icon: Star },
     { path: '/provider-panel/notifications', label: 'Notifications', icon: Bell, badge: unreadNotificationsCount },
@@ -232,6 +233,7 @@ const ProviderLayout: React.FC = () => {
         <main className="flex-1 overflow-y-auto p-4 pb-28 md:p-6 lg:pb-6">
           <Outlet />
         </main>
+        {isApproved && <CollectPaymentBar />}
       </div>
       <RequestAlert />
       <ActiveJob />

@@ -1,13 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ArrowDownToLine, Check, Wallet } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { ArrowDownToLine, Wallet } from 'lucide-react';
 import { useProvider } from '@/contexts/ProviderContext';
 import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import LockedPage from '@/components/provider/LockedPage';
 import CountUp from '@/components/CountUp';
-import { Drawer, DrawerContent, DrawerDescription, DrawerTitle } from '@/components/ui/drawer';
 import { groupByDay, inr, monthBuckets, statusText, totalsOf, type EarningRow } from '@/lib/earningsView';
 
 type Earning = EarningRow & { id: string };
@@ -27,15 +26,12 @@ const buzz = (ms = 10) => { try { navigator.vibrate?.(ms); } catch { /* unsuppor
 
 const Earnings = () => {
   const { provider, refreshProvider } = useProvider();
-  const { toast } = useToast();
+  const navigate = useNavigate();
   const [earnings, setEarnings] = useState<Earning[]>([]);
   const [payouts, setPayouts] = useState<Payout[]>([]);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
   const [tab, setTab] = useState<Tab>('overview');
-  const [sheet, setSheet] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [done, setDone] = useState(false);
   const [picked, setPicked] = useState<number | null>(null);
 
   const load = useCallback(async () => {
@@ -63,30 +59,6 @@ const Earnings = () => {
   const months = useMemo(() => monthBuckets(earnings), [earnings]);
   const groups = useMemo(() => groupByDay(earnings), [earnings]);
   const maxMonth = Math.max(1, ...months.map(m => m.amount));
-  const hasDest = Boolean(provider?.bank_account_number || provider?.upi_id);
-
-  const withdraw = async () => {
-    if (!provider || busy) return;
-    setBusy(true); buzz();
-    // The database does the whole thing in one locked transaction (request_payout); the client cannot set an amount.
-    const { data, error } = await (supabase as any).rpc('request_payout');
-    setBusy(false);
-    const res = data as { ok: boolean; reason?: string; amount?: number } | null;
-    if (error || !res?.ok) {
-      const why: Record<string, string> = {
-        no_destination: 'Add a bank account or UPI ID in Profile first.',
-        nothing_to_withdraw: 'Your balance may have just changed.',
-        not_approved: 'Your account must be approved to withdraw.',
-        unauthorized: 'Please sign in again.',
-      };
-      toast({ title: 'Withdrawal not started', description: (res?.reason && why[res.reason]) || error?.message || 'Please try again.', variant: 'destructive' });
-      void load();
-      return;
-    }
-    setDone(true); buzz(25);
-    void load(); void refreshProvider();
-    setTimeout(() => { setSheet(false); setDone(false); }, 1600);
-  };
 
   const go = (dir: 1 | -1) => setTab(t => TABS[Math.min(TABS.length - 1, Math.max(0, TABS.indexOf(t) + dir))]);
 
@@ -100,7 +72,7 @@ const Earnings = () => {
         className="relative overflow-hidden rounded-[28px] bg-primary p-6 text-primary-foreground"
       >
         <div aria-hidden className="pointer-events-none absolute -right-16 -top-20 h-56 w-56 rounded-full bg-gold/25 blur-3xl" />
-        <p className="relative text-sm font-medium opacity-70">Ready to withdraw</p>
+        <p className="relative text-sm font-medium opacity-70">Earned from jobs</p>
         <p className="relative mt-1 text-[44px] font-extrabold leading-none tracking-tight">
           ₹<CountUp value={loading ? 0 : totals.available} />
         </p>
@@ -113,12 +85,12 @@ const Earnings = () => {
             {inr(totals.awaitingPayment)} from finished jobs is waiting for the customer to pay. It unlocks automatically.
           </p>
         )}
+        {/* Money (balance, dues, withdrawals) is handled in the Wallet */}
         <button
-          disabled={totals.available <= 0 || loading}
-          onClick={() => { buzz(8); setSheet(true); }}
-          className="press relative mt-5 flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-gold text-base font-extrabold text-gold-foreground shadow-gold disabled:opacity-40"
+          onClick={() => { buzz(8); navigate('/provider-panel/wallet'); }}
+          className="press relative mt-5 flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-gold text-base font-extrabold text-gold-foreground shadow-gold"
         >
-          <Wallet className="h-5 w-5" /> {totals.available > 0 ? `Withdraw ${inr(totals.available)}` : 'Nothing to withdraw yet'}
+          <Wallet className="h-5 w-5" /> Open Wallet to withdraw
         </button>
       </motion.section>
 
@@ -214,43 +186,6 @@ const Earnings = () => {
           </AnimatePresence>
         </motion.div>
       )}
-
-      {/* Withdraw bottom sheet */}
-      <Drawer open={sheet} onOpenChange={o => { if (!busy) { setSheet(o); if (!o) setDone(false); } }}>
-        <DrawerContent className="px-5 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
-          <div className="mx-auto w-full max-w-md pt-4">
-            <AnimatePresence mode="wait" initial={false}>
-              {done ? (
-                <motion.div key="ok" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="flex flex-col items-center py-10 text-center">
-                  <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 260, damping: 16 }} className="flex h-20 w-20 items-center justify-center rounded-full bg-emerald-500 text-white"><Check className="h-10 w-10" strokeWidth={3} /></motion.span>
-                  <DrawerTitle className="mt-5 text-2xl font-extrabold">Withdrawal requested</DrawerTitle>
-                  <DrawerDescription className="mt-1">Funds arrive in 1-2 business days.</DrawerDescription>
-                </motion.div>
-              ) : (
-                <motion.div key="form" exit={{ opacity: 0 }}>
-                  <DrawerTitle className="text-sm font-semibold text-muted-foreground">Withdraw</DrawerTitle>
-                  <p className="mt-1 text-[40px] font-extrabold leading-none tracking-tight">{inr(totals.available)}</p>
-                  <DrawerDescription className="mt-2">Arrives in 1-2 business days.</DrawerDescription>
-                  <div className="mt-5 rounded-2xl bg-secondary p-4">
-                    <p className="text-xs font-semibold text-muted-foreground">Paying to</p>
-                    {provider?.bank_account_number ? (
-                      <><p className="mt-1 font-bold">{provider.bank_account_name}</p><p className="text-sm text-muted-foreground">{provider.bank_ifsc} · •••• {provider.bank_account_number.slice(-4)}</p></>
-                    ) : provider?.upi_id ? (
-                      <p className="mt-1 font-bold">UPI · {provider.upi_id}</p>
-                    ) : (
-                      <p className="mt-1 text-sm font-semibold text-red-600">No payout details. Add a bank account or UPI ID in Profile.</p>
-                    )}
-                  </div>
-                  <button onClick={withdraw} disabled={busy || !hasDest || totals.available <= 0}
-                    className="press mt-5 flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-gold text-base font-extrabold text-gold-foreground disabled:opacity-50">
-                    {busy ? <span className="h-5 w-5 animate-spin rounded-full border-2 border-current border-t-transparent" /> : 'Confirm withdrawal'}
-                  </button>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-        </DrawerContent>
-      </Drawer>
     </div>
   );
 };

@@ -1,7 +1,10 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
+import { useProvider } from '@/contexts/ProviderContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -16,6 +19,15 @@ type Mode = 'signin' | 'signup';
 const ProviderLogin: React.FC = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user } = useAuth();
+  const { provider, loading: providerLoading } = useProvider();
+
+  // Already signed in (e.g. reopened the app): go straight to the panel instead of showing the form
+  useEffect(() => {
+    if (user && provider && !providerLoading && provider.status !== 'suspended') {
+      navigate('/provider-panel', { replace: true });
+    }
+  }, [user, provider, providerLoading, navigate]);
 
   const [mode, setMode] = useState<Mode>('signin');
   const [loading, setLoading] = useState(false);

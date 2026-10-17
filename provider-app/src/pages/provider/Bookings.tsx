@@ -6,6 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import PaymentStep from '@/components/provider/PaymentStep';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -20,7 +21,7 @@ import {
 } from '@/lib/bookingView';
 
 type Row = {
-  id: string; status: string;
+    id: string; status: string; payment_status: string | null;
   booking_date: string | null; booking_time: string | null; scheduled_date: string | null; scheduled_time: string | null;
   address: string | null; city: string | null; pincode: string | null;
   total_amount: number | null; platform_fee: number | null; provider_amount: number | null;
@@ -31,7 +32,7 @@ type Row = {
   services: { name: string } | null;
 };
 
-const SELECT = `id, status, booking_date, booking_time, scheduled_date, scheduled_time, address, city, pincode,
+const SELECT = `id, status,payment_status, booking_date, booking_time, scheduled_date, scheduled_time, address, city, pincode,
   total_amount, platform_fee, provider_amount, description, special_instructions, sub_item_name,
   customer_name, customer_phone, cancellation_reason, provider_eta_minutes, unread_messages_provider, services(name)`;
 
@@ -70,6 +71,7 @@ const Bookings = () => {
   const [chatId, setChatId] = useState<string | null>(null);
   const [detail, setDetail] = useState<Row | null>(null);
   const [declineId, setDeclineId] = useState<string | null>(null);
+    const [payId, setPayId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!provider?.id) return;
@@ -225,7 +227,14 @@ const Bookings = () => {
                     </div>
                   )}
 
-                  {b.status === 'completed' && <p className="mt-4 rounded-xl bg-emerald-500/10 px-3 py-2.5 text-center text-sm font-bold text-emerald-700">Completed · {earn != null ? `₹${earn.toLocaleString('en-IN')} earned` : 'earned'}</p>}
+                  {b.status === 'completed' && (
+  <div className="mt-4 space-y-2">
+    <p className="rounded-xl bg-emerald-500/10 px-3 py-2.5 text-center text-sm font-bold text-emerald-700">Completed · {earn != null ? `₹${earn.toLocaleString('en-IN')} earned` : 'earned'}</p>
+    {b.payment_status !== 'paid' && Number(b.total_amount) > 0 && (
+      <button onClick={() => setPayId(b.id)} className="press h-12 w-full rounded-2xl bg-gold text-base font-extrabold text-gold-foreground">Collect payment</button>
+    )}
+  </div>
+)}
                   {b.status === 'cancelled' && <p className="mt-4 rounded-xl bg-red-500/10 px-3 py-2.5 text-center text-sm font-semibold text-red-600">{b.cancellation_reason || 'Cancelled'}</p>}
                 </div>
               </motion.article>
@@ -258,7 +267,7 @@ const Bookings = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
+    
       {chatId && user && (
         <Dialog open onOpenChange={() => setChatId(null)}>
           <DialogContent className="max-w-md p-0">
@@ -267,6 +276,7 @@ const Bookings = () => {
           </DialogContent>
         </Dialog>
       )}
+      <PaymentStep open={!!payId} bookingId={payId} onClose={() => { setPayId(null); void load(); }} onPaid={() => void load()} />
     </div>
   );
 };

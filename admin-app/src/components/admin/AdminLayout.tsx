@@ -46,6 +46,7 @@ const AdminLayout: React.FC = () => {
     { to: '/kyc', icon: <Shield className="h-5 w-5" />, label: 'KYC Review', badge: pendingKyc },
     { to: '/providers', icon: <Users className="h-5 w-5" />, label: 'Providers' },
     { to: '/bookings', icon: <BookOpen className="h-5 w-5" />, label: 'Bookings' },
+    { to: '/wallets', icon: <Wallet className="h-5 w-5" />, label: 'Dues & Payments' },
     { to: '/payouts', icon: <Wallet className="h-5 w-5" />, label: 'Payouts' },
     { to: '/audit', icon: <FileText className="h-5 w-5" />, label: 'Audit Log' },
   ];

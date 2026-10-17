@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useRef, useState, useCallb
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './AuthContext';
 import type { KycStatus } from '@/lib/constants';
+import { toast } from '@/hooks/use-toast';
 
 interface NotificationPreferences {
   new_booking: boolean;
@@ -69,27 +70,39 @@ const ProviderContext = createContext<ProviderContextType | undefined>(undefined
 export const ProviderProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, loading: authLoading } = useAuth();
   const [provider, setProvider] = useState<ProviderProfile | null>(null);
-  const [providerLoading, setProviderLoading] = useState(true);
+  // id of the user whose provider row has finished loading (null = nothing loaded yet)
+  const [loadedForUserId, setLoadedForUserId] = useState<string | null>(null);
   const [unreadNotificationsCount, setUnreadNotificationsCount] = useState(0);
   const [pendingBookingsCount, setPendingBookingsCount] = useState(0);
 
+  const userId = user?.id ?? null;
+
+  // Depends on the user ID only: Supabase hands out a new `user` object on every token refresh / tab focus,
+  // which used to re-run this, flash the spinner and unmount the page the provider was working on.
   const fetchProvider = useCallback(async () => {
-    if (!user) {
+    if (!userId) {
       setProvider(null);
-      setProviderLoading(false);
+      setLoadedForUserId(null);
       return;
     }
-    setProviderLoading(true);
-    const { data } = await supabase
-      .from('service_providers')
-      .select('*')
-      .eq('user_id', user.id)
-      .maybeSingle();
-    setProvider(data as unknown as ProviderProfile | null);
-    setProviderLoading(false);
-  }, [user]);
+    let row: ProviderProfile | null = null;
+    let failed = false;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const { data, error } = await supabase
+        .from('service_providers')
+        .select('*')
+        .eq('user_id', userId)
+        .maybeSingle();
+      if (!error) { row = data as unknown as ProviderProfile | null; failed = false; break; }
+      failed = true;
+      await new Promise((r) => setTimeout(r, 400 * (attempt + 1)));
+    }
+    // A network hiccup must NOT look like "no provider account" (that kicks the user to the login page)
+    if (!failed) setProvider(row);
+    setLoadedForUserId(userId);
+  }, [userId]);
 
-  useEffect(() => { fetchProvider(); }, [fetchProvider]);
+  useEffect(() => { void fetchProvider(); }, [fetchProvider]);
 
   // Depends on the provider's ID only. The 30s heartbeat below replaces the whole `provider` object every time,
   // and depending on the object re-created this callback, tore down and re-opened the realtime channel and
@@ -200,11 +213,22 @@ export const ProviderProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       .eq('id', provider.id)
       .select()
       .single();
-    if (data) setProvider(data as unknown as ProviderProfile);
+    if (data) {
+      setProvider(data as unknown as ProviderProfile);
+      // The database refuses "online" while dues are over the limit (or a job's payment is missing)
+      if (newStatus && (data as { is_online?: boolean | null }).is_online === false) {
+        toast({
+          title: "You can't go online yet",
+          description: 'Open Wallet: pay your dues or record the payment of your last job.',
+          variant: 'destructive',
+        });
+      }
+    }
   };
 
   // loading is true if auth is still resolving OR provider fetch hasn't completed
-  const loading = authLoading || providerLoading;
+  // Also true in the render right after login, before the fetch effect has started (the old redirect-to-login race)
+  const loading = authLoading || (!!userId && loadedForUserId !== userId);
 
   return (
     <ProviderContext.Provider value={{

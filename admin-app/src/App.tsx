@@ -50,6 +50,7 @@ export default function App() {
               <Route path="/kyc" element={<KycReview />} />
               <Route path="/providers" element={<Providers />} />
               <Route path="/bookings" element={<Bookings />} />
+              <Route path="/wallets" element={<Wallets />} />
               <Route path="/payouts" element={<Payouts />} />
               <Route path="/audit" element={<AuditLog />} />
             </Route>
