@@ -14,7 +14,7 @@ legacy/          Old web customer/provider apps. READ-ONLY UI spec. Deleted at m
 
 ## Rules
 
-- **Shared logic goes in `packages/shared`.** Never duplicate Supabase client setup, types, Zod schemas, or fee/date/booking rules inside an app. Logic there needs Vitest tests; `npm run test` must pass before touching screens.
+- **Shared logic goes in `packages/shared`** (see its README for the module map and the list of assumptions to confirm). Reuse `feeForServiceBill`, `settleJob`, `checkCanAccept`, `providerStep`, `customerActions`, `createHandyFixClient` etc. instead of re-deriving rules in a screen. Never duplicate Supabase client setup, types, Zod schemas, or fee/date/booking rules inside an app. Logic there needs Vitest tests; `npm run test` must pass before touching screens.
 - **Never change RLS, migrations, or Edge Functions without asking first.** Never edit an applied migration; add a new one. Anything not yet applied goes in `supabase/proposals/`.
 - **Do not edit `legacy/`** except to read it. Treat old screens as a spec and fix their bugs in the new version instead of porting them.
 - Strict TypeScript everywhere new (`tsconfig.base.json`). No `any` in new code.

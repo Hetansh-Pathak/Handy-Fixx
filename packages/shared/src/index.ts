@@ -1,3 +1,20 @@
-// Shared HandyFix logic (types, Zod schemas, fee/price/booking rules, API + hooks).
-// Populated in Phase 2. Consumed as TypeScript source by apps/mobile and apps/admin.
-export const SHARED_PACKAGE = "@handyfix/shared";
+export * from "./money/money";
+export * from "./money/fee";
+export * from "./money/price-band";
+export * from "./money/bill";
+export * from "./money/launch";
+export * from "./money/wallet";
+export * from "./booking/status";
+export * from "./booking/schedule";
+export * from "./booking/validation";
+export * from "./booking/completion-code";
+export * from "./booking/cancellation";
+export * from "./booking/dispute";
+export * from "./booking/request-timer";
+export * from "./providers/ranking";
+export * from "./geo/distance";
+export * from "./kyc/kyc";
+export * from "./auth/roles";
+export * from "./constants/cities";
+export * from "./supabase/client";
+export * from "./supabase/edge";
