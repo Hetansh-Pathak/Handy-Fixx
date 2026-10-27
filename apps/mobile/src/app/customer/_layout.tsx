@@ -1,12 +1,13 @@
-import { Tabs } from "expo-router";
-import { tabScreenOptions } from "@/components/tab-options";
+import { Stack } from "expo-router";
+import { AreaProvider } from "@/features/customer/area-context";
 
+/** Stack around the tabs so service, booking and confirmation screens open full-screen on top of them. */
 export default function CustomerLayout() {
   return (
-    <Tabs screenOptions={tabScreenOptions}>
-      <Tabs.Screen name="index" options={{ title: "Home" }} />
-      <Tabs.Screen name="bookings" options={{ title: "Bookings" }} />
-      <Tabs.Screen name="profile" options={{ title: "Profile" }} />
-    </Tabs>
+    <AreaProvider>
+      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: "#0A0A0A" } }}>
+        <Stack.Screen name="(tabs)" />
+      </Stack>
+    </AreaProvider>
   );
 }

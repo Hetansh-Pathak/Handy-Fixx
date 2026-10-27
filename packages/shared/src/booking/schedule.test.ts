@@ -48,3 +48,25 @@ describe("slots", () => {
     expect(slotsForDate(at(2026, 11, 30), now).some((s) => s.available)).toBe(false);
   });
 });
+
+import { formatBookingWhen, formatDateChip, formatSlot, parseDateString } from "./schedule";
+
+describe("display formatting", () => {
+  it("formats date chips", () => {
+    expect(formatDateChip(new Date(2026, 10, 10))).toBe("Tue, 10 Nov");
+    expect(formatDateChip(new Date(2026, 0, 1))).toBe("Thu, 1 Jan");
+  });
+  it.each([["08:00", "8:00 AM"], ["12:00", "12:00 PM"], ["00:30", "12:30 AM"], ["14:00:00", "2:00 PM"], ["18:00", "6:00 PM"], ["x", "x"], ["25:00", "25:00"]])(
+    "formatSlot %s -> %s", (input, out) => expect(formatSlot(input)).toBe(out));
+  it("parses a local date string and rejects impossible dates", () => {
+    const d = parseDateString("2026-11-10")!;
+    expect([d.getFullYear(), d.getMonth(), d.getDate()]).toEqual([2026, 10, 10]);
+    for (const bad of ["2026-02-30", "2026-13-01", "10/11/2026", ""]) expect(parseDateString(bad)).toBeNull();
+  });
+  it("formats a stored booking date and time", () => {
+    expect(formatBookingWhen("2026-11-10", "14:00:00")).toBe("Tue, 10 Nov · 2:00 PM");
+    expect(formatBookingWhen("2026-11-10", null)).toBe("Tue, 10 Nov");
+    expect(formatBookingWhen(null, "08:00")).toBe("8:00 AM");
+    expect(formatBookingWhen(undefined, undefined)).toBe("");
+  });
+});

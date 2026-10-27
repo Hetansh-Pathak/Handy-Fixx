@@ -4,6 +4,12 @@ export const env = {
   supabaseAnonKey: process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
   googleWebClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
   easProjectId: process.env.EXPO_PUBLIC_EAS_PROJECT_ID,
+  /**
+   * Set to "1" once supabase/proposals/…pdf_pricing_model has been applied. Until then real customers
+   * cannot confirm bookings (the live 12% trigger would save a different total than the screen shows).
+   * Development builds can always book, to test the flow.
+   */
+  bookingEnabled: __DEV__ || process.env.EXPO_PUBLIC_PDF_PRICING_LIVE === "1",
   /** Native-check screens are always on in dev; set EXPO_PUBLIC_ENABLE_SPIKE=1 for other builds. */
   spikeEnabled: __DEV__ || process.env.EXPO_PUBLIC_ENABLE_SPIKE === "1",
 } as const;

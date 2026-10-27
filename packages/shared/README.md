@@ -22,7 +22,7 @@ Time-dependent functions take `now: Date` as an argument. Never call `new Date()
 | `money/wallet` | Accept check ("Top up ₹100 to accept"), job settlement (deduct / waive / due), top-up | PDF p.7–8 |
 | `money/money` | `formatInr` with Indian grouping (no `Intl` dependency) | legacy `inr()` |
 | `booking/status` | Lifecycle, who may transition, provider primary button per step, customer buttons per state | PDF p.5, p.7, p.10 |
-| `booking/schedule` | Slots, 8-day window, past-slot hiding | legacy `Booking.tsx` |
+| `booking/schedule` | Slots, 8-day window, past-slot hiding, date/time display (no `Intl`) | legacy `Booking.tsx` |
 | `booking/validation` | Zod: pincode, email, 6-digit OTP, Indian mobile, 3-step booking | legacy `Booking.tsx`, OTP functions |
 | `booking/completion-code` | 4-digit code, `complete_booking_with_code` reply → one UI message | legacy `CompleteJobDialog` |
 | `booking/cancellation` | 3 late cancellations in 30 days pauses instant booking for 7 days | PDF p.4 |
@@ -35,6 +35,9 @@ Time-dependent functions take `now: Date` as an argument. Never call `new Date()
 | `auth/session-role` | Role resolution (provider row wins, else remembered role), who may become a pro | locked decisions |
 | `auth/schemas` | Zod: sign-in/up, reset, pro phone, customer profile; friendly auth error messages | legacy auth screens |
 | `auth/deep-link` | Parses Supabase links (`#access_token=…&type=recovery`) | new |
+| `catalog/availability` | Online + fresh-heartbeat rule (90 s), offers-service, serves-area | legacy `ServiceDetail` |
+| `catalog/pricing` | Listed price per pro, booking quote (₹0 fee), `reconcileQuote` vs what the database saved | PDF p.2-3 |
+| `catalog/display` | Service emoji, duration and rating text | legacy |
 | `supabase/client` | `createHandyFixClient`: the only Supabase client factory; throws if config is missing | legacy clients |
 | `supabase/edge` | `callEdge` with readable errors | legacy `wallet.ts` |
 | `constants/cities` | Gujarat city list | legacy `constants.ts` |

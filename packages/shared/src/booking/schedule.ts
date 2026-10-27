@@ -49,3 +49,34 @@ export function bookableDates(now: Date): Date[] {
     new Date(today.getFullYear(), today.getMonth(), today.getDate() + i),
   );
 }
+
+const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"] as const;
+
+/** "Tue, 10 Nov" (hand-written: Intl support differs between Hermes builds). */
+export const formatDateChip = (d: Date) => `${DAYS[d.getDay()]}, ${d.getDate()} ${MONTHS[d.getMonth()]}`;
+
+/** "14:00" or "14:00:00" → "2:00 PM". Returns the input unchanged if it is not a time. */
+export function formatSlot(time: string): string {
+  const m = /^(\d{1,2}):(\d{2})/.exec(time);
+  if (!m) return time;
+  const h = Number(m[1]);
+  if (h > 23) return time;
+  return `${h % 12 === 0 ? 12 : h % 12}:${m[2]} ${h < 12 ? "AM" : "PM"}`;
+}
+
+/** Parses `yyyy-MM-dd` as a LOCAL calendar date (never via `new Date(string)`, which shifts days by timezone). */
+export function parseDateString(value: string): Date | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!m) return null;
+  const [y, mo, d] = [Number(m[1]), Number(m[2]), Number(m[3])];
+  const date = new Date(y, mo - 1, d);
+  return date.getFullYear() === y && date.getMonth() === mo - 1 && date.getDate() === d ? date : null;
+}
+
+/** `("2026-11-10", "14:00:00")` → "Tue, 10 Nov · 2:00 PM". */
+export function formatBookingWhen(dateString: string | null | undefined, time: string | null | undefined): string {
+  const date = dateString ? parseDateString(dateString) : null;
+  const parts = [date ? formatDateChip(date) : null, time ? formatSlot(time) : null].filter(Boolean);
+  return parts.join(" · ");
+}

@@ -5,7 +5,7 @@ Home-services marketplace for tier-2 Indian cities. Migrating from three Vite we
 ## Layout
 
 ```
-apps/mobile      Expo SDK 58 app (TypeScript, Expo Router, NativeWind). Routes: (auth) group, role-pick, /customer/*, /provider/*. NOT an npm workspace (see below)
+apps/mobile      Expo SDK 58 app (TypeScript, Expo Router, NativeWind). Routes: (auth) group, role-pick, /customer/(tabs) + /customer/service|book|booking/*, /provider/*. NOT an npm workspace (see below)
 apps/admin       Web admin (Vite + React). Stays web.
 packages/shared  @handyfix/shared: types, Zod schemas, API functions, hooks, fee/price/booking logic, tests
 supabase/        migrations/{customer,provider}, functions/, proposals/ (NOT applied), verify/
@@ -30,6 +30,13 @@ legacy/          Old web customer/provider apps. READ-ONLY UI spec. Deleted at m
 - Booking statuses in the DB today: pending → confirmed → on_the_way → in_progress → completed (cancelled from pending/confirmed). The PDF adds `arrived` between on_the_way and in_progress; it does not exist yet and needs a new migration (ask first). Completion uses a 4-digit code, stored hashed, attempt-limited.
 - Disputes: 24 h window (48 h for repair quality), admin decides within 48 h, everything in the read-only audit log.
 - The old 12% customer fee (`platform_fee`, `provider_amount`) is being removed. Do not port it.
+
+## Pricing facts (customer booking, slice 2)
+
+- Model: PDF. The customer pays the pro's own rate, `platform_fee = 0`, price locked at booking. A chosen sub-item uses its catalogue price for every pro; otherwise `provider_services.custom_price`, then `services.base_price` (`resolveListedPrice`).
+- **The database, not the app, owns the saved price.** The live trigger `enforce_booking_fee` (if the wallet migration is applied) adds 12% and ignores a pro's own rate. After every insert the app re-reads the stored totals and the confirmation screen shows a red "saved price is different" warning with a Cancel button (`reconcileQuote`). Run `supabase/verify/04_pricing_state_READONLY.sql` to see which trigger is live.
+- `supabase/proposals/20261101000000_pdf_pricing_model_PROPOSAL_NOT_APPLIED.sql` (NOT applied) replaces that trigger, adds price bands and locks the price. Applying it alone means HandyFix collects no fee until the wallet-fee migration (slice 5) exists. Production builds keep "Confirm booking" disabled until `EXPO_PUBLIC_PDF_PRICING_LIVE=1`; dev builds can always book.
+- A pro appears in the customer list only while online AND `service_providers.updated_at` is under 90 s old (`isProviderAvailable`). The provider app (slice 4) must therefore send a heartbeat while online, or pros vanish from the list.
 
 ## Auth facts (verified against the repo, not assumed)
 

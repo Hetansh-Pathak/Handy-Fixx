@@ -102,3 +102,29 @@ export function FullScreenMessage({ title, message, children }: { title: string;
     </Screen>
   );
 }
+
+export function ScreenHeader({ title, onBack }: { title: string; onBack: () => void }) {
+  return (
+    <View className="flex-row items-center gap-2">
+      <Pressable accessibilityRole="button" accessibilityLabel="Go back" onPress={onBack} hitSlop={12} className="min-h-[44px] min-w-[44px] items-center justify-center">
+        <Text className="text-3xl text-white">‹</Text>
+      </Pressable>
+      <Text className="flex-1 text-xl font-semibold text-white" numberOfLines={1}>{title}</Text>
+    </View>
+  );
+}
+
+/** Small selectable pill (sort options, dates, time slots). */
+export function Chip({ label, selected = false, disabled = false, onPress }: { label: string; selected?: boolean; disabled?: boolean; onPress: () => void }) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityState={{ selected, disabled }}
+      disabled={disabled}
+      onPress={onPress}
+      className={`min-h-[44px] justify-center rounded-full border px-4 ${selected ? "border-gold bg-gold" : "border-line bg-surface"} ${disabled ? "opacity-30" : ""}`}
+    >
+      <Text className={`text-sm font-semibold ${selected ? "text-ink" : "text-white"}`}>{label}</Text>
+    </Pressable>
+  );
+}

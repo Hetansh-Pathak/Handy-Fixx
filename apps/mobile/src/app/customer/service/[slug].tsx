@@ -1,0 +1,111 @@
+import { formatDuration, formatInr, formatRating, serviceEmoji, sortProviders, type ProviderSort } from "@handyfix/shared";
+import { useQuery } from "@tanstack/react-query";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { useMemo, useState } from "react";
+import { Pressable, Text, View } from "react-native";
+import { Body, Button, Chip, ErrorBanner, Screen, ScreenHeader, TextField, Title } from "@/components/ui";
+import { useArea } from "@/features/customer/area-context";
+import { fetchProviderListings, fetchServiceBySlug, fetchSubItems } from "@/features/customer/catalog-api";
+import type { ProviderListing, SubItemRow } from "@/features/customer/types";
+
+type SortChoice = Extract<ProviderSort, "top_rated" | "cheapest">;
+
+export default function ServiceScreen() {
+  const router = useRouter();
+  const { slug } = useLocalSearchParams<{ slug: string }>();
+  const { area, setArea } = useArea();
+  const [subId, setSubId] = useState<string | null>(null);
+  const [sort, setSort] = useState<SortChoice>("top_rated");
+
+  const service = useQuery({ queryKey: ["service", slug], queryFn: () => fetchServiceBySlug(slug), enabled: !!slug });
+  const serviceId = service.data?.id;
+  const subItems = useQuery({ queryKey: ["sub-items", serviceId], queryFn: () => fetchSubItems(serviceId!), enabled: !!serviceId });
+  const subItem: SubItemRow | null = subItems.data?.find((s) => s.id === subId) ?? null;
+
+  // Pros come and go as they open and close the app, so the list refreshes itself.
+  const providers = useQuery({
+    queryKey: ["providers", serviceId, subId, area.trim().toLowerCase()],
+    enabled: !!service.data && !subItems.isPending,
+    refetchInterval: 15_000,
+    queryFn: () => fetchProviderListings({ service: service.data!, subItem, area, now: new Date() }),
+  });
+
+  const sorted = useMemo(() => sortProviders(providers.data ?? [], sort), [providers.data, sort]);
+  const needsSubItem = (subItems.data?.length ?? 0) > 0 && !subItem;
+
+  const book = (p: ProviderListing) =>
+    router.push({ pathname: "/customer/book/[providerId]", params: { providerId: p.id, service: slug, ...(subId ? { sub: subId } : {}) } });
+
+  return (
+    <Screen>
+      <ScreenHeader title={service.data?.name ?? "Service"} onBack={() => router.back()} />
+      {service.isError ? <ErrorBanner message="Could not load this service." /> : null}
+      {service.isSuccess && !service.data ? <Body muted>This service is not available.</Body> : null}
+      {service.data ? (
+        <View className="gap-1">
+          <Title>{serviceEmoji(service.data.icon_name)} {service.data.name}</Title>
+          {service.data.description ? <Body muted>{service.data.description}</Body> : null}
+          <Text className="text-sm text-gold">
+            {service.data.base_price ? `Starts from ${formatInr(service.data.base_price)}` : ""}
+            {service.data.duration_minutes ? `  ·  ~${formatDuration(service.data.duration_minutes)}` : ""}
+          </Text>
+        </View>
+      ) : null}
+
+      {(subItems.data?.length ?? 0) > 0 ? (
+        <View className="gap-2">
+          <Text className="text-lg font-semibold text-white">What do you need?</Text>
+          {subItems.data!.map((s) => {
+            const selected = s.id === subId;
+            return (
+              <Pressable key={s.id} accessibilityRole="radio" accessibilityState={{ selected }} onPress={() => setSubId(selected ? null : s.id)}
+                className={`flex-row items-center gap-3 rounded-2xl border-2 p-3 ${selected ? "border-gold bg-gold/10" : "border-line bg-surface"}`}>
+                <Text className="text-2xl">{s.icon ?? "🛠️"}</Text>
+                <View className="flex-1">
+                  <Text className="text-base font-semibold text-white">{s.name}</Text>
+                  {s.duration_minutes ? <Text className="text-xs text-muted">{formatDuration(s.duration_minutes)}</Text> : null}
+                </View>
+                <Text className="text-base font-bold text-gold">{formatInr(s.base_price)}</Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      ) : null}
+
+      <TextField label="Your area" value={area} onChangeText={setArea} placeholder="City or 6-digit pincode" autoCapitalize="words" />
+
+      <View className="flex-row gap-2">
+        <Chip label="Top rated" selected={sort === "top_rated"} onPress={() => setSort("top_rated")} />
+        <Chip label="Cheapest" selected={sort === "cheapest"} onPress={() => setSort("cheapest")} />
+      </View>
+
+      {needsSubItem ? <Body muted>Choose what you need above to see pros and prices.</Body> : null}
+      <ErrorBanner message={providers.isError ? "Could not load pros. Check your connection." : null} />
+      {!needsSubItem && providers.isPending ? <Body muted>Finding pros near you…</Body> : null}
+      {!needsSubItem && providers.isSuccess && sorted.length === 0 ? (
+        <View className="gap-3 rounded-2xl border border-line bg-surface p-4">
+          <Text className="text-base font-semibold text-white">No pros online{area.trim() ? ` in ${area.trim()}` : ""} right now</Text>
+          <Body muted>Pros appear here while they have the app open. Try again in a moment or check your area.</Body>
+          <Button label="Refresh" variant="secondary" onPress={() => void providers.refetch()} />
+        </View>
+      ) : null}
+
+      {!needsSubItem ? sorted.map((p) => (
+        <View key={p.id} className="gap-3 rounded-2xl border border-line bg-surface p-4">
+          <View className="flex-row items-start justify-between gap-3">
+            <View className="flex-1 gap-0.5">
+              <Text className="text-lg font-semibold text-white">{p.fullName}{p.isVerified ? "  ✓" : ""}</Text>
+              <Text className="text-sm text-muted">
+                ★ {formatRating(p.rating)}{p.totalReviews ? ` (${p.totalReviews})` : ""}  ·  {p.totalJobs} jobs
+                {p.experienceYears ? `  ·  ${p.experienceYears} yr exp` : ""}
+              </Text>
+            </View>
+            <Text className="text-2xl font-bold text-gold">{formatInr(p.price)}</Text>
+          </View>
+          {p.bio ? <Text className="text-sm text-muted" numberOfLines={2}>{p.bio}</Text> : null}
+          <Button label={`Book ${p.fullName.split(" ")[0]}`} onPress={() => book(p)} />
+        </View>
+      )) : null}
+    </Screen>
+  );
+}
