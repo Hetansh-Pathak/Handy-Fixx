@@ -1,6 +1,8 @@
 # HandyFix
 
-HandyFix is a home-services marketplace that connects customers with verified local professionals. The repository contains three Vite + React applications: a customer-facing booking experience, a dedicated provider dashboard, and a standalone admin operations panel, all backed by Supabase.
+HandyFix is a home-services marketplace that connects customers with verified local professionals. The repository is a monorepo being migrated from three Vite web apps to a single **React Native + Expo** mobile app (customer and provider roles) with a web admin panel, shared TypeScript logic and a Supabase backend.
+
+> **Migration status:** Phase 0 (clean baseline) and Phase 1 (monorepo layout) are done. `apps/mobile` is created in Phase 3. Until it reaches feature parity, `legacy/customer-app` and `legacy/provider-app` are the working web apps and act as the UI spec.
 
 ![Customer application preview](docs/customer-app-preview.png)
 
@@ -27,35 +29,27 @@ HandyFix is a home-services marketplace that connects customers with verified lo
 ## Repository structure
 
 ```
-handy-fix/
-├── customer-app/          # Customer web application (Vite + React, port 3000)
-├── provider-app/          # Provider dashboard (Vite + React, port 3001)
-├── admin-app/             # Admin operations panel (Vite + React, port 3002)
-├── database/
+handyfix/
+├── apps/
+│   ├── mobile/                # (Phase 3) Expo app: (auth), (customer), (provider) route groups
+│   └── admin/                 # Admin operations panel (Vite + React, stays web, port 3002)
+├── packages/
+│   └── shared/                # @handyfix/shared: types, Zod, fee/price/booking logic, tests
+├── supabase/
 │   ├── migrations/
-│   │   ├── customer/      # Supabase migrations for the customer schema
-│   │   └── provider/      # Supabase migrations for the provider schema
-│   └── supabase/functions/   (all Edge Functions, single source; incl. Razorpay + wallet)
-│       ├── send-welcome-email/       # Edge Function: welcome email on signup
-│       ├── send-provider-otp/        # Edge Function: OTP for provider login
-│       └── verify-provider-otp/      # Edge Function: OTP verification
-└── docs/
-    ├── customer-app-preview.png
-    └── provider-app-preview.png
+│   │   ├── customer/          # Customer-side schema migrations
+│   │   └── provider/          # Provider-side schema migrations (KYC, wallet ledger, ...)
+│   ├── functions/             # All Edge Functions (OTP, email, Razorpay, wallet)
+│   ├── proposals/             # SQL that is NOT applied (review only)
+│   └── verify/                # Read-only verification scripts
+├── legacy/                    # Old web apps, kept as UI spec until mobile parity, then deleted
+│   ├── customer-app/          # (Vite + React, port 3000)
+│   └── provider-app/          # (Vite + React, port 3001)
+├── docs/
+├── CLAUDE.md                  # Rules for Claude Code in this repo
+├── tsconfig.base.json         # Strict TS config shared by new packages
+└── package.json               # npm workspaces root (apps/*, packages/*)
 ```
-
-## Technology stack
-
-| Layer | Technology |
-|---|---|
-| Frontend | React 18, TypeScript, Vite |
-| Styling | Tailwind CSS, shadcn/ui |
-| State & Data | TanStack Query v5, React Hook Form, Zod |
-| Backend | Supabase (Auth, PostgreSQL, Edge Functions, Realtime) |
-| Routing | React Router v6 |
-| Maps | Leaflet, React Leaflet |
-| Charts | Recharts |
-| Animation | Framer Motion |
 
 ## Prerequisites
 
@@ -67,7 +61,7 @@ handy-fix/
 
 ### 1. Configure environment variables
 
-Create a `.env.local` file inside **both** `customer-app` and `provider-app`:
+Create a `.env.local` file inside `apps/admin` (and in `legacy/customer-app` and `legacy/provider-app` if you run them):
 
 ```env
 VITE_SUPABASE_URL=https://<your-project-ref>.supabase.co
@@ -81,8 +75,8 @@ VITE_SUPABASE_PUBLISHABLE_KEY=<your-anon-public-key>
 Using the Supabase CLI or the SQL editor in the Supabase dashboard, apply the migrations in order:
 
 ```
-database/migrations/customer/   # Run these for the customer schema
-database/migrations/provider/   # Run these for the provider schema
+supabase/migrations/customer/   # Run these for the customer schema
+supabase/migrations/provider/   # Run these for the provider schema
 ```
 
 ### 3. Deploy Edge Functions
@@ -110,33 +104,26 @@ supabase secrets set \
 | `BREVO_SENDER_EMAIL` | ✅ | Sender address verified in Brevo |
 | `BREVO_SENDER_NAME` | optional | Display name (default: `HandyFix`) |
 
-### 4. Run the applications
+### 4. Install and run
 
-**Customer app** (opens on http://localhost:3000):
-
-```bash
-cd customer-app
-npm install
-npm run dev
-```
-
-**Provider app** (opens on http://localhost:3001):
+Install once from the repo root (npm workspaces install `apps/admin` and `packages/shared` together):
 
 ```bash
-cd provider-app
 npm install
-npm run dev
 ```
 
-**Admin app** (opens on http://localhost:3002):
+**Admin app** (http://localhost:3002):
 
 ```bash
-cd admin-app
-npm install
-npm run dev
+npm run admin
 ```
 
-Run each in a separate terminal to use both simultaneously.
+**Legacy web apps** (own `package-lock.json`, not part of the workspace, so install inside each):
+
+```bash
+cd legacy/customer-app && npm install && npm run dev   # http://localhost:3000
+cd legacy/provider-app && npm install && npm run dev   # http://localhost:3001
+```
 
 ## Authentication
 
@@ -147,23 +134,24 @@ For Google sign-in, enable Google in **Supabase Dashboard → Authentication →
 
 ## Available scripts
 
-Run these from either `customer-app` or `provider-app`:
+From the repo root (run across all workspaces):
 
 | Command | Description |
 |---|---|
-| `npm run dev` | Start local dev server with hot reload |
-| `npm run build` | Production build (output to `dist/`) |
-| `npm run preview` | Preview the production build locally |
-| `npm run lint` | Run ESLint |
-| `npm run test` | Run unit tests with Vitest |
-| `npm run test:watch` | Run tests in watch mode |
+| `npm run typecheck` | `tsc` in admin and shared |
+| `npm run lint` | ESLint in admin |
+| `npm run test` | Vitest in shared |
+| `npm run build` | Production build of admin |
+| `npm run admin` | Admin dev server |
+
+Inside a single app or package, `npm run dev | build | lint | test` work as before.
 
 ## Contribution guide
 
 1. Pull the latest changes before starting work.
 2. Create a feature branch: `git checkout -b feat/<short-description>`.
-3. Keep changes scoped to the correct app (`customer-app` or `provider-app`).
-4. Run `npm run lint`, `npm run test`, and `npm run build` before opening a pull request.
+3. Keep changes scoped to one app or package. Shared logic goes in `packages/shared`.
+4. Run `npm run typecheck`, `npm run lint`, `npm run test`, and `npm run build` from the root before opening a pull request.
 5. Do not commit `.env.local`, credentials, lock files from other package managers, or generated build output.
 
 ## Team

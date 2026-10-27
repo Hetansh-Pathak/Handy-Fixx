@@ -1,23 +1,22 @@
-# Database
+# Supabase
 
-This directory contains all Supabase database resources for HandyFix.
+This directory contains all Supabase backend resources for HandyFix (migrations, Edge Functions, verification scripts).
 
 ## Structure
 
 ```
-database/
+supabase/
 ├── migrations/
-│   ├── customer/   # Migrations for the customer-app schema
-│   └── provider/   # Migrations for the provider-app schema
-└── supabase/functions/   (all Edge Functions, single source)
-    ├── send-welcome-email/     # Sends a welcome email after customer signup
-    ├── send-provider-otp/      # Generates and sends an OTP for provider login
-    └── verify-provider-otp/    # Verifies the OTP and returns a session
+│   ├── customer/   # Customer-side schema migrations
+│   └── provider/   # Provider-side schema migrations
+├── functions/      # All Edge Functions (single source)
+├── proposals/      # SQL that is NOT applied (review only)
+└── verify/         # Read-only verification scripts
 ```
 
 ## Wallet & payments
 
-See `docs/WALLET_SETUP_GUIDE.md`. Verification scripts live in `database/verify/`.
+See `docs/WALLET_SETUP_GUIDE.md`. Verification scripts live in `supabase/verify/`.
 New functions: `create-qr-payment`, `close-booking-qr`, `create-wallet-topup-order`, `razorpay-webhook` (deploy with `--no-verify-jwt`).
 
 ## Applying migrations

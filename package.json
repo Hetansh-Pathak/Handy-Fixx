@@ -1,0 +1,22 @@
+{
+  "name": "handyfix",
+  "private": true,
+  "version": "1.0.0",
+  "description": "HandyFix monorepo: Expo mobile app, web admin, shared logic, Supabase backend",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "build": "npm run build --workspaces --if-present",
+    "admin": "npm run dev -w @handyfix/admin",
+    "legacy:customer": "npm --prefix legacy/customer-app run dev",
+    "legacy:provider": "npm --prefix legacy/provider-app run dev"
+  }
+}

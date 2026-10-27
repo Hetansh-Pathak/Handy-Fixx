@@ -43,3 +43,19 @@ supabase/.temp/
 
 # Supabase CLI link state (project ref etc.)
 **/supabase/.temp/
+
+# Expo / EAS (apps/mobile)
+.expo/
+*.apk
+*.aab
+*.jks
+*.p12
+*.keystore
+
+# Expo / EAS (apps/mobile)
+.expo/
+*.apk
+*.aab
+*.jks
+*.p12
+*.keystore

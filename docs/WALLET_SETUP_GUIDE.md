@@ -38,7 +38,7 @@ Defaults I chose (all changeable with one SQL line, see "Settings"): dues limit 
 
 ## STEP 2: Check the apps build (about 10 minutes)
 
-Open a terminal in each folder (`provider-app`, `customer-app`, `admin-app`) and run:
+Open a terminal in each folder (`legacy/provider-app`, `legacy/customer-app`, `apps/admin`) and run:
 
 ```
 npm install
@@ -50,7 +50,7 @@ You want the build to finish with **no red errors**. If you see an error, send m
 ## STEP 3: Supabase pre-flight check (READ-ONLY, 2 minutes)
 
 1. Supabase → **SQL Editor** → **New query**.
-2. Open `database/verify/01_preflight_check_READONLY.sql`, copy everything, paste, **Run**.
+2. Open `supabase/verify/01_preflight_check_READONLY.sql`, copy everything, paste, **Run**.
 3. Look at the `result` column. `OK`, `OK (fresh)`, `INFO` are good. `WARN` = read the detail. **`MISSING` = stop and send me the row.**
 4. Note the "Open jobs right now" row. Run the real migration when it is low.
 
@@ -58,7 +58,7 @@ This step changes nothing.
 
 ## STEP 4: Dry run of the migration (saves NOTHING, 2 minutes)
 
-1. New query. Open `database/migrations/provider/20261015000000_wallet_ledger.sql`, copy everything, paste.
+1. New query. Open `supabase/migrations/provider/20261015000000_wallet_ledger.sql`, copy everything, paste.
 2. Scroll to the **very last line**. Change `COMMIT;` to `ROLLBACK;`.
 3. **Run**. You should see "Success. No rows returned". Nothing was saved.
 4. If you see an error, copy the exact text and send it to me. Do not continue.
@@ -71,12 +71,12 @@ This step changes nothing.
 
 ## STEP 6: Verify (READ-ONLY, 2 minutes)
 
-1. New query → paste `database/verify/02_after_migration_check_READONLY.sql` → Run.
+1. New query → paste `supabase/verify/02_after_migration_check_READONLY.sql` → Run.
 2. **Every row must say OK.**
 
 ## STEP 7: Self-test (saves NOTHING, 2 minutes)
 
-1. New query → paste `database/verify/03_selftest_NOTHING_SAVED.sql` → Run.
+1. New query → paste `supabase/verify/03_selftest_NOTHING_SAVED.sql` → Run.
 2. A **red error box appears on purpose**. It contains lines starting with `PASS` or `FAIL`. All should be `PASS`.
 3. This proves in your real database: cash dues post once (replays ignored), the limit forces offline, going online is refused over the limit, a top-up clears it, the ledger cannot be edited, and clients cannot write money tables.
 
@@ -126,7 +126,7 @@ supabase functions deploy razorpay-webhook --no-verify-jwt
 
 ## STEP 11: Deploy the 3 apps
 
-Deploy `provider-app`, `customer-app`, `admin-app` the way you do now (Vercel). No new environment variables are needed.
+Deploy `legacy/provider-app`, `legacy/customer-app`, `apps/admin` (update the Root Directory in each Vercel project) the way you do now (Vercel). No new environment variables are needed.
 
 ## STEP 12: Test before real users
 

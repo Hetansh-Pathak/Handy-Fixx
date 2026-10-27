@@ -1,5 +1,5 @@
 {
-  "name": "handyfix-admin",
+  "name": "@handyfix/admin",
   "private": true,
   "version": "1.0.0",
   "type": "module",
@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
     "preview": "vite preview"
   },
   "dependencies": {
