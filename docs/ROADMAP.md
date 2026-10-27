@@ -42,7 +42,8 @@ Package name: `in.handyfix.app`.
 | Applying the SQL proposals | Owner reviews, then says "apply". Nothing is applied. Order: pricing, then arrived status, then provider wallet fee. |
 | Google Maps API key | For the live map: enable "Maps SDK for Android", restrict by package `in.handyfix.app` + SHA-1, add as EAS secret `GOOGLE_MAPS_API_KEY`, set `EXPO_PUBLIC_MAPS_ENABLED=1` |
 | Supabase dashboard | Confirm "Confirm email" is OFF; allow redirect `handyfix://**` |
-| Firebase + Google OAuth + EAS accounts | Needed for push and Google sign-in on a device |
+| Google sign-in setup | Owner follows `docs/GOOGLE_SIGNIN_SETUP.md` (Cloud OAuth clients, Supabase provider, env var, dev build) |
+| Firebase + EAS accounts | Needed for push (4b) and builds |
 | GitHub push | Owner pushes (or fixes access); bundle in the scratchpad until then |
 
 ## SQL proposals (all NOT applied)
@@ -53,7 +54,7 @@ Package name: `in.handyfix.app`.
 
 4. `supabase/proposals/20261103000000_customer_booking_contact_PROPOSAL_NOT_APPLIED.sql`: lets a customer read their own pro's phone only after acceptance (needed for the Call button).
 
-Before applying 2: run `supabase/verify/05_booking_status_and_triggers_READONLY.sql` (it may show `arrived` needs no migration).
+Verify 05 result (owner ran it): `booking_status` is an enum without `arrived`, so proposal 2 IS needed for "I've arrived". No CHECK constraints mention status. Live guard triggers `guard_booking_money_columns`, `zz_guard_booking_update`, `trg_block_direct_completion` have unseen bodies: owner runs `supabase/verify/06_guard_triggers_READONLY.sql` before applying 1 or 3. Safe order and smoke tests: `supabase/APPLY_PLAN.md`. Google sign-in steps: `docs/GOOGLE_SIGNIN_SETUP.md`.
 
 Live state (owner ran `verify/04_pricing_state_READONLY.sql`): 12% trigger LIVE, no price bands, `service_sub_items` present,
 12 pro rates set, last 20 bookings all carried a fee.
