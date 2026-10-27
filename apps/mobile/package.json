@@ -33,6 +33,7 @@
     "react-native-gesture-handler": "~3.3.0",
     "react-native-get-random-values": "^2.0.0",
     "react-native-maps": "^1.29.11",
+    "react-native-razorpay": "^3.0.0",
     "react-native-reanimated": "4.7.1",
     "react-native-safe-area-context": "~5.10.1",
     "react-native-screens": "~4.30.0",
@@ -55,7 +56,7 @@
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
     "export:android": "EXPO_OFFLINE=1 expo export --platform android",
-    "test:e2e-web": "node e2e-web/auth-flow.cjs && node e2e-web/booking-flow.cjs && node e2e-web/provider-flow.cjs && node e2e-web/status-flow.cjs"
+    "test:e2e-web": "node e2e-web/auth-flow.cjs && node e2e-web/booking-flow.cjs && node e2e-web/provider-flow.cjs && node e2e-web/status-flow.cjs && node e2e-web/wallet-flow.cjs"
   },
   "private": true
 }

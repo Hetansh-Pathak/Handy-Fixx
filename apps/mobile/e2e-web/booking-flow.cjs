@@ -2,7 +2,7 @@
 // See e2e-web/README.md for how to run it.
 const { chromium } = require("playwright");
 const path = require("path");
-const { installMock, db, BASE } = require("./mock-supabase.cjs");
+const { installMock, installRealtime, db, BASE } = require("./mock-supabase.cjs");
 
 const OUT = path.join(__dirname, "shots");
 require("fs").mkdirSync(OUT, { recursive: true });
@@ -23,6 +23,7 @@ const check = (name, ok, extra = "") => {
     if (m.type() === "error" && !/Failed to load resource|ERR_|favicon/.test(m.text())) errors.push("console: " + m.text().slice(0, 200));
   });
   await installMock(page);
+  await installRealtime(page);
 
   // Visible-only helpers: the stack navigator keeps earlier screens mounted underneath.
   const T = (text, exact = true) => page.getByText(text, { exact }).locator("visible=true").last();
@@ -125,8 +126,8 @@ const check = (name, ok, extra = "") => {
 
   // ── 4. confirm (PDF pricing) ─────────────────────────────────────────────────
   await confirmBtn.click();
-  await see("Booking requested");
-  check("confirmation screen says Finding your pro", (await body()).includes("Finding your pro"));
+  await see("Waiting for Asha");
+  check("the status screen says we are waiting for the pro to accept", /Asha has \d+ seconds to accept/i.test(await body()));
   const b1 = db.storedBookings[0];
   check("booking payload: slot, address, price and no sub-item",
     b1 && b1.scheduled_time === "18:00:00" && b1.address === "12 MG Road" && b1.pincode === "382010" && b1.provider_amount === 599 && b1.platform_fee === 0 && b1.sub_item_id === null && b1.status === "pending" && b1.provider_id === "p-asha",

@@ -5,7 +5,7 @@ const b64 = (o) => Buffer.from(JSON.stringify(o)).toString("base64url");
 const jwt = (sub, email) => `${b64({ alg: "HS256", typ: "JWT" })}.${b64({ sub, email, role: "authenticated", aud: "authenticated", exp: 4102444800 })}.sig`;
 
 // ── fake backend state ───────────────────────────────────────────────────────
-const db = { users: {}, providerRows: [], profiles: [], bookings: 0, verified: new Set(), calls: [], storedBookings: [], pricingMode: "pdf", locations: [], wallet: { available: 0, dues: 0 }, launchActive: true, serverWalletRule: true, sockets: [], completionCode: "4321" };
+const db = { users: {}, providerRows: [], profiles: [], bookings: 0, verified: new Set(), calls: [], storedBookings: [], pricingMode: "pdf", locations: [], wallet: { available: 0, dues: 0 }, ledger: [], payouts: [], minPayout: 200, payoutDetails: true, launchActive: true, serverWalletRule: true, sockets: [], completionCode: "4321" };
 let nextId = 1;
 const userJson = (u) => ({ id: u.id, aud: "authenticated", role: "authenticated", email: u.email, email_confirmed_at: "2026-01-01T00:00:00Z",
   app_metadata: { provider: "email" }, user_metadata: u.meta, created_at: "2026-01-01T00:00:00Z" });
@@ -185,6 +185,27 @@ async function installMock(page) {
     if (p === "/rest/v1/rpc/get_wallet_summary") {
       const { available, dues } = db.wallet;
       return json(route, 200, { ok: true, provider_id: "x", balance: available - dues, available, dues, blocked: false });
+    }
+    if (p === "/rest/v1/wallet_transactions") return json(route, 200, db.ledger);
+    if (p === "/rest/v1/payout_requests") return json(route, 200, db.payouts);
+    if (p === "/rest/v1/wallet_settings") return json(route, 200, { min_payout: db.minPayout });
+    if (p === "/functions/v1/create-wallet-topup-order") {
+      const b = body();
+      db.calls.push({ fn: "create-wallet-topup-order", body: b });
+      if (!Number.isInteger(b.amount) || b.amount < 1 || b.amount > 50000) return json(route, 400, { error: "Enter a whole amount between ₹1 and ₹50,000" });
+      return json(route, 200, { order_id: "order_test1", amount_paise: b.amount * 100, key_id: "rzp_test_x", prefill: {} });
+    }
+    if (p === "/rest/v1/rpc/request_payout") {
+      const b = body();
+      const amt = Number(b.p_amount);
+      if (!db.payoutDetails) return json(route, 200, { ok: false, reason: "no_payout_details" });
+      if (amt < db.minPayout) return json(route, 200, { ok: false, reason: "below_minimum", min_payout: db.minPayout });
+      if (amt > db.wallet.available) return json(route, 200, { ok: false, reason: "insufficient_balance" });
+      db.wallet.available -= amt;
+      const row = { id: "po" + (db.payouts.length + 1), amount: amt, status: "pending", created_at: new Date().toISOString() };
+      db.payouts.unshift(row);
+      db.ledger.unshift({ id: "l-po" + db.payouts.length, type: "payout", amount: -amt, note: "Withdrawal request", created_at: row.created_at });
+      return json(route, 200, { ok: true, payout_id: row.id, amount: amt });
     }
     if (p === "/rest/v1/rpc/complete_booking_with_code") {
       const b = body();

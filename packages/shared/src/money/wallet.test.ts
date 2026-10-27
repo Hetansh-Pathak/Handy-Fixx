@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applyTopUp, checkCanAccept, MIN_TOPUP, settleJob, validateTopUp } from "./wallet";
+import { applyTopUp, checkCanAccept, MAX_TOPUP, MIN_TOPUP, settleJob, validateTopUp } from "./wallet";
 
 const w = (balance: number, due = 0) => ({ balance, due });
 
@@ -72,5 +72,13 @@ describe("top-ups", () => {
   it("unblocks accepting once the due is paid", () => {
     const wallet = applyTopUp(w(0, 15), 100);
     expect(checkCanAccept({ wallet, estimatedServiceBill: 349, launchActive: false }).ok).toBe(true);
+  });
+});
+
+describe("validateTopUp limits", () => {
+  it("rejects paise and amounts above the server limit", () => {
+    expect(validateTopUp(150.5)).toEqual({ ok: false, error: "Enter a whole rupee amount." });
+    expect(validateTopUp(MAX_TOPUP + 1)).toEqual({ ok: false, error: "Maximum top-up is ₹50,000." });
+    expect(validateTopUp(MAX_TOPUP)).toEqual({ ok: true });
   });
 });

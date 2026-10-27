@@ -1,6 +1,7 @@
 import {
-  friendlyAuthError, type BookingPatch, type CompletionResult, type WalletSummary,
+  callEdge, friendlyAuthError, interpretPayout, type BookingPatch, type CompletionResult, type LedgerEntry, type PayoutRequestResult, type WalletSummary,
 } from "@handyfix/shared";
+import type { CheckoutOrder } from "@/lib/razorpay";
 import { getSupabase } from "@/lib/supabase";
 
 export type ProviderBooking = {
@@ -101,4 +102,42 @@ export async function upsertProviderLocation(args: { bookingId: string; userId: 
 export async function updateEta(bookingId: string, providerId: string, minutes: number) {
   const { error } = await getSupabase().from("bookings").update({ provider_eta_minutes: minutes }).eq("id", bookingId).eq("provider_id", providerId);
   if (error) throw readable(error);
+}
+
+// ─── wallet screen ───────────────────────────────────────────────────────────
+
+export type PayoutRow = { id: string; amount: number | string; status: string; created_at: string };
+
+/** Ledger rows are readable by their own provider (RLS `wallet_tx_provider_read`). */
+export async function fetchLedger(providerId: string, limit = 40): Promise<LedgerEntry[]> {
+  const { data, error } = await getSupabase()
+    .from("wallet_transactions").select("id, type, amount, note, booking_id, created_at")
+    .eq("provider_id", providerId).order("created_at", { ascending: false }).limit(limit);
+  if (error) throw readable(error);
+  return (data ?? []) as LedgerEntry[];
+}
+
+export async function fetchPayouts(providerId: string): Promise<PayoutRow[]> {
+  const { data, error } = await getSupabase()
+    .from("payout_requests").select("id, amount, status, created_at")
+    .eq("provider_id", providerId).order("created_at", { ascending: false }).limit(10);
+  if (error) throw readable(error);
+  return (data ?? []) as PayoutRow[];
+}
+
+/** Smallest withdrawal the admin allows (`wallet_settings.min_payout`); null if the table can't be read. */
+export async function fetchMinPayout(): Promise<number | null> {
+  const { data, error } = await getSupabase().from("wallet_settings").select("min_payout").maybeSingle();
+  if (error || !data) return null;
+  return Number((data as { min_payout: number | string }).min_payout) || null;
+}
+
+export async function createTopUpOrder(amount: number): Promise<CheckoutOrder> {
+  return callEdge<CheckoutOrder>(getSupabase(), "create-wallet-topup-order", { amount });
+}
+
+export async function requestPayout(amount: number): Promise<PayoutRequestResult> {
+  const { data, error } = await getSupabase().rpc("request_payout", { p_amount: amount });
+  if (error) throw readable(error);
+  return interpretPayout(data);
 }

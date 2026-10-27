@@ -19,6 +19,7 @@ Package name: `in.handyfix.app`.
 | 4 / slice 1 | Auth, role pick, profiles |
 | 4 / slice 2 | Customer: services, pros with prices, 3-step booking |
 | 4 / slice 3 | Customer booking status: list, live status over Realtime, ETA/distance/live position with a map (key needed), code card, call (needs SQL function), next-best-pros rebook after a timeout or decline, cancel. 24 end-to-end checks against a mock backend. |
+| 5a | Provider wallet screen: balance/dues, history, earnings, Razorpay top-up (uses the existing `create-wallet-topup-order` + webhook), withdrawal via `request_payout`. 17 checks on a mock; **Razorpay checkout itself untested (needs a dev build + keys)** |
 | 4 / slice 4 | Provider: online switch with heartbeat, full-screen request alert (Realtime + polling), accept/decline with wallet check, job steps, live trip location, completion code, flat-fee preview. Tested end to end (26 checks) against a mock backend only. |
 
 ## QUEUE (in order)
@@ -27,7 +28,7 @@ Package name: `in.handyfix.app`.
 |---|---|---|
 | 1 | ~~Slice 3: customer booking status~~ | **DONE** (map and call need owner setup, see BLOCKED) |
 | 2 | **Slice 4b: server side of the request flow**: push to the pro when a booking arrives (FCM edge function and token table), the 30 s timeout and next-pro offers as real server logic. Needs a Firebase project from the owner. **Until then a pro whose app is closed gets no request.** | QUEUED |
-| 3 | **Slice 5: provider money and KYC**: wallet screen and Razorpay top-up, earnings, payouts, 9-step KYC wizard (camera and pickers), pro sets own rate inside the band | QUEUED |
+| 3 | **Slice 5b-rest: KYC and rate**: 9-step KYC wizard (camera and pickers, storage upload), payout details (UPI/bank) form, pro sets own rate inside the band (needs pricing proposal applied). Wallet/top-up/withdraw/earnings are DONE (5a). | QUEUED |
 | 4 | **Slice 5b: extra work with customer approval** (+ bill photos for parts) and **disputes** (24 h / 48 h window, evidence, admin decision, appeal) | QUEUED |
 | 5 | **Slice 6**: chat with number blocking, reviews, notifications, account deletion | QUEUED |
 | 6 | **Admin panel** updates: price bands, disputes, wallet/fee records | QUEUED |
@@ -43,6 +44,7 @@ Package name: `in.handyfix.app`.
 | Google Maps API key | For the live map: enable "Maps SDK for Android", restrict by package `in.handyfix.app` + SHA-1, add as EAS secret `GOOGLE_MAPS_API_KEY`, set `EXPO_PUBLIC_MAPS_ENABLED=1` |
 | Supabase dashboard | Confirm "Confirm email" is OFF; allow redirect `handyfix://**` |
 | Google sign-in setup | Owner follows `docs/GOOGLE_SIGNIN_SETUP.md` (Cloud OAuth clients, Supabase provider, env var, dev build) |
+| Razorpay | Edge function secrets `RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET`, webhook configured, functions deployed (check `supabase functions list`); test mode first |
 | Firebase + EAS accounts | Needed for push (4b) and builds |
 | GitHub push | Owner pushes (or fixes access); bundle in the scratchpad until then |
 

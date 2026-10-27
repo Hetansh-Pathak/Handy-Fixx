@@ -19,6 +19,7 @@ export * from "./provider/job-flow";
 export * from "./provider/eta";
 export * from "./provider/request";
 export * from "./provider/wallet-view";
+export * from "./provider/wallet-ledger";
 export * from "./catalog/availability";
 export * from "./catalog/pricing";
 export * from "./catalog/display";

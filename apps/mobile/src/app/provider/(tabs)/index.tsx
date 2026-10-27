@@ -1,7 +1,8 @@
 import { formatInr } from "@handyfix/shared";
 import { launchLine } from "@handyfix/shared";
 import { Switch, Text, View } from "react-native";
-import { Body, Card, ErrorBanner, InfoBanner, Screen, Title } from "@/components/ui";
+import { useRouter } from "expo-router";
+import { Body, Button, Card, ErrorBanner, InfoBanner, Screen, Title } from "@/components/ui";
 import { useSession } from "@/features/auth/session-provider";
 import { useProviderRuntime } from "@/features/provider/provider-runtime";
 
@@ -16,6 +17,7 @@ function nextStep(status: string, kyc: string): { title: string; note: string; t
 const TONE = { gold: "text-gold", ok: "text-ok", danger: "text-danger" } as const;
 
 export default function ProviderHome() {
+  const router = useRouter();
   const { provider, fullName } = useSession();
   const rt = useProviderRuntime();
   const step = nextStep(provider?.status ?? "", provider?.kyc_status ?? "");
@@ -67,7 +69,7 @@ export default function ProviderHome() {
           ) : null}
         </View>
         {rt.launch.active ? <Text className="text-sm text-ok">{launchLine(rt.launch)}. The ₹15–50 fee is waived.</Text> : <Text className="text-sm text-muted">A flat ₹15 / ₹30 / ₹50 fee is taken from your wallet only when a job completes.</Text>}
-        <Text className="text-xs text-muted">Wallet top-up arrives with the wallet screen.</Text>
+        <Button label="Open wallet" variant="secondary" onPress={() => router.push("/provider/wallet")} />
       </Card>
     </Screen>
   );

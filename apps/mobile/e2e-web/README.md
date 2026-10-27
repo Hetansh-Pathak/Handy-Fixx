@@ -8,6 +8,8 @@ the script, so it needs no Supabase project, phone or network. Two suites:
 - `provider-flow.cjs`: approval gate, going online (heartbeat), a request arriving by Realtime and by the polling fallback, accept and decline, the job steps, the completion code with wrong-code feedback, the flat fee (waived in launch, charged after), the client-side and server-side wallet block, and the jobs list.
 - `status-flow.cjs`: the customer's bookings list and status screen through a booking's life: waiting with the 30 s countdown, acceptance over Realtime, ETA/distance/live and stale position, the completion code card, done, the "next best pros" offer after a timeout or a decline (one-tap rebook of the same job), cancel, the hidden Call button when the contact function is missing, and the saved-price warning.
 
+- `wallet-flow.cjs`: the pro's wallet: balance and dues, history, earnings, top-up validation and order creation (native Razorpay checkout cannot run on web), quick-pick amounts, withdrawal rules and the dues lock.
+
 `mock-supabase.cjs` is the shared fake backend (catalogue, pros, bookings, auth, wallet, completion code, and a Realtime WebSocket speaking protocol 2.0.0).
 
 It is a regression net for navigation and form logic. It does **not** replace testing on a real phone
@@ -24,7 +26,7 @@ EXPO_PUBLIC_ENABLE_SPIKE=0 \
 npx expo start --web --port 8099 --clear
 
 # terminal 2
-npm run test:e2e-web            # runs all four suites; screenshots go to e2e-web/shots/
+npm run test:e2e-web            # runs all five suites; screenshots go to e2e-web/shots/
 ```
 
 Notes:

@@ -3,6 +3,8 @@ import { roundMoney, type Rupees } from "./money";
 
 /** Minimum wallet top-up. */
 export const MIN_TOPUP: Rupees = 100;
+/** The top-up function (create-wallet-topup-order) accepts whole rupees up to this. */
+export const MAX_TOPUP: Rupees = 50000;
 
 /** `balance` is prepaid money; `due` is fees owed after a job completed on an empty wallet. */
 export type WalletState = { balance: Rupees; due: Rupees };
@@ -108,6 +110,8 @@ export type TopUpValidation = { ok: true } | { ok: false; error: string };
 export function validateTopUp(amount: number): TopUpValidation {
   if (!Number.isFinite(amount)) return { ok: false, error: "Enter a valid amount." };
   if (amount < MIN_TOPUP) return { ok: false, error: `Minimum top-up is ₹${MIN_TOPUP}.` };
+  if (!Number.isInteger(amount)) return { ok: false, error: "Enter a whole rupee amount." };
+  if (amount > MAX_TOPUP) return { ok: false, error: `Maximum top-up is ₹${MAX_TOPUP.toLocaleString("en-IN")}.` };
   return { ok: true };
 }
 

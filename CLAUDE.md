@@ -48,6 +48,11 @@ legacy/          Old web customer/provider apps. READ-ONLY UI spec. Deleted at m
 - Live trip location goes to `provider_locations` (keyed by the AUTH user id, not the provider row id) plus `bookings.provider_eta_minutes`; the customer map that reads it is slice 3.
 - Background location is requested only when a pro goes online or starts a trip.
 
+## Provider wallet facts (slice 5a)
+
+- `provider/wallet` shows `get_wallet_summary()`, the ledger (`wallet_transactions`, own rows via RLS), payouts and earnings (completed bookings' `provider_amount`). Top-up: edge function `create-wallet-topup-order` (whole rupees ₹100-₹50,000 in the app) → `react-native-razorpay` (lazy, native only) → the server webhook credits the ledger; the app polls the ledger, it never credits locally. Withdrawal: `request_payout(p_amount)` RPC (needs approved KYC and saved UPI/bank details; the payout-details form is not built yet).
+- Payment keys live only in Edge Function secrets. `react-native-razorpay` is a native module: it needs a development build (not Expo Go).
+
 ## Customer booking status facts (slice 3)
 
 - The status screen (`customer/booking/[id]`) follows one booking: Realtime on the booking row and on `provider_locations`, plus an 8 s poll as a safety net. Waiting shows the pro's 30 s window; after it (or after a decline) `fetchAlternatives` offers the next best pros and `rebookWithProvider` books the same job with the chosen one and cancels the unanswered request. No database change is needed for this.
