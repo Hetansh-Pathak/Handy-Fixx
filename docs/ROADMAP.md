@@ -1,0 +1,69 @@
+# HandyFix roadmap and queue
+
+Living status file. Claude: read this at the start of a session and **remind the owner about every item
+marked QUEUED or BLOCKED** at the end of each report until it is done.
+
+Decisions locked: React Native + Expo, one app with two roles (one role per account), PDF business model
+(customer pays the pro's own rate, ₹0 customer fee; provider pays a flat ₹15/30/50 from a prepaid wallet only on
+completed jobs; fee-free first 3 months or 10 jobs; customer pays the pro directly by UPI or cash), Android first.
+Package name: `in.handyfix.app`.
+
+## Done (committed locally, not pushed)
+
+| Phase | What |
+|---|---|
+| 0 | Repo cleanup |
+| 1 | Monorepo layout |
+| 2 | `packages/shared` business logic with tests |
+| 3 | Expo app shell and native check screens (phone checks still to run) |
+| 4 / slice 1 | Auth, role pick, profiles |
+| 4 / slice 2 | Customer: services, pros with prices, 3-step booking |
+| 4 / slice 4 | Provider: online switch with heartbeat, full-screen request alert (Realtime + polling), accept/decline with wallet check, job steps, live trip location, completion code, flat-fee preview. Tested end to end (26 checks) against a mock backend only. |
+
+## QUEUE (in order)
+
+| # | Item | State |
+|---|---|---|
+| 1 | **Slice 3: customer booking status**: realtime status, live map with the pro's position and ETA, call/chat after confirmation, the 4-digit code card, "pro declined or did not answer in 30 s: offer the next best pros" screen, cancel | **QUEUED. Owner asked to be reminded.** |
+| 2 | **Slice 4b: server side of the request flow**: push to the pro when a booking arrives (FCM edge function and token table), the 30 s timeout and next-pro offers as real server logic. Needs a Firebase project from the owner. **Until then a pro whose app is closed gets no request.** | QUEUED |
+| 3 | **Slice 5: provider money and KYC**: wallet screen and Razorpay top-up, earnings, payouts, 9-step KYC wizard (camera and pickers), pro sets own rate inside the band | QUEUED |
+| 4 | **Slice 5b: extra work with customer approval** (+ bill photos for parts) and **disputes** (24 h / 48 h window, evidence, admin decision, appeal) | QUEUED |
+| 5 | **Slice 6**: chat with number blocking, reviews, notifications, account deletion | QUEUED |
+| 6 | **Admin panel** updates: price bands, disputes, wallet/fee records | QUEUED |
+| 7 | **Phase 5**: Sentry, EAS builds, Play Console internal then closed testing, location declaration | QUEUED |
+| 8 | Delete `legacy/` web apps at mobile parity; rebuild the grant document sections for the new model | QUEUED |
+
+## BLOCKED on the owner
+
+| Item | Needed |
+|---|---|
+| Real-phone checks (background location, request alert, push, Google sign-in) | Owner runs `apps/mobile/SPIKE.md` **at the end** (their decision). Nothing in the app has been run on a device. |
+| Applying the SQL proposals | Owner reviews, then says "apply". Nothing is applied. Order: pricing, then arrived status, then provider wallet fee. |
+| Supabase dashboard | Confirm "Confirm email" is OFF; allow redirect `handyfix://**` |
+| Firebase + Google OAuth + EAS accounts | Needed for push and Google sign-in on a device |
+| GitHub push | Owner pushes (or fixes access); bundle in the scratchpad until then |
+
+## SQL proposals (all NOT applied)
+
+1. `supabase/proposals/20261101000000_pdf_pricing_model_PROPOSAL_NOT_APPLIED.sql`: price bands, locked booking price, replaces the live 12% trigger.
+2. `supabase/proposals/20261102000000_booking_status_arrived_PROPOSAL_NOT_APPLIED.sql`: adds the `arrived` status.
+3. `supabase/proposals/20261102000001_provider_wallet_fee_PROPOSAL_NOT_APPLIED.sql`: flat-fee slabs, launch period, accept check, fee posted at completion; removes the old `unsettled_job` block. **Required for the provider flow to work in production** (otherwise pros are locked out 24 h after their first job).
+
+Before applying 2: run `supabase/verify/05_booking_status_and_triggers_READONLY.sql` (it may show `arrived` needs no migration).
+
+Live state (owner ran `verify/04_pricing_state_READONLY.sql`): 12% trigger LIVE, no price bands, `service_sub_items` present,
+12 pro rates set, last 20 bookings all carried a fee.
+
+## Security findings still open (need migrations)
+
+- `confirm_user_email(text)` is callable by anyone and can confirm any email.
+- `send-provider-otp` / `verify-provider-otp` store codes in plaintext with no attempt limit.
+- The booking completion code is stored in plaintext (the customer has to be able to read it; consider a server-side reveal).
+
+## Known limits of slice 4
+
+- No server push: requests reach a pro only while the app is open or its presence foreground service runs.
+- Presence keep-alive uses the background-location foreground service. Play may ask why a "go online" feature needs background location: the honest answer is live trip sharing plus staying reachable; decide before the Play declaration (Phase 5).
+- The fee shown after completion is a preview computed in the app. The real fee is settled by the database once the wallet proposal is applied.
+- Extra work, disputes, wallet top-up, payouts and the pro setting their own rate are not built yet (see QUEUE).
+- Nothing here has run on a phone: background tasks, the foreground services, the ring sound and the full-screen modal on a locked device are all unverified.

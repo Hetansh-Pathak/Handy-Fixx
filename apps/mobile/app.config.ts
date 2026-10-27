@@ -19,7 +19,7 @@ const config: ExpoConfig = {
   backgroundColor: BLACK,
   android: {
     // Placeholder: must match your Firebase app, Google OAuth Android client and Play listing.
-    package: "com.handyfix.app",
+    package: "in.handyfix.app",
     adaptiveIcon: {
       backgroundColor: BLACK,
       foregroundImage: "./assets/images/android-icon-foreground.png",

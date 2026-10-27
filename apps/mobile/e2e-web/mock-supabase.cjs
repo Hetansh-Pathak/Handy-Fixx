@@ -5,7 +5,7 @@ const b64 = (o) => Buffer.from(JSON.stringify(o)).toString("base64url");
 const jwt = (sub, email) => `${b64({ alg: "HS256", typ: "JWT" })}.${b64({ sub, email, role: "authenticated", aud: "authenticated", exp: 4102444800 })}.sig`;
 
 // ── fake backend state ───────────────────────────────────────────────────────
-const db = { users: {}, providerRows: [], profiles: [], bookings: 0, verified: new Set(), calls: [], storedBookings: [], pricingMode: "pdf" };
+const db = { users: {}, providerRows: [], profiles: [], bookings: 0, verified: new Set(), calls: [], storedBookings: [], pricingMode: "pdf", locations: [], wallet: { available: 0, dues: 0 }, launchActive: true, serverWalletRule: true, sockets: [], completionCode: "4321" };
 let nextId = 1;
 const userJson = (u) => ({ id: u.id, aud: "authenticated", role: "authenticated", email: u.email, email_confirmed_at: "2026-01-01T00:00:00Z",
   app_metadata: { provider: "email" }, user_metadata: u.meta, created_at: "2026-01-01T00:00:00Z" });
@@ -79,6 +79,19 @@ async function installMock(page) {
     if (p === "/rest/v1/service_providers") {
       const u = userFromAuth(req);
       if (m === "POST") { db.providerRows.push({ ...body(), id: "p-" + nextId++ }); return route.fulfill({ status: 201, headers: CORS }); }
+      if (m === "PATCH") {
+        const id = (url.searchParams.get("id") || "").replace("eq.", "");
+        const row = db.providerRows.find((r) => r.id === id);
+        const patch = body();
+        if (row) {
+          Object.assign(row, patch);
+          // like the live trigger: only an approved, active pro can actually be online
+          if (patch.is_online && !(row.status === "active" && row.kyc_status === "approved")) row.is_online = false;
+          db.heartbeats = (db.heartbeats || 0) + 1;
+        }
+        const wantsRows = (req.headers()["prefer"] || "").includes("return=representation");
+        return wantsRows ? json(route, 200, row ? [row] : []) : route.fulfill({ status: 204, headers: CORS });
+      }
       const rows = db.providerRows.filter((r) => u && r.user_id === u.id);
       return json(route, 200, rows);
     }
@@ -99,12 +112,27 @@ async function installMock(page) {
       }
       if (m === "PATCH") {
         const id = (q.get("id") || "").replace("eq.", "");
-        const row = db.storedBookings.find((r) => r.id === id);
-        if (row) Object.assign(row, body());
+        const pid = (q.get("provider_id") || "").replace("eq.", "");
+        const row = db.storedBookings.find((r) => r.id === id && (!pid || r.provider_id === pid));
+        const patch = body();
+        if (row && patch.status === "confirmed" && row.status === "pending" && db.serverWalletRule && !db.launchActive) {
+          // mirrors the proposed enforce_wallet_before_accept trigger
+          const amount = Number(row.provider_amount);
+          const fee = amount <= 0 ? 0 : amount < 500 ? 15 : amount <= 1500 ? 30 : 50;
+          if (db.wallet.available < fee || db.wallet.dues > 0) {
+            return json(route, 400, { code: "P0001", message: "Wallet below the fee. Top up Rs 100 to accept." });
+          }
+        }
+        if (row) { db.patches = (db.patches || []).concat([{ id, patch }]); Object.assign(row, patch); }
         return route.fulfill({ status: 204, headers: CORS });
       }
       const id = (q.get("id") || "").replace("eq.", "");
-      return json(route, 200, db.storedBookings.filter((r) => !id || r.id === id));
+      const pid = (q.get("provider_id") || "").replace("eq.", "");
+      const st = (q.get("status") || "").replace("eq.", "");
+      const rows = db.storedBookings
+        .filter((r) => (!id || r.id === id) && (!pid || r.provider_id === pid) && (!st || r.status === st))
+        .map((r) => ({ ...r, services: { name: (db.services.find((x) => x.id === r.service_id) || {}).name || null } }));
+      return json(route, 200, rows);
     }
     if (p === "/rest/v1/services") {
       const q = url.searchParams;
@@ -139,9 +167,71 @@ async function installMock(page) {
       return json(route, 200, { success: true });
     }
     if (p === "/functions/v1/send-welcome-email") return json(route, 200, { ok: true });
+    if (p === "/rest/v1/rpc/get_wallet_summary") {
+      const { available, dues } = db.wallet;
+      return json(route, 200, { ok: true, provider_id: "x", balance: available - dues, available, dues, blocked: false });
+    }
+    if (p === "/rest/v1/rpc/complete_booking_with_code") {
+      const b = body();
+      const row = db.storedBookings.find((r) => r.id === b.p_booking_id);
+      if (!row || row.status !== "in_progress") return json(route, 200, { ok: false, reason: "invalid_status", status: row && row.status });
+      row.failed_attempts = row.failed_attempts || 0;
+      if (row.locked_until && new Date(row.locked_until) > new Date()) return json(route, 200, { ok: false, reason: "locked", locked_until: row.locked_until });
+      if (b.p_code !== db.completionCode) {
+        row.failed_attempts += 1;
+        const locked = row.failed_attempts >= 5;
+        if (locked) row.locked_until = new Date(Date.now() + 15 * 60000).toISOString();
+        return json(route, 200, { ok: false, reason: "wrong_code", attempts_left: Math.max(0, 5 - row.failed_attempts), locked, locked_until: locked ? row.locked_until : null });
+      }
+      row.status = "completed"; row.completed_at = new Date().toISOString();
+      // the proposed settle_booking_fee: flat slab from the wallet, unless the launch period waives it
+      const amount = Number(row.provider_amount);
+      const fee = amount <= 0 ? 0 : amount < 500 ? 15 : amount <= 1500 ? 30 : 50;
+      if (!db.launchActive && fee > 0) { db.wallet.available -= fee; if (db.wallet.available < 0) { db.wallet.dues += -db.wallet.available; db.wallet.available = 0; } }
+      db.completedFees = (db.completedFees || []).concat([{ id: row.id, fee, waived: db.launchActive }]);
+      return json(route, 200, { ok: true });
+    }
+    if (p === "/rest/v1/provider_locations") {
+      const b = body();
+      db.locations = db.locations.filter((l) => l.booking_id !== b.booking_id).concat([b]);
+      return route.fulfill({ status: 201, headers: CORS });
+    }
     return json(route, 404, { error: "unmocked " + p });
   });
 }
 
 
-module.exports = { installMock, db, jwt, BASE };
+// Minimal Supabase Realtime (Phoenix) server speaking protocol 2.0.0 (realtime-js >= 2.x):
+// every frame is the JSON array [join_ref, ref, topic, event, payload]. Joins succeed, heartbeats are
+// answered, and tests can push row changes.
+async function installRealtime(page) {
+  await page.routeWebSocket(/mock\.supabase\.co\/realtime\/v1\/websocket/, (ws) => {
+    const sub = { ws, topics: new Map() };
+    db.sockets.push(sub);
+    ws.onMessage((raw) => {
+      let frame; try { frame = JSON.parse(String(raw)); } catch { return; }
+      if (!Array.isArray(frame)) return;
+      const [joinRef, ref, topic, event, payload] = frame;
+      const reply = (response) => ws.send(JSON.stringify([joinRef, ref, topic, "phx_reply", { status: "ok", response }]));
+      if (event === "phx_join") {
+        const changes = (((payload || {}).config || {}).postgres_changes || []).map((c, i) => ({ id: 1000 + i, ...c }));
+        sub.topics.set(topic, changes.map((c) => c.id));
+        reply({ postgres_changes: changes });
+      } else if (event === "phx_leave") { sub.topics.delete(topic); reply({}); }
+      else reply({});
+    });
+  });
+}
+
+/** Pushes a bookings row change to every joined realtime channel. */
+function pushBookingChange(record, type = "INSERT") {
+  for (const { ws, topics } of db.sockets) {
+    for (const [topic, ids] of topics) {
+      ws.send(JSON.stringify([null, null, topic, "postgres_changes", {
+        ids, data: { schema: "public", table: "bookings", commit_timestamp: new Date().toISOString(), type, columns: [], record, old_record: {}, errors: null },
+      }]));
+    }
+  }
+}
+
+module.exports = { installMock, installRealtime, pushBookingChange, db, jwt, BASE };

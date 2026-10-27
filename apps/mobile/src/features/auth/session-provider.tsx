@@ -16,6 +16,9 @@ export type ProviderRow = {
   phone: string | null;
   email: string | null;
   is_online: boolean | null;
+  /** When the pro was approved: the fee-free launch period is counted from here. */
+  kyc_reviewed_at: string | null;
+  total_jobs: number | null;
 };
 
 export type SessionStatus = "loading" | "signed_out" | "ready" | "error" | "misconfigured";
@@ -98,7 +101,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     queryFn: async (): Promise<ProviderRow | null> => {
       const { data, error } = await client!
         .from("service_providers")
-        .select("id, full_name, status, kyc_status, phone, email, is_online")
+        .select("id, full_name, status, kyc_status, phone, email, is_online, kyc_reviewed_at, total_jobs")
         .eq("user_id", userId!)
         .maybeSingle();
       if (error) throw error;

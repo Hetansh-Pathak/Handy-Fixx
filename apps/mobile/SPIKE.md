@@ -12,7 +12,7 @@ with the right permissions and the notification sound packaged. What needs a pho
 
 1. **Expo account + EAS CLI**: `npm i -g eas-cli`, then `eas login` and, from `apps/mobile`, `eas init`
    (creates the EAS project; put its id in `EAS_PROJECT_ID` / `EXPO_PUBLIC_EAS_PROJECT_ID`).
-2. **Package name**: `com.handyfix.app` in `app.config.ts` is a placeholder. Change it now if you want a different
+2. **Package name**: `in.handyfix.app` in `app.config.ts` is a placeholder. Change it now if you want a different
    one: it must match Firebase, the Google OAuth Android client and the Play listing, and cannot change after publishing.
 3. **Firebase (push)**: create a Firebase project, add an Android app with that package name, download
    `google-services.json` into `apps/mobile/` (gitignored; on EAS upload it as a file secret named

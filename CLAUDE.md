@@ -38,6 +38,16 @@ legacy/          Old web customer/provider apps. READ-ONLY UI spec. Deleted at m
 - `supabase/proposals/20261101000000_pdf_pricing_model_PROPOSAL_NOT_APPLIED.sql` (NOT applied) replaces that trigger, adds price bands and locks the price. Applying it alone means HandyFix collects no fee until the wallet-fee migration (slice 5) exists. Production builds keep "Confirm booking" disabled until `EXPO_PUBLIC_PDF_PRICING_LIVE=1`; dev builds can always book.
 - A pro appears in the customer list only while online AND `service_providers.updated_at` is under 90 s old (`isProviderAvailable`). The provider app (slice 4) must therefore send a heartbeat while online, or pros vanish from the list.
 
+## Provider flow facts (slice 4)
+
+- Wallet (Option A): the live ledger is one signed balance (`get_wallet_summary()` → `available` and `dues`); that already equals the PDF's `{balance, due}`, so the shared fee rules use it as is. The flat fee is posted as a negative `cash_fee` entry once per booking (idempotent key `fee:<booking>`).
+- **Proposal `20261102000001_provider_wallet_fee` (NOT applied)** adds the slab fee, launch waiver, accept check and a `booking_fees` audit row, and retires the old `unsettled_job` block. **Without it the new app's pros get locked out 24 h after their first job** (the live DB wants a "record payment" step the PDF flow does not have). The app shows PDF numbers either way; the database is the authority and its message is shown verbatim (`P0001`).
+- Launch period (3 months or 10 jobs, whichever first) is counted from `service_providers.kyc_reviewed_at` and `total_jobs`; both columns already exist.
+- Presence: a pro is listed only while `updated_at` is under 90 s old. The app touches it every 30 s while open, and via a foreground service (`PRESENCE_TASK`) while the app is in the background. Requests reach a pro through Realtime plus an 8 s poll; **there is no server push yet**, so a closed app gets no request (queued as slice 4b in docs/ROADMAP.md).
+- Job steps use `providerStep`; `EXPO_PUBLIC_ARRIVED_STATUS=1` turns on "I've arrived" only after the `arrived` status exists in the database. Completion is only possible through `complete_booking_with_code` (never a direct update).
+- Live trip location goes to `provider_locations` (keyed by the AUTH user id, not the provider row id) plus `bookings.provider_eta_minutes`; the customer map that reads it is slice 3.
+- Background location is requested only when a pro goes online or starts a trip.
+
 ## Auth facts (verified against the repo, not assumed)
 
 - Supabase email confirmation is OFF; customers verify their email through the OTP functions (`send-customer-otp` / `verify-customer-otp`), and the booking RLS rule uses `is_customer_email_verified()`. Google sign-in counts as verified.

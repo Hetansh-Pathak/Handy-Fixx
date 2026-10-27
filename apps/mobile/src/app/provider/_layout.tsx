@@ -1,7 +1,7 @@
-import { Tabs } from "expo-router";
+import { Stack } from "expo-router";
 import { Button, FullScreenMessage } from "@/components/ui";
-import { tabScreenOptions } from "@/components/tab-options";
 import { useSession } from "@/features/auth/session-provider";
+import { ProviderRuntime } from "@/features/provider/provider-runtime";
 
 export default function ProviderLayout() {
   const { provider, signOut } = useSession();
@@ -15,11 +15,12 @@ export default function ProviderLayout() {
     );
   }
 
+  // The runtime owns online status, the heartbeat and the incoming-request alert for every provider screen.
   return (
-    <Tabs screenOptions={tabScreenOptions}>
-      <Tabs.Screen name="index" options={{ title: "Home" }} />
-      <Tabs.Screen name="jobs" options={{ title: "Jobs" }} />
-      <Tabs.Screen name="profile" options={{ title: "Profile" }} />
-    </Tabs>
+    <ProviderRuntime>
+      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: "#0A0A0A" } }}>
+        <Stack.Screen name="(tabs)" />
+      </Stack>
+    </ProviderRuntime>
   );
 }

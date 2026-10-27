@@ -54,7 +54,7 @@
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
     "export:android": "EXPO_OFFLINE=1 expo export --platform android",
-    "test:e2e-web": "node e2e-web/auth-flow.cjs && node e2e-web/booking-flow.cjs"
+    "test:e2e-web": "node e2e-web/auth-flow.cjs && node e2e-web/booking-flow.cjs && node e2e-web/provider-flow.cjs"
   },
   "private": true
 }

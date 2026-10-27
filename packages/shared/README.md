@@ -35,6 +35,10 @@ Time-dependent functions take `now: Date` as an argument. Never call `new Date()
 | `auth/session-role` | Role resolution (provider row wins, else remembered role), who may become a pro | locked decisions |
 | `auth/schemas` | Zod: sign-in/up, reset, pro phone, customer profile; friendly auth error messages | legacy auth screens |
 | `auth/deep-link` | Parses Supabase links (`#access_token=…&type=recovery`) | new |
+| `provider/job-flow` | Button per step, the booking patch each button writes, decline, progress (x of 4 or 3), phone visibility, pro-side status wording | PDF p.7, legacy provider portal |
+| `provider/request` | Open-request window (30 s), oldest-first pick, earning/fee/keep shown on the alert | PDF p.7 |
+| `provider/wallet-view` | Live wallet summary → fee-rule state, launch status from approval date, accept-block text | PDF p.6-8 |
+| `provider/eta` | Distance → ETA minutes | new |
 | `catalog/availability` | Online + fresh-heartbeat rule (90 s), offers-service, serves-area | legacy `ServiceDetail` |
 | `catalog/pricing` | Listed price per pro, booking quote (₹0 fee), `reconcileQuote` vs what the database saved | PDF p.2-3 |
 | `catalog/display` | Service emoji, duration and rating text | legacy |
@@ -54,7 +58,8 @@ The PDF is silent or ambiguous here. Each is a named constant or parameter, so c
 6. **Safety reports** (immediate suspension) are mapped to the `behaviour` reason.
 7. **Providers** can cancel only a *pending* request (decline). Cancelling after accepting goes through admin.
 8. **`arrived` status** is in the PDF lifecycle but not in the database yet. Provider helpers take `{ withArrivedStep: false }` until a migration adds it.
-9. **Fee base** is rate + approved *service* extras. Approved parts are part of what the customer pays but never of the fee slab.
+9. **ETA** assumes a steady 25 km/h until a routing service is added.
+10. **Fee base** is rate + approved *service* extras. Approved parts are part of what the customer pays but never of the fee slab.
 
 ## Deliberately not ported from the web apps
 

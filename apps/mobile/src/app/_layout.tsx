@@ -2,6 +2,7 @@ import "../global.css";
 import "react-native-get-random-values";
 import "react-native-url-polyfill/auto";
 import "../tasks/location-task";
+import "../tasks/provider-tasks";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";

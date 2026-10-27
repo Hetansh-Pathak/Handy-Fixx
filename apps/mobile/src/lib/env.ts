@@ -10,6 +10,11 @@ export const env = {
    * Development builds can always book, to test the flow.
    */
   bookingEnabled: __DEV__ || process.env.EXPO_PUBLIC_PDF_PRICING_LIVE === "1",
+  /**
+   * Set to "1" once supabase/proposals/…booking_status_arrived has been applied (or the status column is plain
+   * text). Until then the job flow skips "I've arrived" and goes straight from on-the-way to start-job.
+   */
+  arrivedStatus: process.env.EXPO_PUBLIC_ARRIVED_STATUS === "1",
   /** Native-check screens are always on in dev; set EXPO_PUBLIC_ENABLE_SPIKE=1 for other builds. */
   spikeEnabled: __DEV__ || process.env.EXPO_PUBLIC_ENABLE_SPIKE === "1",
 } as const;
