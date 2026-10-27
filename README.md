@@ -31,7 +31,7 @@ HandyFix is a home-services marketplace that connects customers with verified lo
 ```
 handyfix/
 ├── apps/
-│   ├── mobile/                # Expo SDK 58 app: (auth), (customer), (provider) route groups; own install, see CLAUDE.md
+│   ├── mobile/                # Expo SDK 58 app: (auth) screens, role-pick, /customer and /provider tabs; own install, see CLAUDE.md
 │   └── admin/                 # Admin operations panel (Vite + React, stays web, port 3002)
 ├── packages/
 │   └── shared/                # @handyfix/shared: types, Zod, fee/price/booking logic, tests

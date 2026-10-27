@@ -12,9 +12,9 @@ describe("roles", () => {
     expect(needsRolePick(null)).toBe(true);
     expect(needsRolePick(undefined)).toBe(true);
     expect(needsRolePick("customer")).toBe(false);
-    expect(homeRouteFor(null)).toBe("/(auth)/role-pick");
-    expect(homeRouteFor("customer")).toBe("/(customer)");
-    expect(homeRouteFor("provider")).toBe("/(provider)");
+    expect(homeRouteFor(null)).toBe("/role-pick");
+    expect(homeRouteFor("customer")).toBe("/customer");
+    expect(homeRouteFor("provider")).toBe("/provider");
   });
   it("asks for background location only for providers", () => {
     expect(requiresBackgroundLocation("provider")).toBe(true);

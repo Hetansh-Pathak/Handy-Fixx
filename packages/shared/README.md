@@ -31,7 +31,10 @@ Time-dependent functions take `now: Date` as an argument. Never call `new Date()
 | `providers/ranking` | Rank by rating → distance → response speed (never money), featured slots, next-best offers | PDF p.4, p.12 |
 | `geo/distance` | Haversine km, distance formatting | new |
 | `kyc/kyc` | 9 steps, Aadhaar (Verhoeff) and PAN checks, masks, file validation, 18+ check | legacy `constants.ts` |
-| `auth/roles` | One role per account, role → route group, background-location rule | locked decisions |
+| `auth/roles` | One role per account, role → home route (`/customer`, `/provider`), background-location rule | locked decisions |
+| `auth/session-role` | Role resolution (provider row wins, else remembered role), who may become a pro | locked decisions |
+| `auth/schemas` | Zod: sign-in/up, reset, pro phone, customer profile; friendly auth error messages | legacy auth screens |
+| `auth/deep-link` | Parses Supabase links (`#access_token=…&type=recovery`) | new |
 | `supabase/client` | `createHandyFixClient`: the only Supabase client factory; throws if config is missing | legacy clients |
 | `supabase/edge` | `callEdge` with readable errors | legacy `wallet.ts` |
 | `constants/cities` | Gujarat city list | legacy `constants.ts` |

@@ -49,3 +49,6 @@ example
 # Firebase / Google services (secret per environment, uploaded to EAS as a file secret)
 google-services.json
 GoogleService-Info.plist
+
+# e2e screenshots
+e2e-web/shots/

@@ -5,7 +5,7 @@ Home-services marketplace for tier-2 Indian cities. Migrating from three Vite we
 ## Layout
 
 ```
-apps/mobile      Expo SDK 58 app (TypeScript, Expo Router, NativeWind). Route groups: (auth) (customer) (provider). NOT an npm workspace (see below)
+apps/mobile      Expo SDK 58 app (TypeScript, Expo Router, NativeWind). Routes: (auth) group, role-pick, /customer/*, /provider/*. NOT an npm workspace (see below)
 apps/admin       Web admin (Vite + React). Stays web.
 packages/shared  @handyfix/shared: types, Zod schemas, API functions, hooks, fee/price/booking logic, tests
 supabase/        migrations/{customer,provider}, functions/, proposals/ (NOT applied), verify/
@@ -24,12 +24,19 @@ legacy/          Old web customer/provider apps. READ-ONLY UI spec. Deleted at m
 
 ## Product decisions (locked)
 
-- **One app, two roles, one role per account.** Role is picked once after sign-up and routes to `(customer)` or `(provider)`. Request background location only when someone picks the provider role, never for customers.
+- **One app, two roles, one role per account.** Role is picked once after sign-up (`/role-pick`) and routes to `/customer` or `/provider`. The role is a routing convenience, not a permission: a `service_providers` row means provider (authoritative), otherwise the `handyfix_role` flag on the auth user; real access is enforced by RLS and KYC. Never use `(group)/index` for two groups (groups add no URL segment, so they collide on `/`). Request background location only when someone picks the provider role, never for customers.
 - **Business model** (source: HandyFix-complete.pdf): customer pays the price shown, platform fee for customers is ₹0. Provider pays a flat fee on completed jobs only, from a prepaid wallet: ₹15 (<₹500), ₹30 (₹500-1,500), ₹50 (>₹1,500), based on the service bill, parts excluded. Provider sets a rate inside an admin price band. Price is locked at booking; the bill grows only via extra work the customer approves. Customer pays the pro directly (UPI/cash); Razorpay is used for wallet top-up.
 - Fee-free launch: a provider's first 3 months or first 10 jobs (wallet check skipped, fee shown as "waived"). Declining or missing a request costs ₹0; the customer is offered the next best pros.
 - Booking statuses in the DB today: pending → confirmed → on_the_way → in_progress → completed (cancelled from pending/confirmed). The PDF adds `arrived` between on_the_way and in_progress; it does not exist yet and needs a new migration (ask first). Completion uses a 4-digit code, stored hashed, attempt-limited.
 - Disputes: 24 h window (48 h for repair quality), admin decides within 48 h, everything in the read-only audit log.
 - The old 12% customer fee (`platform_fee`, `provider_amount`) is being removed. Do not port it.
+
+## Auth facts (verified against the repo, not assumed)
+
+- Supabase email confirmation is OFF; customers verify their email through the OTP functions (`send-customer-otp` / `verify-customer-otp`), and the booking RLS rule uses `is_customer_email_verified()`. Google sign-in counts as verified.
+- **Never call `confirm_user_email`** (legacy provider login did): it is `SECURITY DEFINER` with no `REVOKE`, so anyone can confirm any email. Fixing it needs a migration (ask first).
+- The provider OTP functions (`send-provider-otp` / `verify-provider-otp`) store codes in plaintext with no attempt limit, unlike the customer ones. Do not build on them until they are hardened.
+- Password reset uses the implicit flow: `handyfix://reset-password#access_token=…&type=recovery`. The Supabase dashboard must allow the redirect URL `handyfix://**`.
 
 ## Design system
 

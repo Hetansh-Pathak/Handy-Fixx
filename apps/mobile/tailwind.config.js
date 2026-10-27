@@ -1,5 +1,8 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
+  // Dark-only app today. "class" lets NativeWind accept Expo's manual color-scheme setting (the default
+  // "media" throws on web); there are no dark: variants to switch yet.
+  darkMode: "class",
   content: ["./src/**/*.{ts,tsx}"],
   presets: [require("nativewind/preset")],
   theme: {
