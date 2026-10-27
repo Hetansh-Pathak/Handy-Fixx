@@ -1,52 +1,218 @@
-import { formatDuration, formatInr, serviceEmoji } from "@handyfix/shared";
+import { formatDuration, formatInr } from "@handyfix/shared";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
+import { Award, BadgeIndianRupee, Clock, Headphones, LocateFixed, MapPin, RotateCcw, Search, ShieldCheck, Star, Users, type LucideIcon } from "lucide-react-native";
 import { useMemo, useState } from "react";
-import { Pressable, Text, View } from "react-native";
-import { Body, Button, ErrorBanner, Screen, TextField, Title } from "@/components/ui";
+import { Linking, Pressable, ScrollView, TextInput, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Eyebrow, IconTile, Logo, SectionHeading, ServiceIcon } from "@/components/brand";
+import { Text } from "@/components/text";
+import { Body, Button, ErrorBanner } from "@/components/ui";
 import { useSession } from "@/features/auth/session-provider";
 import { useArea } from "@/features/customer/area-context";
 import { fetchServices } from "@/features/customer/catalog-api";
+import { env } from "@/lib/env";
+import { colors } from "@/theme/colors";
+
+const STATS: { icon: LucideIcon; value: string; label: string }[] = [
+  { icon: Users, value: "50,000+", label: "Happy Customers" },
+  { icon: BadgeIndianRupee, value: "₹0", label: "Fee for customers" },
+  { icon: Star, value: "4.9★", label: "Avg. Rating" },
+  { icon: Award, value: "2,000+", label: "Verified Pros" },
+];
+
+const STEPS = [
+  { title: "Find Your Job", desc: "Browse services and describe what you need." },
+  { title: "Get Matched", desc: "We'll connect you with a top-rated pro nearby." },
+  { title: "Job Done", desc: "Your expert completes the job to your satisfaction." },
+];
+
+const WHY: { icon: LucideIcon; title: string; desc: string }[] = [
+  { icon: ShieldCheck, title: "Verified & Vetted", desc: "Every pro passes an identity check before taking jobs." },
+  { icon: MapPin, title: "Live GPS Tracking", desc: "Track your pro in real time on the way to your home." },
+  { icon: Clock, title: "Upfront Pricing", desc: "No hidden fees. Know the price before booking." },
+  { icon: Headphones, title: "Support", desc: "Our team is here if something goes wrong." },
+  { icon: BadgeIndianRupee, title: "Pay the Pro Directly", desc: "Pay by UPI or cash once the job is done." },
+  { icon: RotateCcw, title: "Fair Disputes", desc: "Raise a problem within 24 hours and we step in." },
+];
+
+const REVIEWS = [
+  { name: "Priya Sharma", role: "Homeowner", text: "HandyFix saved my weekend! The plumber arrived in 30 minutes and fixed everything perfectly. Highly recommend!" },
+  { name: "Rahul Mehta", role: "Business Owner", text: "I use HandyFix for all my office repairs. Reliable, fast, and their pricing is always transparent." },
+  { name: "Kavya Iyer", role: "Apartment Renter", text: "Finally a service app that actually works. Knew exactly when my pro would arrive. The cleaning was spotless!" },
+];
 
 export default function CustomerHome() {
   const router = useRouter();
   const { fullName } = useSession();
   const { area, setArea } = useArea();
   const [search, setSearch] = useState("");
+  const [category, setCategory] = useState("All Services");
   const services = useQuery({ queryKey: ["services"], queryFn: fetchServices, staleTime: 5 * 60_000 });
+
+  const categories = useMemo(() => {
+    const names = new Set<string>();
+    (services.data ?? []).forEach((s) => { if (s.category) names.add(s.category); });
+    return ["All Services", ...names];
+  }, [services.data]);
 
   const visible = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return (services.data ?? []).filter((s) => !q || s.name.toLowerCase().includes(q) || (s.description ?? "").toLowerCase().includes(q));
-  }, [services.data, search]);
+    return (services.data ?? []).filter(
+      (s) => (category === "All Services" || s.category === category) && (!q || s.name.toLowerCase().includes(q) || (s.description ?? "").toLowerCase().includes(q)),
+    );
+  }, [services.data, search, category]);
 
   return (
-    <Screen>
-      <Title>Hi{fullName ? `, ${fullName.split(" ")[0]}` : ""}</Title>
-      <Body muted>What do you need fixed today?</Body>
-      <TextField label="Your area" value={area} onChangeText={setArea} placeholder="City or 6-digit pincode"
-        hint="We show pros who cover this area." autoCapitalize="words" autoComplete="postal-code" />
-      <TextField label="Search services" value={search} onChangeText={setSearch} placeholder="Plumbing, cleaning…" autoCapitalize="none" />
-      <ErrorBanner message={services.isError ? "Could not load services." : null} />
-      {services.isError ? <Button label="Try again" variant="secondary" onPress={() => void services.refetch()} /> : null}
-      {services.isPending ? <Body muted>Loading services…</Body> : null}
-      {services.isSuccess && visible.length === 0 ? <Body muted>No services match “{search}”.</Body> : null}
-      {visible.map((s) => (
-        <Pressable key={s.id} accessibilityRole="button" accessibilityLabel={s.name}
-          onPress={() => router.push({ pathname: "/customer/service/[slug]", params: { slug: s.slug } })}
-          className="flex-row items-center gap-4 rounded-2xl border border-line bg-surface p-4 active:opacity-80">
-          <Text className="text-3xl">{serviceEmoji(s.icon_name)}</Text>
-          <View className="flex-1 gap-0.5">
-            <Text className="text-lg font-semibold text-white">{s.name}</Text>
-            {s.description ? <Text className="text-sm text-muted" numberOfLines={2}>{s.description}</Text> : null}
-            <Text className="text-sm text-gold">
-              {s.base_price ? `From ${formatInr(s.base_price)}` : "Price on request"}
-              {s.duration_minutes ? `  ·  ~${formatDuration(s.duration_minutes)}` : ""}
-            </Text>
+    <SafeAreaView className="flex-1 bg-canvas" edges={["top"]}>
+      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: 32 }}>
+        <View className="flex-row items-center justify-between px-5 py-3">
+          <Logo />
+          {fullName ? <Text className="text-sm font-medium text-muted">Hi, {fullName.split(" ")[0]}</Text> : null}
+        </View>
+
+        {/* Hero */}
+        <View className="gap-4 px-5 pb-6 pt-4">
+          <Eyebrow>#1 Home services marketplace</Eyebrow>
+          <Text className="text-4xl font-extrabold leading-tight text-fg">
+            Your Home, <Text className="text-brand">Fixed Fast.</Text>
+            {"\n"}<Text className="text-brand">Guaranteed.</Text>
+          </Text>
+          <Text className="text-base leading-6 text-muted">
+            Book verified professionals for any home service. From plumbing to painting, done right, on time, every time.
+          </Text>
+          <Text className="text-sm font-medium text-fg">What do you need fixed today?</Text>
+          <View className="flex-row items-center gap-2 rounded-2xl border border-line bg-field p-2">
+            <MapPin size={20} color={colors.muted} style={{ marginLeft: 8 }} />
+            <TextInput
+              accessibilityLabel="Your area"
+              value={area}
+              onChangeText={setArea}
+              placeholder="City or 6-digit pincode"
+              placeholderTextColor={colors.mutedSoft}
+              autoCapitalize="words"
+              autoComplete="postal-code"
+              style={{ fontFamily: "PlusJakartaSans_400Regular" }}
+              className="min-h-[44px] flex-1 px-2 text-base text-fg"
+            />
+            <View className="h-11 w-11 items-center justify-center rounded-xl border border-brand/30 bg-brand-soft"><LocateFixed size={20} color={colors.brand} /></View>
           </View>
-          <Text className="text-2xl text-muted">›</Text>
-        </Pressable>
-      ))}
-    </Screen>
+          <View className="flex-row flex-wrap items-center gap-x-4 gap-y-1">
+            <View className="flex-row items-center gap-1.5"><ShieldCheck size={16} color={colors.brand} /><Text className="text-sm text-muted">Verified Pros</Text></View>
+            <View className="flex-row items-center gap-1.5"><Star size={16} color={colors.brand} /><Text className="text-sm text-muted">4.9 Avg Rating</Text></View>
+            <Text className="text-sm font-semibold text-brand">50,000+ bookings</Text>
+          </View>
+        </View>
+
+        {/* Stats strip */}
+        <View className="flex-row flex-wrap bg-strip px-3 py-8">
+          {STATS.map(({ icon: Icon, value, label }) => (
+            <View key={label} className="w-1/2 items-center gap-2 py-4">
+              <View className="h-14 w-14 items-center justify-center rounded-full border border-brand/40 bg-brand/20"><Icon size={24} color={colors.brand} /></View>
+              <Text className="text-3xl font-extrabold text-white">{value}</Text>
+              <Text className="text-sm text-white/70">{label}</Text>
+            </View>
+          ))}
+        </View>
+
+        {/* Services */}
+        <View className="gap-5 px-5 pt-10" accessibilityLabel="Services">
+          <SectionHeading title="Every home service, one tap away" subtitle="Trusted professionals for every corner of your home" />
+          <View className="flex-row items-center gap-2 rounded-2xl border border-line bg-card px-3">
+            <Search size={18} color={colors.muted} />
+            <TextInput
+              accessibilityLabel="Search services"
+              value={search}
+              onChangeText={setSearch}
+              placeholder="Plumbing, cleaning…"
+              placeholderTextColor={colors.mutedSoft}
+              autoCapitalize="none"
+              style={{ fontFamily: "PlusJakartaSans_400Regular" }}
+              className="min-h-[48px] flex-1 text-base text-fg"
+            />
+          </View>
+          {categories.length > 1 ? (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }} className="-mx-1 rounded-2xl">
+              {categories.map((c) => (
+                <Pressable key={c} accessibilityRole="button" accessibilityState={{ selected: category === c }} onPress={() => setCategory(c)}
+                  className={`min-h-[44px] justify-center rounded-xl px-4 ${category === c ? "bg-brand" : "bg-field"}`}>
+                  <Text className={`text-sm font-semibold ${category === c ? "text-white" : "text-muted"}`}>{c}</Text>
+                </Pressable>
+              ))}
+            </ScrollView>
+          ) : null}
+          <ErrorBanner message={services.isError ? "Could not load services." : null} />
+          {services.isError ? <Button label="Try again" variant="secondary" onPress={() => void services.refetch()} /> : null}
+          {services.isPending ? <Body muted>Loading services…</Body> : null}
+          {services.isSuccess && visible.length === 0 ? <Body muted>No services match “{search}”.</Body> : null}
+          <View className="flex-row flex-wrap justify-between gap-y-4">
+            {visible.map((s) => (
+              <Pressable key={s.id} accessibilityRole="button" accessibilityLabel={s.name}
+                onPress={() => router.push({ pathname: "/customer/service/[slug]", params: { slug: s.slug } })}
+                className="w-[48%] gap-2 rounded-3xl border border-line bg-card p-4 active:opacity-80">
+                <IconTile><ServiceIcon name={s.icon_name} /></IconTile>
+                <Text className="mt-2 text-lg font-semibold text-fg">{s.name}</Text>
+                {s.description ? <Text className="text-sm leading-5 text-muted" numberOfLines={2}>{s.description}</Text> : null}
+                <View className="mt-1 flex-row flex-wrap items-center gap-x-3">
+                  <Text className="text-base font-bold text-brand">{s.base_price ? `From ${formatInr(s.base_price)}` : "On request"}</Text>
+                  {s.duration_minutes ? <Text className="text-sm text-muted">{formatDuration(s.duration_minutes)}</Text> : null}
+                </View>
+              </Pressable>
+            ))}
+          </View>
+        </View>
+
+        {/* How it works */}
+        <View className="gap-6 px-5 pt-14">
+          <SectionHeading title="How HandyFix works" subtitle="Three simple steps to a fixed home" />
+          {STEPS.map((step, i) => (
+            <View key={step.title} className="items-center gap-2">
+              <View className="h-14 w-14 items-center justify-center rounded-full bg-brand"><Text className="text-xl font-bold text-white">{i + 1}</Text></View>
+              <Text className="text-xl font-bold text-fg">{step.title}</Text>
+              <Text className="text-center text-base text-muted">{step.desc}</Text>
+            </View>
+          ))}
+        </View>
+
+        {/* Why choose */}
+        <View className="gap-4 px-5 pt-14">
+          <SectionHeading title="Why choose HandyFix" />
+          {WHY.map(({ icon: Icon, title, desc }) => (
+            <View key={title} className="flex-row items-start gap-4 rounded-3xl border border-line bg-card p-5">
+              <IconTile size={48}><Icon size={22} color={colors.brand} /></IconTile>
+              <View className="flex-1 gap-1">
+                <Text className="text-lg font-bold text-fg">{title}</Text>
+                <Text className="text-sm leading-5 text-muted">{desc}</Text>
+              </View>
+            </View>
+          ))}
+        </View>
+
+        {/* Testimonials */}
+        <View className="gap-4 px-5 pt-14">
+          <SectionHeading title="Loved by homeowners" />
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12 }}>
+            {REVIEWS.map((r) => (
+              <View key={r.name} className="w-72 gap-3 rounded-3xl border border-line bg-card p-5">
+                <View className="flex-row gap-0.5">{[0, 1, 2, 3, 4].map((i) => <Star key={i} size={16} color={colors.sun} fill={colors.sun} />)}</View>
+                <Text className="text-base leading-6 text-fg">“{r.text}”</Text>
+                <View>
+                  <Text className="text-base font-bold text-fg">{r.name}</Text>
+                  <Text className="text-sm text-muted">{r.role}</Text>
+                </View>
+              </View>
+            ))}
+          </ScrollView>
+        </View>
+
+        {/* Become a pro */}
+        <View className="mx-5 mt-14 gap-3 rounded-3xl bg-strip p-6">
+          <Text className="text-sm font-semibold uppercase tracking-wider text-brand">Join 2,000+ pros</Text>
+          <Text className="text-2xl font-extrabold text-white">Turn your skills into daily income</Text>
+          <Text className="text-base leading-6 text-white/70">Pros keep what customers pay them. HandyFix charges a small flat fee per completed job, and nothing for missed requests.</Text>
+          {env.proAppUrl ? <Button label="Get the HandyFix Pro app" onPress={() => void Linking.openURL(env.proAppUrl)} /> : null}
+        </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 }

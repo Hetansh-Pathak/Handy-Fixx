@@ -4,7 +4,8 @@ import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { applyRecoveryLink, updatePassword } from "@/features/auth/api";
 import { useSession } from "@/features/auth/session-provider";
-import { Body, Button, ErrorBanner, InfoBanner, Screen, TextField, TextLink, Title } from "@/components/ui";
+import { AuthShell } from "@/components/brand";
+import { Body, Button, ErrorBanner, InfoBanner, TextField, TextLink, Title } from "@/components/ui";
 import { useZodForm } from "@/lib/use-form";
 
 type Phase = "waiting" | "ready" | "invalid" | "done";
@@ -63,7 +64,7 @@ export default function ResetPassword() {
   };
 
   return (
-    <Screen>
+    <AuthShell>
       <Title>Choose a new password</Title>
       <ErrorBanner message={error} />
       {phase === "waiting" ? <Body muted>Checking your link…</Body> : null}
@@ -84,6 +85,6 @@ export default function ResetPassword() {
         </>
       ) : null}
       {phase !== "done" ? <TextLink label="Back to sign in" onPress={() => router.replace("/sign-in")} /> : null}
-    </Screen>
+    </AuthShell>
   );
 }

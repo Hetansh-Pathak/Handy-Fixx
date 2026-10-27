@@ -1,9 +1,11 @@
 import { signInSchema } from "@handyfix/shared";
 import { Link, useRouter } from "expo-router";
 import { useState } from "react";
-import { Text, View } from "react-native";
+import { View } from "react-native";
+import { Text } from "@/components/text";
 import { signInWithEmail } from "@/features/auth/api";
-import { Body, Button, ErrorBanner, Screen, TextField, TextLink, Title } from "@/components/ui";
+import { AuthShell } from "@/components/brand";
+import { Body, Button, ErrorBanner, TextField, TextLink, Title } from "@/components/ui";
 import { env } from "@/lib/env";
 import { signInWithGoogle } from "@/lib/google-auth";
 import { useZodForm } from "@/lib/use-form";
@@ -41,11 +43,10 @@ export default function SignIn() {
   };
 
   return (
-    <Screen>
-      <View className="mt-8 gap-1">
-        <Text className="text-sm font-semibold uppercase tracking-widest text-gold">HandyFix</Text>
+    <AuthShell>
+      <View className="gap-1">
         <Title>Welcome back</Title>
-        <Body muted>Sign in to book trusted pros or manage your jobs.</Body>
+        <Body muted>{env.appVariant === "provider" ? "Sign in to receive and manage your jobs." : env.appVariant === "customer" ? "Sign in to book trusted pros." : "Sign in to book trusted pros or manage your jobs."}</Body>
       </View>
       <ErrorBanner message={error} />
       <TextField label="Email" value={form.values.email} onChangeText={form.set("email")} error={form.errors.email}
@@ -66,6 +67,6 @@ export default function SignIn() {
           <Text className="py-2 text-center text-sm text-muted">Developer: native checks</Text>
         </Link>
       ) : null}
-    </Screen>
+    </AuthShell>
   );
 }

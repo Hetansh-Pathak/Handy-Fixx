@@ -1,5 +1,6 @@
 import { useCallback, useState } from "react";
-import { Text, View } from "react-native";
+import { View } from "react-native";
+import { Text } from "@/components/text";
 import { Card } from "../ui";
 
 export type LogLevel = "info" | "ok" | "fail";
@@ -23,7 +24,7 @@ const COLOR: Record<LogLevel, string> = { info: "text-muted", ok: "text-ok", fai
 export function SpikeLog({ lines }: { lines: { id: number; time: string; level: LogLevel; text: string }[] }) {
   return (
     <Card>
-      <Text className="text-sm font-semibold text-white">Log</Text>
+      <Text className="text-sm font-semibold text-fg">Log</Text>
       {lines.length === 0 ? <Text className="text-sm text-muted">Nothing yet.</Text> : null}
       {lines.map((l) => (
         <View key={l.id} className="flex-row gap-2">

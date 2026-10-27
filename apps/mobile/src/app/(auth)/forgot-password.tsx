@@ -2,7 +2,8 @@ import { forgotPasswordSchema } from "@handyfix/shared";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import { sendPasswordReset } from "@/features/auth/api";
-import { Body, Button, ErrorBanner, InfoBanner, Screen, TextField, TextLink, Title } from "@/components/ui";
+import { AuthShell } from "@/components/brand";
+import { Body, Button, ErrorBanner, InfoBanner, TextField, TextLink, Title } from "@/components/ui";
 import { useZodForm } from "@/lib/use-form";
 
 export default function ForgotPassword() {
@@ -28,7 +29,7 @@ export default function ForgotPassword() {
   };
 
   return (
-    <Screen>
+    <AuthShell>
       <Title>Reset your password</Title>
       <Body muted>We will email you a link. Open it on this phone to choose a new password.</Body>
       <ErrorBanner message={error} />
@@ -37,6 +38,6 @@ export default function ForgotPassword() {
         keyboardType="email-address" autoCapitalize="none" autoCorrect={false} autoComplete="email" textContentType="emailAddress" onSubmitEditing={() => void submit()} />
       <Button label={sent ? "Send again" : "Send reset link"} loading={busy} onPress={() => void submit()} />
       <TextLink label="Back to sign in" onPress={() => router.replace("/sign-in")} />
-    </Screen>
+    </AuthShell>
   );
 }

@@ -4,7 +4,8 @@ import {
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import { Text, View } from "react-native";
+import { View } from "react-native";
+import { Text } from "@/components/text";
 import { Body, Button, Card, Chip, ErrorBanner, InfoBanner, Screen, ScreenHeader, TextField } from "@/components/ui";
 import { useSession } from "@/features/auth/session-provider";
 import {
@@ -108,7 +109,7 @@ export default function WalletScreen() {
         <View className="flex-row items-end justify-between">
           <View>
             <Text className="text-sm text-muted">Balance</Text>
-            <Text accessibilityLabel="Wallet balance" className="text-4xl font-bold text-white">{formatInr(rt.wallet.balance)}</Text>
+            <Text accessibilityLabel="Wallet balance" className="text-4xl font-bold text-fg">{formatInr(rt.wallet.balance)}</Text>
           </View>
           {rt.wallet.due > 0 ? (
             <View className="items-end">
@@ -123,7 +124,7 @@ export default function WalletScreen() {
       </Card>
 
       <Card>
-        <Text className="text-lg font-semibold text-white">Add money</Text>
+        <Text className="text-lg font-semibold text-fg">Add money</Text>
         <View className="flex-row flex-wrap gap-2">
           {topUpChoices(rt.wallet.due).map((v) => (
             <Chip key={v} label={formatInr(v)} selected={amount === String(v)} onPress={() => { setAmount(String(v)); setAmountError(null); }} />
@@ -136,7 +137,7 @@ export default function WalletScreen() {
       </Card>
 
       <Card>
-        <Text className="text-lg font-semibold text-white">Withdraw</Text>
+        <Text className="text-lg font-semibold text-fg">Withdraw</Text>
         {canWithdraw ? (
           <>
             <TextField label="Amount (₹)" value={withdraw} onChangeText={(v) => { setWithdraw(v.replace(/\D/g, "").slice(0, 6)); setWithdrawError(null); }}
@@ -150,13 +151,13 @@ export default function WalletScreen() {
         {(payouts.data ?? []).map((p) => (
           <View key={p.id} className="flex-row justify-between">
             <Text className="text-sm text-muted">{p.created_at.slice(0, 10)}</Text>
-            <Text className="text-sm text-white">{formatInr(Number(p.amount))} · {p.status}</Text>
+            <Text className="text-sm text-fg">{formatInr(Number(p.amount))} · {p.status}</Text>
           </View>
         ))}
       </Card>
 
       <Card>
-        <Text className="text-lg font-semibold text-white">Earnings</Text>
+        <Text className="text-lg font-semibold text-fg">Earnings</Text>
         <Line label="Today" value={formatInr(earnings.todayTotal)} />
         <Line label="This month" value={`${formatInr(earnings.monthTotal)} · ${earnings.monthJobs} job${earnings.monthJobs === 1 ? "" : "s"}`} />
         <Line label="All time" value={`${formatInr(earnings.total)} · ${earnings.jobs} job${earnings.jobs === 1 ? "" : "s"}`} />
@@ -164,7 +165,7 @@ export default function WalletScreen() {
       </Card>
 
       <Card>
-        <Text className="text-lg font-semibold text-white">History</Text>
+        <Text className="text-lg font-semibold text-fg">History</Text>
         {ledger.isPending ? <Body muted>Loading…</Body> : null}
         {ledger.isError ? <ErrorBanner message="Could not load your wallet history." /> : null}
         {ledger.data && ledger.data.length === 0 ? <Body muted>No wallet activity yet.</Body> : null}
@@ -173,7 +174,7 @@ export default function WalletScreen() {
           return (
             <View key={l.id} className="flex-row items-center justify-between gap-3 border-t border-line pt-2">
               <View className="flex-1">
-                <Text className="text-base text-white">{l.label}</Text>
+                <Text className="text-base text-fg">{l.label}</Text>
                 <Text className="text-xs text-muted">{l.createdAt.slice(0, 10)}{l.note ? ` · ${l.note}` : ""}</Text>
               </View>
               <Text className={`text-base font-semibold ${l.credit ? "text-ok" : "text-danger"}`}>{l.amountText}</Text>
@@ -189,7 +190,7 @@ function Line({ label, value }: { label: string; value: string }) {
   return (
     <View className="flex-row justify-between gap-4">
       <Text className="text-base text-muted">{label}</Text>
-      <Text className="flex-1 text-right text-base text-white">{value}</Text>
+      <Text className="flex-1 text-right text-base text-fg">{value}</Text>
     </View>
   );
 }

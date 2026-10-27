@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
-import { Linking, Platform, Text, View } from "react-native";
+import { Linking, Platform, View } from "react-native";
+import { Text } from "@/components/text";
 import { Button } from "@/components/ui";
 import { env } from "@/lib/env";
 
@@ -36,7 +37,7 @@ function NativeMap({ pro, destination }: { pro: Point | null; destination: Point
         accessibilityLabel="Map showing your pro and your address"
       >
         <Maps.Marker coordinate={destination} title="Your address" pinColor="#2FB36D" />
-        {pro ? <Maps.Marker coordinate={pro} title="Your pro" pinColor="#FBB614" /> : null}
+        {pro ? <Maps.Marker coordinate={pro} title="Your pro" pinColor="#C16430" /> : null}
       </MapView>
     </View>
   );
@@ -45,8 +46,8 @@ function NativeMap({ pro, destination }: { pro: Point | null; destination: Point
 function MapFallback({ pro, destination }: { pro: Point | null; destination: Point | null }) {
   const target = pro ?? destination;
   return (
-    <View className="gap-2 rounded-2xl border border-line bg-surface p-4">
-      <Text className="text-base font-semibold text-white">{pro ? "Your pro is on the way" : "Waiting for your pro's location"}</Text>
+    <View className="gap-2 rounded-2xl border border-line bg-card p-4">
+      <Text className="text-base font-semibold text-fg">{pro ? "Your pro is on the way" : "Waiting for your pro's location"}</Text>
       <Text className="text-sm text-muted">The in-app map needs the phone app with maps enabled. You can follow your pro in Google Maps.</Text>
       {target ? (
         <Button label="Open in Google Maps" variant="secondary"

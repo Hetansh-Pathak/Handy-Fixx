@@ -3,7 +3,8 @@ import {
 } from "@handyfix/shared";
 import { setAudioModeAsync, useAudioPlayer } from "expo-audio";
 import { useEffect, useRef, useState } from "react";
-import { Modal, Text, Vibration, View } from "react-native";
+import { Modal, Vibration, View } from "react-native";
+import { Text } from "@/components/text";
 import { Button } from "../ui";
 
 const RATE = 349; // demo: leak repair at ₹349
@@ -50,18 +51,18 @@ export function RequestAlertModal({
 
   return (
     <Modal visible={visible} animationType="fade" statusBarTranslucent onRequestClose={onDecline}>
-      <View className="flex-1 justify-between bg-ink p-6 pt-16">
+      <View className="flex-1 justify-between bg-canvas p-6 pt-16">
         <View className="items-center gap-3">
-          <Text className="text-xs font-semibold uppercase tracking-[4px] text-gold">New request</Text>
-          <View className="h-40 w-40 items-center justify-center rounded-full border-8 border-gold">
-            <Text className="text-6xl font-bold text-white">{left}</Text>
+          <Text className="text-xs font-semibold uppercase tracking-[4px] text-brand">New request</Text>
+          <View className="h-40 w-40 items-center justify-center rounded-full border-8 border-brand">
+            <Text className="text-6xl font-bold text-fg">{left}</Text>
           </View>
           <View className="h-1.5 w-full overflow-hidden rounded-full bg-line">
-            <View className="h-full bg-gold" style={{ width: `${requestProgress(sentAt.current, now) * 100}%` }} />
+            <View className="h-full bg-brand" style={{ width: `${requestProgress(sentAt.current, now) * 100}%` }} />
           </View>
-          <Text className="mt-2 text-2xl font-semibold text-white">Plumbing · Leak repair</Text>
+          <Text className="mt-2 text-2xl font-semibold text-fg">Plumbing · Leak repair</Text>
           <Text className="text-sm text-muted">Today · 5:00 PM · 2.4 km away · {REQUEST_TIMEOUT_SECONDS}s to accept</Text>
-          <View className="mt-4 w-full gap-2 rounded-2xl border border-line bg-surface p-4">
+          <View className="mt-4 w-full gap-2 rounded-2xl border border-line bg-card p-4">
             <Row label="You earn" value={formatInr(RATE)} strong />
             <Row label="HandyFix fee" value={launchActive ? `${formatInr(fee)} waived` : formatInr(fee)} />
           </View>
@@ -82,7 +83,7 @@ function Row({ label, value, strong = false }: { label: string; value: string; s
   return (
     <View className="flex-row justify-between">
       <Text className="text-base text-muted">{label}</Text>
-      <Text className={`text-base ${strong ? "font-bold text-gold" : "text-white"}`}>{value}</Text>
+      <Text className={`text-base ${strong ? "font-bold text-brand" : "text-fg"}`}>{value}</Text>
     </View>
   );
 }

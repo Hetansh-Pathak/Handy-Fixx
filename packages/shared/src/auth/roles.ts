@@ -24,3 +24,17 @@ export function homeRouteFor(role: AppRole | null | undefined): "/role-pick" | "
 
 /** Background location is requested only after someone picks the provider role. */
 export const requiresBackgroundLocation = (role: AppRole) => role === "provider";
+
+/** The store apps built from one codebase: HandyFix (customers), HandyFix Pro (providers), or both (dev/web preview). */
+export const APP_VARIANTS = ["customer", "provider", "both"] as const;
+export type AppVariant = (typeof APP_VARIANTS)[number];
+
+export function parseAppVariant(value: string | null | undefined): AppVariant {
+  return (APP_VARIANTS as readonly string[]).includes(value ?? "") ? (value as AppVariant) : "both";
+}
+
+/** Whether an account with this role may use this build. A pro opening the customer app is told to use the Pro app. */
+export const variantAllowsRole = (variant: AppVariant, role: AppRole): boolean => variant === "both" || variant === role;
+
+/** Roles the role-pick screen offers in this build. */
+export const rolesForVariant = (variant: AppVariant): AppRole[] => (variant === "both" ? [...APP_ROLES] : [variant]);

@@ -1,11 +1,12 @@
-import { Text, View } from "react-native";
+import { View } from "react-native";
+import { Text } from "@/components/text";
 import { Body, Button, Card, Screen, Title } from "@/components/ui";
 import { useSession } from "@/features/auth/session-provider";
 
 const Row = ({ label, value }: { label: string; value: string | null | undefined }) => (
   <View className="flex-row justify-between gap-4">
     <Text className="text-base text-muted">{label}</Text>
-    <Text className="flex-1 text-right text-base text-white">{value || "Not set"}</Text>
+    <Text className="flex-1 text-right text-base text-fg">{value || "Not set"}</Text>
   </View>
 );
 

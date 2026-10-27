@@ -21,3 +21,19 @@ describe("roles", () => {
     expect(requiresBackgroundLocation("customer")).toBe(false);
   });
 });
+
+describe("app variants", () => {
+  it("parses the build variant and falls back to both", async () => {
+    const { parseAppVariant, variantAllowsRole, rolesForVariant } = await import("./roles");
+    expect(parseAppVariant("customer")).toBe("customer");
+    expect(parseAppVariant("provider")).toBe("provider");
+    expect(parseAppVariant("nonsense")).toBe("both");
+    expect(parseAppVariant(undefined)).toBe("both");
+    expect(variantAllowsRole("customer", "customer")).toBe(true);
+    expect(variantAllowsRole("customer", "provider")).toBe(false);
+    expect(variantAllowsRole("provider", "customer")).toBe(false);
+    expect(variantAllowsRole("both", "provider")).toBe(true);
+    expect(rolesForVariant("provider")).toEqual(["provider"]);
+    expect(rolesForVariant("both")).toEqual(["customer", "provider"]);
+  });
+});

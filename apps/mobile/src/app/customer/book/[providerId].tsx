@@ -7,7 +7,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import * as Location from "expo-location";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Text, View } from "react-native";
+import { View } from "react-native";
+import { Text } from "@/components/text";
 import { Body, Button, Card, Chip, ErrorBanner, InfoBanner, Screen, ScreenHeader, TextField, Title } from "@/components/ui";
 import { loadCustomerProfile, loadEmailVerified } from "@/features/auth/api";
 import { EmailVerificationCard } from "@/features/auth/EmailVerificationCard";
@@ -158,13 +159,13 @@ export default function BookScreen() {
   return (
     <Screen>
       <ScreenHeader title={`Book ${ctx.provider.fullName.split(" ")[0]}`} onBack={back} />
-      <Text className="text-sm font-semibold uppercase tracking-widest text-gold">Step {step} of 3</Text>
+      <Text className="text-sm font-semibold uppercase tracking-widest text-brand">Step {step} of 3</Text>
       <ErrorBanner message={error} />
 
       {step === 1 ? (
         <>
           <Title>When?</Title>
-          <Text className="text-base font-semibold text-white">Date</Text>
+          <Text className="text-base font-semibold text-fg">Date</Text>
           <View className="flex-row flex-wrap gap-2">
             {dates.map((d) => (
               <Chip key={toDateString(d)} label={formatDateChip(d)} selected={!!date && toDateString(d) === toDateString(date)}
@@ -172,7 +173,7 @@ export default function BookScreen() {
                 onPress={() => { setDate(d); setSlot(null); setErrors({}); }} />
             ))}
           </View>
-          <Text className="text-base font-semibold text-white">Time</Text>
+          <Text className="text-base font-semibold text-fg">Time</Text>
           <View className="flex-row flex-wrap gap-2">
             {slots.map((s) => (
               <Chip key={s.slot} label={formatSlot(s.slot)} selected={slot === s.slot} disabled={!s.available} onPress={() => { setSlot(s.slot); setErrors({}); }} />
@@ -227,7 +228,7 @@ function Row({ label, value, strong = false }: { label: string; value: string; s
   return (
     <View className="flex-row justify-between gap-4">
       <Text className="text-base text-muted">{label}</Text>
-      <Text className={`flex-1 text-right text-base ${strong ? "font-bold text-gold" : "text-white"}`}>{value}</Text>
+      <Text className={`flex-1 text-right text-base ${strong ? "font-bold text-brand" : "text-fg"}`}>{value}</Text>
     </View>
   );
 }

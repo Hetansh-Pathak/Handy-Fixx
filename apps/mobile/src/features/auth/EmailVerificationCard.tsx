@@ -1,7 +1,7 @@
 import { emailOtpSchema } from "@handyfix/shared";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { Text } from "react-native";
+import { Text } from "@/components/text";
 import { Body, Button, Card, ErrorBanner, InfoBanner, TextField } from "@/components/ui";
 import { loadEmailVerified, sendEmailCode, verifyEmailCode } from "./api";
 
@@ -57,7 +57,7 @@ export function EmailVerificationCard({ userId, email }: { userId: string; email
 
   return (
     <Card>
-      <Text className="text-base font-semibold text-white">Verify your email</Text>
+      <Text className="text-base font-semibold text-fg">Verify your email</Text>
       <Body muted>You need to verify {email ?? "your email"} once before your first booking.</Body>
       <ErrorBanner message={error} />
       <InfoBanner message={codeSent ? "We sent a 6-digit code. It expires in 10 minutes." : null} />

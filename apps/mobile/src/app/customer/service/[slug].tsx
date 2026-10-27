@@ -2,7 +2,8 @@ import { formatDuration, formatInr, formatRating, serviceEmoji, sortProviders, t
 import { useQuery } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useMemo, useState } from "react";
-import { Pressable, Text, View } from "react-native";
+import { Pressable, View } from "react-native";
+import { Text } from "@/components/text";
 import { Body, Button, Chip, ErrorBanner, Screen, ScreenHeader, TextField, Title } from "@/components/ui";
 import { useArea } from "@/features/customer/area-context";
 import { fetchProviderListings, fetchServiceBySlug, fetchSubItems } from "@/features/customer/catalog-api";
@@ -45,7 +46,7 @@ export default function ServiceScreen() {
         <View className="gap-1">
           <Title>{serviceEmoji(service.data.icon_name)} {service.data.name}</Title>
           {service.data.description ? <Body muted>{service.data.description}</Body> : null}
-          <Text className="text-sm text-gold">
+          <Text className="text-sm text-brand">
             {service.data.base_price ? `Starts from ${formatInr(service.data.base_price)}` : ""}
             {service.data.duration_minutes ? `  ·  ~${formatDuration(service.data.duration_minutes)}` : ""}
           </Text>
@@ -54,18 +55,18 @@ export default function ServiceScreen() {
 
       {(subItems.data?.length ?? 0) > 0 ? (
         <View className="gap-2">
-          <Text className="text-lg font-semibold text-white">What do you need?</Text>
+          <Text className="text-lg font-semibold text-fg">What do you need?</Text>
           {subItems.data!.map((s) => {
             const selected = s.id === subId;
             return (
               <Pressable key={s.id} accessibilityRole="radio" accessibilityState={{ selected }} onPress={() => setSubId(selected ? null : s.id)}
-                className={`flex-row items-center gap-3 rounded-2xl border-2 p-3 ${selected ? "border-gold bg-gold/10" : "border-line bg-surface"}`}>
+                className={`flex-row items-center gap-3 rounded-2xl border-2 p-3 ${selected ? "border-brand bg-brand/10" : "border-line bg-card"}`}>
                 <Text className="text-2xl">{s.icon ?? "🛠️"}</Text>
                 <View className="flex-1">
-                  <Text className="text-base font-semibold text-white">{s.name}</Text>
+                  <Text className="text-base font-semibold text-fg">{s.name}</Text>
                   {s.duration_minutes ? <Text className="text-xs text-muted">{formatDuration(s.duration_minutes)}</Text> : null}
                 </View>
-                <Text className="text-base font-bold text-gold">{formatInr(s.base_price)}</Text>
+                <Text className="text-base font-bold text-brand">{formatInr(s.base_price)}</Text>
               </Pressable>
             );
           })}
@@ -83,24 +84,24 @@ export default function ServiceScreen() {
       <ErrorBanner message={providers.isError ? "Could not load pros. Check your connection." : null} />
       {!needsSubItem && providers.isPending ? <Body muted>Finding pros near you…</Body> : null}
       {!needsSubItem && providers.isSuccess && sorted.length === 0 ? (
-        <View className="gap-3 rounded-2xl border border-line bg-surface p-4">
-          <Text className="text-base font-semibold text-white">No pros online{area.trim() ? ` in ${area.trim()}` : ""} right now</Text>
+        <View className="gap-3 rounded-2xl border border-line bg-card p-4">
+          <Text className="text-base font-semibold text-fg">No pros online{area.trim() ? ` in ${area.trim()}` : ""} right now</Text>
           <Body muted>Pros appear here while they have the app open. Try again in a moment or check your area.</Body>
           <Button label="Refresh" variant="secondary" onPress={() => void providers.refetch()} />
         </View>
       ) : null}
 
       {!needsSubItem ? sorted.map((p) => (
-        <View key={p.id} className="gap-3 rounded-2xl border border-line bg-surface p-4">
+        <View key={p.id} className="gap-3 rounded-2xl border border-line bg-card p-4">
           <View className="flex-row items-start justify-between gap-3">
             <View className="flex-1 gap-0.5">
-              <Text className="text-lg font-semibold text-white">{p.fullName}{p.isVerified ? "  ✓" : ""}</Text>
+              <Text className="text-lg font-semibold text-fg">{p.fullName}{p.isVerified ? "  ✓" : ""}</Text>
               <Text className="text-sm text-muted">
                 ★ {formatRating(p.rating)}{p.totalReviews ? ` (${p.totalReviews})` : ""}  ·  {p.totalJobs} jobs
                 {p.experienceYears ? `  ·  ${p.experienceYears} yr exp` : ""}
               </Text>
             </View>
-            <Text className="text-2xl font-bold text-gold">{formatInr(p.price)}</Text>
+            <Text className="text-2xl font-bold text-brand">{formatInr(p.price)}</Text>
           </View>
           {p.bio ? <Text className="text-sm text-muted" numberOfLines={2}>{p.bio}</Text> : null}
           <Button label={`Book ${p.fullName.split(" ")[0]}`} onPress={() => book(p)} />

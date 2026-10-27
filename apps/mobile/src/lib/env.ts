@@ -1,5 +1,12 @@
+import { parseAppVariant } from "@handyfix/shared";
+
 // EXPO_PUBLIC_* values are inlined at build time and visible in the bundle: public values only.
 export const env = {
+  /** Which store app this build is: "customer" (HandyFix), "provider" (HandyFix Pro) or "both" (dev / web preview). */
+  appVariant: parseAppVariant(process.env.EXPO_PUBLIC_APP_VARIANT),
+  /** Where the customer app sends people who want to become pros (the Pro app's store page). */
+  proAppUrl: process.env.EXPO_PUBLIC_PRO_APP_URL ?? "",
+  customerAppUrl: process.env.EXPO_PUBLIC_CUSTOMER_APP_URL ?? "",
   supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL,
   supabaseAnonKey: process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
   googleWebClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,

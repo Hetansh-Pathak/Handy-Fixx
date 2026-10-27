@@ -1,6 +1,7 @@
 import { formatInr } from "@handyfix/shared";
 import { launchLine } from "@handyfix/shared";
-import { Switch, Text, View } from "react-native";
+import { Switch, View } from "react-native";
+import { Text } from "@/components/text";
 import { useRouter } from "expo-router";
 import { Body, Button, Card, ErrorBanner, InfoBanner, Screen, Title } from "@/components/ui";
 import { useSession } from "@/features/auth/session-provider";
@@ -14,7 +15,7 @@ function nextStep(status: string, kyc: string): { title: string; note: string; t
   return { title: "Verify your identity to start", note: "Complete the 9-step identity check to receive jobs. The wizard arrives in a later update.", tone: "gold" };
 }
 
-const TONE = { gold: "text-gold", ok: "text-ok", danger: "text-danger" } as const;
+const TONE = { gold: "text-brand", ok: "text-ok", danger: "text-danger" } as const;
 
 export default function ProviderHome() {
   const router = useRouter();
@@ -33,10 +34,10 @@ export default function ProviderHome() {
         </Card>
       ) : null}
 
-      <View className={`gap-3 rounded-2xl border p-5 ${rt.online ? "border-gold bg-gold/10" : "border-line bg-surface"}`}>
+      <View className={`gap-3 rounded-2xl border p-5 ${rt.online ? "border-brand bg-brand/10" : "border-line bg-card"}`}>
         <View className="flex-row items-center justify-between gap-4">
           <View className="flex-1 gap-1">
-            <Text className={`text-xl font-bold ${rt.online ? "text-gold" : "text-white"}`}>{rt.online ? "You're online" : "You're offline"}</Text>
+            <Text className={`text-xl font-bold ${rt.online ? "text-brand" : "text-fg"}`}>{rt.online ? "You're online" : "You're offline"}</Text>
             <Text className="text-sm text-muted">
               {rt.online ? "New requests appear with a sound. Accept within 30 seconds." : "Go online to receive job requests. It costs ₹0."}
             </Text>
@@ -46,7 +47,7 @@ export default function ProviderHome() {
             value={rt.online}
             disabled={!rt.canGoOnline || rt.toggling}
             onValueChange={() => void rt.toggleOnline()}
-            trackColor={{ false: "#26262C", true: "#FBB614" }}
+            trackColor={{ false: "#ECE6DA", true: "#C16430" }}
             thumbColor="#FFFFFF"
           />
         </View>
@@ -59,7 +60,7 @@ export default function ProviderHome() {
         <View className="flex-row items-end justify-between">
           <View>
             <Text className="text-sm text-muted">Wallet</Text>
-            <Text className="text-3xl font-bold text-white">{formatInr(rt.wallet.balance)}</Text>
+            <Text className="text-3xl font-bold text-fg">{formatInr(rt.wallet.balance)}</Text>
           </View>
           {rt.wallet.due > 0 ? (
             <View className="items-end">

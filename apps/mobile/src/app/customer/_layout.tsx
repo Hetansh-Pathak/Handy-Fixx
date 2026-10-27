@@ -5,7 +5,7 @@ import { AreaProvider } from "@/features/customer/area-context";
 export default function CustomerLayout() {
   return (
     <AreaProvider>
-      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: "#0A0A0A" } }}>
+      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: "#FAF6EF" } }}>
         <Stack.Screen name="(tabs)" />
       </Stack>
     </AreaProvider>

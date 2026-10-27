@@ -51,7 +51,7 @@ const check = (name, ok, extra = "") => {
   // ── 1. services list and search ──────────────────────────────────────────────
   await see("House Cleaning");
   check("services list shows the catalogue", (await count("Plumbing")) >= 1 && (await count("House Cleaning")) >= 1);
-  check("service card shows starting price and duration", (await body()).includes("From ₹299") && (await body()).includes("~1 hr"));
+  check("service card shows starting price and duration", (await body()).includes("From ₹299") && (await body()).includes("1 hr"));
   await shot("20-services");
   await L("Search services").fill("clean");
   check("search filters the list", (await count("Plumbing")) === 0 && (await count("House Cleaning")) >= 1);

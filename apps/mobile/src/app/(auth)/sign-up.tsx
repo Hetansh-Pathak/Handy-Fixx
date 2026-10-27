@@ -2,7 +2,9 @@ import { signUpSchema } from "@handyfix/shared";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import { signUpWithEmail } from "@/features/auth/api";
-import { Body, Button, ErrorBanner, InfoBanner, Screen, TextField, TextLink, Title } from "@/components/ui";
+import { AuthShell } from "@/components/brand";
+import { env } from "@/lib/env";
+import { Body, Button, ErrorBanner, InfoBanner, TextField, TextLink, Title } from "@/components/ui";
 import { useZodForm } from "@/lib/use-form";
 
 export default function SignUp() {
@@ -29,9 +31,9 @@ export default function SignUp() {
   };
 
   return (
-    <Screen>
+    <AuthShell>
       <Title>Create your account</Title>
-      <Body muted>One account, one role. You choose customer or pro on the next step.</Body>
+      <Body muted>{env.appVariant === "provider" ? "Join HandyFix Pro and start receiving jobs." : env.appVariant === "customer" ? "Book trusted pros for any home service." : "One account, one role. You choose customer or pro on the next step."}</Body>
       <ErrorBanner message={error} />
       <InfoBanner message={notice} />
       <TextField label="Full name" value={form.values.fullName} onChangeText={form.set("fullName")} error={form.errors.fullName}
@@ -44,6 +46,6 @@ export default function SignUp() {
         secureTextEntry autoCapitalize="none" autoComplete="new-password" textContentType="newPassword" onSubmitEditing={() => void submit()} />
       <Button label="Create account" loading={busy} onPress={() => void submit()} />
       <TextLink label="Already have an account? Sign in" onPress={() => router.replace("/sign-in")} />
-    </Screen>
+    </AuthShell>
   );
 }

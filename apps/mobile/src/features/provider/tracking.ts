@@ -4,7 +4,7 @@ import {
   JOB_LOCATION_TASK, JOB_TRACKING_KEY, PRESENCE_KEY, PRESENCE_TASK, type JobTrackingState, type PresenceState,
 } from "@/tasks/provider-tasks";
 
-const SERVICE_COLOR = "#FBB614";
+const SERVICE_COLOR = "#C16430";
 
 /** Foreground first, then "Allow all the time". Only ever asked of a pro, never of a customer. */
 export async function ensureBackgroundLocation(): Promise<"granted" | "foreground_only" | "denied"> {

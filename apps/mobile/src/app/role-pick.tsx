@@ -1,9 +1,11 @@
-import { providerPickSchema } from "@handyfix/shared";
-import { useState } from "react";
-import { Pressable, Text } from "react-native";
+import { providerPickSchema, rolesForVariant } from "@handyfix/shared";
+import { useEffect, useRef, useState } from "react";
+import { Pressable } from "react-native";
+import { Text } from "@/components/text";
 import { chooseCustomerRole, chooseProviderRole } from "@/features/auth/api";
 import { useSession } from "@/features/auth/session-provider";
 import { Body, Button, ErrorBanner, InfoBanner, Screen, TextField, TextLink, Title } from "@/components/ui";
+import { env } from "@/lib/env";
 import { useZodForm } from "@/lib/use-form";
 
 type Choice = "customer" | "provider";
@@ -11,8 +13,10 @@ type Choice = "customer" | "provider";
 /** Runs once after sign-up. One role per account, so this choice is not meant to be changed later. */
 export default function RolePick() {
   const { userId, email, fullName, roleResolution, refresh, signOut } = useSession();
+  const offered = rolesForVariant(env.appVariant);
+  const single = offered.length === 1 ? offered[0] : null; // the store apps each serve one role
   const [choice, setChoice] = useState<Choice | null>(
-    roleResolution && roleResolution.role === null && roleResolution.reason === "incomplete_provider" ? "provider" : null,
+    single ?? (roleResolution && roleResolution.role === null && roleResolution.reason === "incomplete_provider" ? "provider" : null),
   );
   const form = useZodForm(providerPickSchema, { phone: "" });
   const [busy, setBusy] = useState(false);
@@ -46,14 +50,36 @@ export default function RolePick() {
     }
   };
 
+  // The customer app has nothing to ask: everyone who signs up there is a customer.
+  const autoStarted = useRef(false);
+  useEffect(() => {
+    if (single === "customer" && userId && !autoStarted.current) {
+      autoStarted.current = true;
+      void confirm();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [single, userId]);
+
+  if (single === "customer") {
+    return (
+      <Screen>
+        <Title>Setting up your account…</Title>
+        <ErrorBanner message={error} />
+        {error ? <Button label="Try again" onPress={() => void confirm()} /> : null}
+        {error ? <TextLink label="Sign out" onPress={() => void signOut()} /> : null}
+      </Screen>
+    );
+  }
+
   return (
     <Screen>
-      <Title>How will you use HandyFix?</Title>
-      <Body muted>Pick one. An account is either a customer or a pro, so use a different email if you ever need both.</Body>
+      <Title>{single === "provider" ? "Set up your pro account" : "How will you use HandyFix?"}</Title>
+      {single ? <Body muted>Pros receive job requests and pay a small flat fee only when a job completes. Identity verification is required.</Body>
+        : <Body muted>Pick one. An account is either a customer or a pro, so use a different email if you ever need both.</Body>}
       <InfoBanner message={roleResolution && roleResolution.role === null && roleResolution.reason === "incomplete_provider" ? "Let's finish setting up your pro account." : null} />
       <ErrorBanner message={error} />
-      <RoleCard selected={choice === "customer"} title="I need a service" note="Book verified pros for repairs, cleaning and more." onPress={() => setChoice("customer")} />
-      <RoleCard selected={choice === "provider"} title="I'm a pro" note="Get job requests, pay a small flat fee only when you earn. Identity verification required." onPress={() => setChoice("provider")} />
+      {single ? null : <RoleCard selected={choice === "customer"} title="I need a service" note="Book verified pros for repairs, cleaning and more." onPress={() => setChoice("customer")} />}
+      {single ? null : <RoleCard selected={choice === "provider"} title="I'm a pro" note="Get job requests, pay a small flat fee only when you earn. Identity verification required." onPress={() => setChoice("provider")} />}
       {choice === "provider" ? (
         <TextField label="Mobile number" value={form.values.phone} onChangeText={form.set("phone")} error={form.errors.phone}
           hint="Customers can call you only after you accept a job." keyboardType="phone-pad" autoComplete="tel" textContentType="telephoneNumber" maxLength={16} />
@@ -67,8 +93,8 @@ export default function RolePick() {
 function RoleCard({ selected, title, note, onPress }: { selected: boolean; title: string; note: string; onPress: () => void }) {
   return (
     <Pressable accessibilityRole="radio" accessibilityState={{ selected }} onPress={onPress}
-      className={`gap-1 rounded-2xl border-2 p-4 ${selected ? "border-gold bg-gold/10" : "border-line bg-surface"}`}>
-      <Text className="text-lg font-semibold text-white">{title}</Text>
+      className={`gap-1 rounded-2xl border-2 p-4 ${selected ? "border-brand bg-brand/10" : "border-line bg-card"}`}>
+      <Text className="text-lg font-semibold text-fg">{title}</Text>
       <Text className="text-sm text-muted">{note}</Text>
     </Pressable>
   );

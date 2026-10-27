@@ -2,7 +2,8 @@ import { formatBookingWhen, formatInr, providerStatusLabel, type BookingStatus }
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import { Pressable, Text, View } from "react-native";
+import { Pressable, View } from "react-native";
+import { Text } from "@/components/text";
 import { Body, Chip, ErrorBanner, Screen, Title } from "@/components/ui";
 import { useSession } from "@/features/auth/session-provider";
 import { fetchProviderBookings, serviceNameOf, type ProviderBooking } from "@/features/provider/api";
@@ -41,13 +42,13 @@ export default function ProviderJobs() {
       {rows.map((b) => (
         <Pressable key={b.id} accessibilityRole="button" accessibilityLabel={`Job ${serviceNameOf(b)}`}
           onPress={() => router.push({ pathname: "/provider/job/[id]", params: { id: b.id } })}
-          className="gap-1 rounded-2xl border border-line bg-surface p-4 active:opacity-80">
+          className="gap-1 rounded-2xl border border-line bg-card p-4 active:opacity-80">
           <View className="flex-row justify-between gap-3">
-            <Text className="flex-1 text-lg font-semibold text-white">{serviceNameOf(b)}</Text>
-            <Text className="text-lg font-bold text-gold">{formatInr(b.provider_amount ?? 0)}</Text>
+            <Text className="flex-1 text-lg font-semibold text-fg">{serviceNameOf(b)}</Text>
+            <Text className="text-lg font-bold text-brand">{formatInr(b.provider_amount ?? 0)}</Text>
           </View>
           <Text className="text-sm text-muted">{formatBookingWhen(b.booking_date, b.booking_time)} · {b.city ?? ""}</Text>
-          <Text className="text-sm text-gold">{b.status === "pending" ? "Waiting for you" : providerStatusLabel(b.status as BookingStatus)}</Text>
+          <Text className="text-sm text-brand">{b.status === "pending" ? "Waiting for you" : providerStatusLabel(b.status as BookingStatus)}</Text>
         </Pressable>
       ))}
     </Screen>

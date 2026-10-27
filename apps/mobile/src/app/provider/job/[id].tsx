@@ -6,7 +6,8 @@ import {
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useRef, useState } from "react";
-import { Linking, Text, View } from "react-native";
+import { Linking, View } from "react-native";
+import { Text } from "@/components/text";
 import { Body, Button, Card, ErrorBanner, InfoBanner, Screen, ScreenHeader, TextField, Title } from "@/components/ui";
 import { useSession } from "@/features/auth/session-provider";
 import { applyBookingPatch, completeWithCode, fetchProviderBooking, serviceNameOf, type ProviderBooking } from "@/features/provider/api";
@@ -136,7 +137,7 @@ export default function JobScreen() {
   return (
     <Screen>
       <ScreenHeader title={serviceNameOf(booking)} onBack={() => router.back()} />
-      {progress ? <Text className="text-sm font-semibold uppercase tracking-widest text-gold">Step {progress.current} of {progress.total}</Text> : null}
+      {progress ? <Text className="text-sm font-semibold uppercase tracking-widest text-brand">Step {progress.current} of {progress.total}</Text> : null}
       <Title>{providerStatusLabel(status)}</Title>
       <ErrorBanner message={error} />
       <InfoBanner message={notice} />
@@ -166,7 +167,7 @@ export default function JobScreen() {
 
       {status === "in_progress" && !settlement ? (
         <Card>
-          <Text className="text-lg font-semibold text-white">Finish the job</Text>
+          <Text className="text-lg font-semibold text-fg">Finish the job</Text>
           <Body muted>Ask the customer for their {COMPLETION_CODE_LENGTH}-digit code once they are happy with the work.</Body>
           <TextField label="Customer's code" value={code} onChangeText={(v) => { setCode(v.replace(/\D/g, "").slice(0, COMPLETION_CODE_LENGTH)); setCodeError(null); }}
             error={codeError ?? undefined} keyboardType="number-pad" maxLength={COMPLETION_CODE_LENGTH} autoComplete="off" />
@@ -226,7 +227,7 @@ function Line({ label, value, strong = false }: { label: string; value: string; 
   return (
     <View className="flex-row justify-between gap-4">
       <Text className="text-base text-muted">{label}</Text>
-      <Text className={`flex-1 text-right text-base ${strong ? "font-bold text-gold" : "text-white"}`}>{value}</Text>
+      <Text className={`flex-1 text-right text-base ${strong ? "font-bold text-brand" : "text-fg"}`}>{value}</Text>
     </View>
   );
 }

@@ -18,7 +18,7 @@ export default function ProviderLayout() {
   // The runtime owns online status, the heartbeat and the incoming-request alert for every provider screen.
   return (
     <ProviderRuntime>
-      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: "#0A0A0A" } }}>
+      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: "#FAF6EF" } }}>
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="wallet" />
       </Stack>

@@ -1,5 +1,5 @@
 import { Link, type Href } from "expo-router";
-import { Text } from "react-native";
+import { Text } from "@/components/text";
 import { Body, Card, Screen, Title } from "@/components/ui";
 
 const CHECKS: { href: Href; title: string; note: string }[] = [
@@ -17,7 +17,7 @@ export default function SpikeMenu() {
       {CHECKS.map((c) => (
         <Link key={c.title} href={c.href} asChild>
           <Card>
-            <Text className="text-lg font-semibold text-white">{c.title}</Text>
+            <Text className="text-lg font-semibold text-fg">{c.title}</Text>
             <Text className="text-sm text-muted">{c.note}</Text>
           </Card>
         </Link>

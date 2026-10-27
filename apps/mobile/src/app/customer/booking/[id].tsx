@@ -5,7 +5,8 @@ import {
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
-import { Linking, Text, View } from "react-native";
+import { Linking, View } from "react-native";
+import { Text } from "@/components/text";
 import { TrackingMap } from "@/components/TrackingMap";
 import { Body, Button, Card, ErrorBanner, InfoBanner, Screen, ScreenHeader, Title } from "@/components/ui";
 import { loadCustomerProfile } from "@/features/auth/api";
@@ -145,7 +146,7 @@ export default function BookingStatusScreen() {
   return (
     <Screen>
       <ScreenHeader title="Booking" onBack={() => router.replace("/customer/bookings")} />
-      <Text className="text-sm font-semibold uppercase tracking-widest text-gold">{serviceName ?? "Service"}</Text>
+      <Text className="text-sm font-semibold uppercase tracking-widest text-brand">{serviceName ?? "Service"}</Text>
       <Title>{title}</Title>
       <ErrorBanner message={error} />
       <InfoBanner message={notice} />
@@ -170,19 +171,19 @@ export default function BookingStatusScreen() {
         <View className="gap-2">
           <TrackingMap pro={proPoint} destination={destination} />
           <Card>
-            <Text className="text-lg font-semibold text-white">
+            <Text className="text-lg font-semibold text-fg">
               {tracking.etaText ? `Arriving in about ${tracking.etaText}` : proPoint ? "Your pro is on the way" : "Waiting for your pro's location"}
             </Text>
             {tracking.distanceText ? <Text className="text-sm text-muted">{tracking.distanceText}</Text> : null}
-            {tracking.stale ? <Text className="text-sm text-gold">Last seen {tracking.ageSeconds != null ? `${Math.max(1, Math.round(tracking.ageSeconds / 60))} min ago` : "a while ago"}. Their phone may be offline.</Text> : null}
+            {tracking.stale ? <Text className="text-sm text-brand">Last seen {tracking.ageSeconds != null ? `${Math.max(1, Math.round(tracking.ageSeconds / 60))} min ago` : "a while ago"}. Their phone may be offline.</Text> : null}
           </Card>
         </View>
       ) : null}
 
       {showsCompletionCode(status) ? (
         <Card>
-          <Text className="text-sm font-semibold uppercase tracking-widest text-gold">Your code</Text>
-          <Text accessibilityLabel="Completion code" className="text-5xl font-bold tracking-[12px] text-white">{code.data ?? "····"}</Text>
+          <Text className="text-sm font-semibold uppercase tracking-widest text-brand">Your code</Text>
+          <Text accessibilityLabel="Completion code" className="text-5xl font-bold tracking-[12px] text-fg">{code.data ?? "····"}</Text>
           <Text className="text-sm text-muted">Give this code to {pro} only when the work is done and you are happy. It closes the job.</Text>
         </Card>
       ) : null}
@@ -216,7 +217,7 @@ export default function BookingStatusScreen() {
       {customerCanCancel(status) && !confirmingCancel ? <Button label="Cancel booking" variant="secondary" onPress={() => setConfirmingCancel(true)} /> : null}
       {customerCanCancel(status) && confirmingCancel ? (
         <Card>
-          <Text className="text-base font-semibold text-white">Cancel this booking?</Text>
+          <Text className="text-base font-semibold text-fg">Cancel this booking?</Text>
           <Button label="Yes, cancel it" variant="danger" loading={busy === "cancel"} onPress={() => void cancel()} />
           <Button label="Keep booking" variant="secondary" onPress={() => setConfirmingCancel(false)} />
         </Card>
@@ -236,7 +237,7 @@ function Alternatives({
   const pros = state.data?.pros ?? [];
   return (
     <View className="gap-3">
-      <Text className="text-lg font-semibold text-white">Next best pros for the same time</Text>
+      <Text className="text-lg font-semibold text-fg">Next best pros for the same time</Text>
       {state.isPending ? <Body muted>Finding other pros…</Body> : null}
       {state.isError ? <ErrorBanner message="Could not load other pros." /> : null}
       {!state.isPending && pros.length === 0 ? (
@@ -247,13 +248,13 @@ function Alternatives({
         </Card>
       ) : null}
       {pros.map((p) => (
-        <View key={p.id} className="gap-2 rounded-2xl border border-line bg-surface p-4">
+        <View key={p.id} className="gap-2 rounded-2xl border border-line bg-card p-4">
           <View className="flex-row items-start justify-between gap-3">
             <View className="flex-1">
-              <Text className="text-lg font-semibold text-white">{p.fullName}{p.isVerified ? "  ✓" : ""}</Text>
+              <Text className="text-lg font-semibold text-fg">{p.fullName}{p.isVerified ? "  ✓" : ""}</Text>
               <Text className="text-sm text-muted">★ {formatRating(p.rating)}{p.totalReviews ? ` (${p.totalReviews})` : ""} · {p.totalJobs} jobs</Text>
             </View>
-            <Text className="text-2xl font-bold text-gold">{formatInr(p.price)}</Text>
+            <Text className="text-2xl font-bold text-brand">{formatInr(p.price)}</Text>
           </View>
           <Button label={`Book ${p.fullName.split(" ")[0]}`} loading={busyId === p.id} disabled={busyId !== null && busyId !== p.id} onPress={() => onChoose(p)} />
         </View>
@@ -266,7 +267,7 @@ function Line({ label, value, strong = false }: { label: string; value: string; 
   return (
     <View className="flex-row justify-between gap-4">
       <Text className="text-base text-muted">{label}</Text>
-      <Text className={`flex-1 text-right text-base ${strong ? "font-bold text-gold" : "text-white"}`}>{value}</Text>
+      <Text className={`flex-1 text-right text-base ${strong ? "font-bold text-brand" : "text-fg"}`}>{value}</Text>
     </View>
   );
 }
