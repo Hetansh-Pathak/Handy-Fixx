@@ -5,7 +5,7 @@ Home-services marketplace for tier-2 Indian cities. Migrating from three Vite we
 ## Layout
 
 ```
-apps/mobile      Expo app (TypeScript, Expo Router, NativeWind). Route groups: (auth) (customer) (provider)
+apps/mobile      Expo SDK 58 app (TypeScript, Expo Router, NativeWind). Route groups: (auth) (customer) (provider). NOT an npm workspace (see below)
 apps/admin       Web admin (Vite + React). Stays web.
 packages/shared  @handyfix/shared: types, Zod schemas, API functions, hooks, fee/price/booking logic, tests
 supabase/        migrations/{customer,provider}, functions/, proposals/ (NOT applied), verify/
@@ -35,12 +35,19 @@ legacy/          Old web customer/provider apps. READ-ONLY UI spec. Deleted at m
 
 Black, white and gold. Gold is the accent (primary buttons, highlights); backgrounds black or white; one primary button per step. Keep screens simple and tappable on a low-end Android phone.
 
+## Mobile app install layout (important)
+
+`apps/mobile` is deliberately **outside** the npm workspace: it is on React 19 / React Native 0.88 while `apps/admin` is on React 18, and npm hoisting split NativeWind and React Native across two `node_modules` (breaks `className` types and risks duplicate runtimes). It has its own `package-lock.json`, installs itself (`npm run mobile:install`), and links `@handyfix/shared` via `"file:../../packages/shared"`. Because EAS installs only inside `apps/mobile`, any runtime dependency of `packages/shared` (currently `zod`, `@supabase/supabase-js`) must **also** be listed in `apps/mobile/package.json`. Add Expo/native packages with `npx expo install` where network allows; otherwise pin to `node_modules/expo/bundledNativeModules.json`.
+
 ## Commands
 
 ```bash
 npm install                # once, from the repo root (workspaces: apps/*, packages/*)
 npm run typecheck | lint | test | build
 npm run admin              # admin dev server
+npm run mobile:install     # install apps/mobile (separate from the root install)
+npm run mobile:typecheck   # tsc for the Expo app
+npm run mobile:start       # Expo dev server (needs a development build on a phone)
 ```
 
 `legacy/*` apps are not in the workspace; install inside each folder.

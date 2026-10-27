@@ -2,7 +2,7 @@
 
 HandyFix is a home-services marketplace that connects customers with verified local professionals. The repository is a monorepo being migrated from three Vite web apps to a single **React Native + Expo** mobile app (customer and provider roles) with a web admin panel, shared TypeScript logic and a Supabase backend.
 
-> **Migration status:** Phase 0 (clean baseline) and Phase 1 (monorepo layout) are done. `apps/mobile` is created in Phase 3. Until it reaches feature parity, `legacy/customer-app` and `legacy/provider-app` are the working web apps and act as the UI spec.
+> **Migration status:** Phases 0 to 2 (clean baseline, monorepo, shared logic) are done and `apps/mobile` exists as an app shell with native-risk check screens (Phase 3: run `apps/mobile/SPIKE.md` on a real Android phone). Until it reaches feature parity, `legacy/customer-app` and `legacy/provider-app` are the working web apps and act as the UI spec.
 
 ![Customer application preview](docs/customer-app-preview.png)
 
@@ -31,7 +31,7 @@ HandyFix is a home-services marketplace that connects customers with verified lo
 ```
 handyfix/
 ├── apps/
-│   ├── mobile/                # (Phase 3) Expo app: (auth), (customer), (provider) route groups
+│   ├── mobile/                # Expo SDK 58 app: (auth), (customer), (provider) route groups; own install, see CLAUDE.md
 │   └── admin/                 # Admin operations panel (Vite + React, stays web, port 3002)
 ├── packages/
 │   └── shared/                # @handyfix/shared: types, Zod, fee/price/booking logic, tests
@@ -116,6 +116,13 @@ npm install
 
 ```bash
 npm run admin
+```
+
+**Mobile app** (separate install, needs an EAS development build on a phone; see `apps/mobile/SPIKE.md`):
+
+```bash
+npm run mobile:install
+npm run mobile:start
 ```
 
 **Legacy web apps** (own `package-lock.json`, not part of the workspace, so install inside each):
