@@ -1,9 +1,10 @@
 import {
-  reconcileQuote, toDateString, toDbTime, type BookingQuote, type NewBookingInput, type QuoteCheck, type StoredTotals,
-  parseDateString, type BookingSlot,
+  BOOKING_SLOTS, isSlotAvailable, nextBestPros, parseDateString, quoteBooking, reconcileQuote, toDateString, toDbTime,
+  type BookingQuote, type BookingSlot, type NewBookingInput, type QuoteCheck, type StoredTotals,
 } from "@handyfix/shared";
 import { getSupabase } from "@/lib/supabase";
-import type { ServiceRow, SubItemRow } from "./types";
+import { fetchProviderListings, fetchSubItems } from "./catalog-api";
+import type { ProviderListing, ServiceRow, SubItemRow } from "./types";
 
 /** The database refused the insert because the customer's email is not verified yet (RLS). */
 export class EmailNotVerifiedError extends Error {
@@ -78,26 +79,32 @@ export async function createBooking(args: {
 export type BookingRow = {
   id: string;
   status: string;
+  created_at: string | null;
   booking_date: string | null;
   booking_time: string | null;
   address: string | null;
   city: string | null;
   pincode: string | null;
+  special_instructions: string | null;
+  sub_item_id: string | null;
   sub_item_name: string | null;
   provider_id: string | null;
   service_id: string | null;
   provider_amount: number | null;
   platform_fee: number | null;
   total_amount: number | null;
+  latitude: number | null;
+  longitude: number | null;
+  provider_eta_minutes: number | null;
+  cancellation_reason: string | null;
 };
+
+const BOOKING_COLUMNS =
+  "id, status, created_at, booking_date, booking_time, address, city, pincode, special_instructions, sub_item_id, sub_item_name, provider_id, service_id, provider_amount, platform_fee, total_amount, latitude, longitude, provider_eta_minutes, cancellation_reason";
 
 export async function fetchBooking(id: string): Promise<{ booking: BookingRow; serviceName: string | null; providerName: string | null } | null> {
   const supabase = getSupabase();
-  const { data, error } = await supabase
-    .from("bookings")
-    .select("id, status, booking_date, booking_time, address, city, pincode, sub_item_name, provider_id, service_id, provider_amount, platform_fee, total_amount")
-    .eq("id", id)
-    .maybeSingle();
+  const { data, error } = await supabase.from("bookings").select(BOOKING_COLUMNS).eq("id", id).maybeSingle();
   if (error) throw new Error(error.message);
   if (!data) return null;
   const booking = data as BookingRow;
@@ -111,6 +118,127 @@ export async function fetchBooking(id: string): Promise<{ booking: BookingRow; s
     serviceName: (service.data as { name: string } | null)?.name ?? null,
     providerName: (provider.data as { full_name: string | null } | null)?.full_name ?? null,
   };
+}
+
+/** The 4-digit code the customer gives the pro at the end. Only the booking's own customer can read it (RLS). */
+export async function fetchCompletionCode(bookingId: string): Promise<string | null> {
+  const { data, error } = await getSupabase().from("booking_completion_codes").select("code").eq("booking_id", bookingId).maybeSingle();
+  if (error) return null;
+  return (data as { code: string } | null)?.code ?? null;
+}
+
+/**
+ * The pro's phone, only after they accept (PDF p.2). Needs the server function in
+ * supabase/proposals/…customer_booking_contact; until it exists this returns null and the Call button stays hidden.
+ */
+export async function fetchProviderPhone(bookingId: string): Promise<string | null> {
+  const { data, error } = await getSupabase().rpc("get_booking_provider_phone", { p_booking_id: bookingId });
+  if (error) return null;
+  return typeof data === "string" && data.trim() ? data.trim() : null;
+}
+
+export type ProviderPosition = { latitude: number; longitude: number; updated_at: string };
+
+export async function fetchProviderLocation(bookingId: string): Promise<ProviderPosition | null> {
+  const { data, error } = await getSupabase().from("provider_locations").select("latitude, longitude, updated_at").eq("booking_id", bookingId).maybeSingle();
+  if (error || !data) return null;
+  const row = data as { latitude: number; longitude: number; updated_at: string };
+  return { latitude: Number(row.latitude), longitude: Number(row.longitude), updated_at: row.updated_at };
+}
+
+export type CustomerBookingListItem = {
+  id: string;
+  status: string;
+  created_at: string | null;
+  booking_date: string | null;
+  booking_time: string | null;
+  sub_item_name: string | null;
+  total_amount: number | null;
+  serviceName: string | null;
+  providerName: string | null;
+};
+
+export async function fetchCustomerBookings(userId: string): Promise<CustomerBookingListItem[]> {
+  const supabase = getSupabase();
+  const { data, error } = await supabase
+    .from("bookings")
+    .select("id, status, created_at, booking_date, booking_time, provider_id, sub_item_name, total_amount, services(name)")
+    .eq("customer_id", userId)
+    .order("created_at", { ascending: false })
+    .limit(100);
+  if (error) throw new Error(error.message);
+  type Row = Omit<CustomerBookingListItem, "serviceName" | "providerName"> & { provider_id: string | null; services: { name: string } | { name: string }[] | null };
+  const rows = (data ?? []) as Row[];
+
+  const ids = [...new Set(rows.map((r) => r.provider_id).filter((v): v is string => !!v))];
+  const names = new Map<string, string>();
+  if (ids.length > 0) {
+    const { data: pros } = await supabase.from("public_providers").select("id, full_name").in("id", ids);
+    for (const p of (pros ?? []) as { id: string; full_name: string | null }[]) if (p.full_name) names.set(p.id, p.full_name);
+  }
+  return rows.map((r) => {
+    const svc = Array.isArray(r.services) ? r.services[0] : r.services;
+    return { ...r, serviceName: svc?.name ?? null, providerName: r.provider_id ? (names.get(r.provider_id) ?? null) : null };
+  });
+}
+
+/**
+ * Other pros for the same job after a decline or a 30 s silence: same area, similar price, online, best ranked.
+ * Needs no database change: it reads the same public list the customer browsed.
+ */
+export async function fetchAlternatives(booking: BookingRow): Promise<{ service: ServiceRow; subItem: SubItemRow | null; pros: ProviderListing[] } | null> {
+  if (!booking.service_id) return null;
+  const { data: svc, error } = await getSupabase()
+    .from("services").select("id, name, slug, description, icon_name, base_price, duration_minutes, category").eq("id", booking.service_id).maybeSingle();
+  if (error || !svc) return null;
+  const service = svc as ServiceRow;
+  const subItem = booking.sub_item_id ? ((await fetchSubItems(service.id)).find((s) => s.id === booking.sub_item_id) ?? null) : null;
+
+  const listings = await fetchProviderListings({ service, subItem, area: "", now: new Date() });
+  const pros = nextBestPros({
+    candidates: listings,
+    excludeIds: new Set(booking.provider_id ? [booking.provider_id] : []),
+    requestedPrice: Number(booking.provider_amount ?? subItem?.base_price ?? service.base_price ?? 0),
+    pincode: booking.pincode ?? "",
+    city: booking.city,
+  });
+  return { service, subItem, pros };
+}
+
+/**
+ * The customer picked another pro: book the same job (same slot, address and notes) with them, then cancel the
+ * unanswered request. If the slot has already passed the caller falls back to the normal booking flow.
+ */
+export async function rebookWithProvider(args: {
+  userId: string;
+  customerName: string | null;
+  customerPhone: string | null;
+  old: BookingRow;
+  service: ServiceRow;
+  subItem: SubItemRow | null;
+  pro: ProviderListing;
+  now: Date;
+}): Promise<CreatedBooking | { slotPassed: true }> {
+  const { old, now } = args;
+  const date = old.booking_date ? parseDateString(old.booking_date) : null;
+  const slot = (old.booking_time ?? "").slice(0, 5) as BookingSlot;
+  if (!date || !(BOOKING_SLOTS as readonly string[]).includes(slot) || !isSlotAvailable(date, slot, now)) return { slotPassed: true };
+
+  const created = await createBooking({
+    userId: args.userId,
+    customerName: args.customerName,
+    customerPhone: args.customerPhone,
+    service: args.service,
+    subItem: args.subItem,
+    providerId: args.pro.id,
+    input: {
+      date: old.booking_date!, time: slot, address: old.address ?? "", city: old.city ?? "", pincode: old.pincode ?? "",
+      latitude: old.latitude, longitude: old.longitude, notes: old.special_instructions ?? undefined,
+    },
+    quote: quoteBooking(args.pro.price),
+  });
+  if (old.status === "pending") await cancelBooking(old.id).catch(() => undefined);
+  return created;
 }
 
 /** Customers can cancel while a booking is still pending or confirmed. */

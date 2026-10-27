@@ -15,6 +15,11 @@ export const env = {
    * text). Until then the job flow skips "I've arrived" and goes straight from on-the-way to start-job.
    */
   arrivedStatus: process.env.EXPO_PUBLIC_ARRIVED_STATUS === "1",
+  /**
+   * Set to "1" once a Google Maps API key is in the build (GOOGLE_MAPS_API_KEY). Without it the live-tracking card
+   * shows distance and ETA with an "Open in Google Maps" button instead of an embedded map.
+   */
+  mapsEnabled: process.env.EXPO_PUBLIC_MAPS_ENABLED === "1",
   /** Native-check screens are always on in dev; set EXPO_PUBLIC_ENABLE_SPIKE=1 for other builds. */
   spikeEnabled: __DEV__ || process.env.EXPO_PUBLIC_ENABLE_SPIKE === "1",
 } as const;

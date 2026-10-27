@@ -18,13 +18,14 @@ Package name: `in.handyfix.app`.
 | 3 | Expo app shell and native check screens (phone checks still to run) |
 | 4 / slice 1 | Auth, role pick, profiles |
 | 4 / slice 2 | Customer: services, pros with prices, 3-step booking |
+| 4 / slice 3 | Customer booking status: list, live status over Realtime, ETA/distance/live position with a map (key needed), code card, call (needs SQL function), next-best-pros rebook after a timeout or decline, cancel. 24 end-to-end checks against a mock backend. |
 | 4 / slice 4 | Provider: online switch with heartbeat, full-screen request alert (Realtime + polling), accept/decline with wallet check, job steps, live trip location, completion code, flat-fee preview. Tested end to end (26 checks) against a mock backend only. |
 
 ## QUEUE (in order)
 
 | # | Item | State |
 |---|---|---|
-| 1 | **Slice 3: customer booking status**: realtime status, live map with the pro's position and ETA, call/chat after confirmation, the 4-digit code card, "pro declined or did not answer in 30 s: offer the next best pros" screen, cancel | **QUEUED. Owner asked to be reminded.** |
+| 1 | ~~Slice 3: customer booking status~~ | **DONE** (map and call need owner setup, see BLOCKED) |
 | 2 | **Slice 4b: server side of the request flow**: push to the pro when a booking arrives (FCM edge function and token table), the 30 s timeout and next-pro offers as real server logic. Needs a Firebase project from the owner. **Until then a pro whose app is closed gets no request.** | QUEUED |
 | 3 | **Slice 5: provider money and KYC**: wallet screen and Razorpay top-up, earnings, payouts, 9-step KYC wizard (camera and pickers), pro sets own rate inside the band | QUEUED |
 | 4 | **Slice 5b: extra work with customer approval** (+ bill photos for parts) and **disputes** (24 h / 48 h window, evidence, admin decision, appeal) | QUEUED |
@@ -39,6 +40,7 @@ Package name: `in.handyfix.app`.
 |---|---|
 | Real-phone checks (background location, request alert, push, Google sign-in) | Owner runs `apps/mobile/SPIKE.md` **at the end** (their decision). Nothing in the app has been run on a device. |
 | Applying the SQL proposals | Owner reviews, then says "apply". Nothing is applied. Order: pricing, then arrived status, then provider wallet fee. |
+| Google Maps API key | For the live map: enable "Maps SDK for Android", restrict by package `in.handyfix.app` + SHA-1, add as EAS secret `GOOGLE_MAPS_API_KEY`, set `EXPO_PUBLIC_MAPS_ENABLED=1` |
 | Supabase dashboard | Confirm "Confirm email" is OFF; allow redirect `handyfix://**` |
 | Firebase + Google OAuth + EAS accounts | Needed for push and Google sign-in on a device |
 | GitHub push | Owner pushes (or fixes access); bundle in the scratchpad until then |
@@ -48,6 +50,8 @@ Package name: `in.handyfix.app`.
 1. `supabase/proposals/20261101000000_pdf_pricing_model_PROPOSAL_NOT_APPLIED.sql`: price bands, locked booking price, replaces the live 12% trigger.
 2. `supabase/proposals/20261102000000_booking_status_arrived_PROPOSAL_NOT_APPLIED.sql`: adds the `arrived` status.
 3. `supabase/proposals/20261102000001_provider_wallet_fee_PROPOSAL_NOT_APPLIED.sql`: flat-fee slabs, launch period, accept check, fee posted at completion; removes the old `unsettled_job` block. **Required for the provider flow to work in production** (otherwise pros are locked out 24 h after their first job).
+
+4. `supabase/proposals/20261103000000_customer_booking_contact_PROPOSAL_NOT_APPLIED.sql`: lets a customer read their own pro's phone only after acceptance (needed for the Call button).
 
 Before applying 2: run `supabase/verify/05_booking_status_and_triggers_READONLY.sql` (it may show `arrived` needs no migration).
 

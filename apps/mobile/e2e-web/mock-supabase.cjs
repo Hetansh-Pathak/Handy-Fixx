@@ -128,9 +128,10 @@ async function installMock(page) {
       }
       const id = (q.get("id") || "").replace("eq.", "");
       const pid = (q.get("provider_id") || "").replace("eq.", "");
+      const cid = (q.get("customer_id") || "").replace("eq.", "");
       const st = (q.get("status") || "").replace("eq.", "");
       const rows = db.storedBookings
-        .filter((r) => (!id || r.id === id) && (!pid || r.provider_id === pid) && (!st || r.status === st))
+        .filter((r) => (!id || r.id === id) && (!pid || r.provider_id === pid) && (!cid || r.customer_id === cid) && (!st || r.status === st))
         .map((r) => ({ ...r, services: { name: (db.services.find((x) => x.id === r.service_id) || {}).name || null } }));
       return json(route, 200, rows);
     }
@@ -145,8 +146,22 @@ async function installMock(page) {
       return json(route, 200, db.subItems.filter((s) => s.service_id === sid));
     }
     if (p === "/rest/v1/public_providers") {
-      const id = (url.searchParams.get("id") || "").replace("eq.", "");
-      return json(route, 200, db.publicProviders().filter((r) => !id || r.id === id));
+      const raw = url.searchParams.get("id") || "";
+      const ids = raw.startsWith("in.") ? raw.slice(4, -1).split(",") : raw.startsWith("eq.") ? [raw.slice(3)] : null;
+      return json(route, 200, db.publicProviders().filter((r) => !ids || ids.includes(r.id)));
+    }
+    if (p === "/rest/v1/booking_completion_codes") {
+      const bid = (url.searchParams.get("booking_id") || "").replace("eq.", "");
+      const row = db.storedBookings.find((r) => r.id === bid);
+      return json(route, 200, row && ["arrived", "in_progress", "confirmed", "on_the_way"].includes(row.status) ? [{ code: db.completionCode }] : []);
+    }
+    if (p === "/rest/v1/rpc/get_booking_provider_phone") {
+      if (db.phoneRpcMissing) return json(route, 404, { code: "PGRST202", message: "Could not find the function public.get_booking_provider_phone" });
+      const b = body();
+      const u = userFromAuth(req);
+      const row = db.storedBookings.find((r) => r.id === b.p_booking_id);
+      const ok = row && u && row.customer_id === u.id && ["confirmed", "on_the_way", "arrived", "in_progress"].includes(row.status);
+      return json(route, 200, ok ? "9876500099" : null);
     }
     if (p === "/rest/v1/provider_services") {
       const sid = (url.searchParams.get("service_id") || "").replace("eq.", "");
@@ -191,6 +206,10 @@ async function installMock(page) {
       db.completedFees = (db.completedFees || []).concat([{ id: row.id, fee, waived: db.launchActive }]);
       return json(route, 200, { ok: true });
     }
+    if (p === "/rest/v1/provider_locations" && m === "GET") {
+      const bid = (url.searchParams.get("booking_id") || "").replace("eq.", "");
+      return json(route, 200, db.locations.filter((l) => l.booking_id === bid));
+    }
     if (p === "/rest/v1/provider_locations") {
       const b = body();
       db.locations = db.locations.filter((l) => l.booking_id !== b.booking_id).concat([b]);
@@ -215,7 +234,7 @@ async function installRealtime(page) {
       const reply = (response) => ws.send(JSON.stringify([joinRef, ref, topic, "phx_reply", { status: "ok", response }]));
       if (event === "phx_join") {
         const changes = (((payload || {}).config || {}).postgres_changes || []).map((c, i) => ({ id: 1000 + i, ...c }));
-        sub.topics.set(topic, changes.map((c) => c.id));
+        sub.topics.set(topic, changes);
         reply({ postgres_changes: changes });
       } else if (event === "phx_leave") { sub.topics.delete(topic); reply({}); }
       else reply({});
@@ -223,15 +242,18 @@ async function installRealtime(page) {
   });
 }
 
-/** Pushes a bookings row change to every joined realtime channel. */
-function pushBookingChange(record, type = "INSERT") {
+/** Pushes a row change for `table` to every joined channel that listens to that table. */
+function pushChange(table, record, type = "INSERT") {
   for (const { ws, topics } of db.sockets) {
-    for (const [topic, ids] of topics) {
+    for (const [topic, changes] of topics) {
+      const ids = changes.filter((c) => c.table === table).map((c) => c.id);
+      if (ids.length === 0) continue;
       ws.send(JSON.stringify([null, null, topic, "postgres_changes", {
-        ids, data: { schema: "public", table: "bookings", commit_timestamp: new Date().toISOString(), type, columns: [], record, old_record: {}, errors: null },
+        ids, data: { schema: "public", table, commit_timestamp: new Date().toISOString(), type, columns: [], record, old_record: {}, errors: null },
       }]));
     }
   }
 }
+const pushBookingChange = (record, type = "INSERT") => pushChange("bookings", record, type);
 
-module.exports = { installMock, installRealtime, pushBookingChange, db, jwt, BASE };
+module.exports = { installMock, installRealtime, pushBookingChange, pushChange, db, jwt, BASE };

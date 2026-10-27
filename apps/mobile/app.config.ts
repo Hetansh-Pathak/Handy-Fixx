@@ -36,6 +36,8 @@ const config: ExpoConfig = {
       ...(process.env.EAS_BUILD_PROFILE === "production" ? ["android.permission.SYSTEM_ALERT_WINDOW"] : []),
     ],
     ...(fs.existsSync(googleServicesFile) ? { googleServicesFile } : {}),
+    // Maps SDK key for the live-tracking map (Google Cloud: enable "Maps SDK for Android", restrict by package + SHA-1).
+    ...(process.env.GOOGLE_MAPS_API_KEY ? { config: { googleMaps: { apiKey: process.env.GOOGLE_MAPS_API_KEY } } } : {}),
   },
   plugins: [
     "expo-router",

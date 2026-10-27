@@ -48,6 +48,14 @@ legacy/          Old web customer/provider apps. READ-ONLY UI spec. Deleted at m
 - Live trip location goes to `provider_locations` (keyed by the AUTH user id, not the provider row id) plus `bookings.provider_eta_minutes`; the customer map that reads it is slice 3.
 - Background location is requested only when a pro goes online or starts a trip.
 
+## Customer booking status facts (slice 3)
+
+- The status screen (`customer/booking/[id]`) follows one booking: Realtime on the booking row and on `provider_locations`, plus an 8 s poll as a safety net. Waiting shows the pro's 30 s window; after it (or after a decline) `fetchAlternatives` offers the next best pros and `rebookWithProvider` books the same job with the chosen one and cancels the unanswered request. No database change is needed for this.
+- The completion code (`booking_completion_codes`, customer-only RLS) is shown from `arrived`/`in_progress`.
+- **Calling the pro needs a server function** (`supabase/proposals/20261103000000_customer_booking_contact`): the KYC migration hid `service_providers` from customers, so the old phone join returns nothing. Until it is applied the Call button is hidden (the app does not break).
+- The embedded live map needs a Google Maps API key at build time (`GOOGLE_MAPS_API_KEY`, an EAS secret) and `EXPO_PUBLIC_MAPS_ENABLED=1`. Without them the card shows ETA and distance plus "Open in Google Maps".
+- Rating, reporting a problem, extra-work approval and chat are not built yet (slices 5b and 6).
+
 ## Auth facts (verified against the repo, not assumed)
 
 - Supabase email confirmation is OFF; customers verify their email through the OTP functions (`send-customer-otp` / `verify-customer-otp`), and the booking RLS rule uses `is_customer_email_verified()`. Google sign-in counts as verified.

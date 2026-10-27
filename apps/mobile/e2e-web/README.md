@@ -6,6 +6,7 @@ the script, so it needs no Supabase project, phone or network. Two suites:
 - `booking-flow.cjs`: services and search, sub-items, availability and area rules, per-pro prices and sorting, the 3-step booking with validation, the email-verification gate, the saved-price check (PDF and legacy 12% modes) and cancel.
 
 - `provider-flow.cjs`: approval gate, going online (heartbeat), a request arriving by Realtime and by the polling fallback, accept and decline, the job steps, the completion code with wrong-code feedback, the flat fee (waived in launch, charged after), the client-side and server-side wallet block, and the jobs list.
+- `status-flow.cjs`: the customer's bookings list and status screen through a booking's life: waiting with the 30 s countdown, acceptance over Realtime, ETA/distance/live and stale position, the completion code card, done, the "next best pros" offer after a timeout or a decline (one-tap rebook of the same job), cancel, the hidden Call button when the contact function is missing, and the saved-price warning.
 
 `mock-supabase.cjs` is the shared fake backend (catalogue, pros, bookings, auth, wallet, completion code, and a Realtime WebSocket speaking protocol 2.0.0).
 
@@ -23,7 +24,7 @@ EXPO_PUBLIC_ENABLE_SPIKE=0 \
 npx expo start --web --port 8099 --clear
 
 # terminal 2
-npm run test:e2e-web            # runs all three suites; screenshots go to e2e-web/shots/
+npm run test:e2e-web            # runs all four suites; screenshots go to e2e-web/shots/
 ```
 
 Notes:

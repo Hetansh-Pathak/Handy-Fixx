@@ -27,6 +27,9 @@ Time-dependent functions take `now: Date` as an argument. Never call `new Date()
 | `booking/completion-code` | 4-digit code, `complete_booking_with_code` reply → one UI message | legacy `CompleteJobDialog` |
 | `booking/cancellation` | 3 late cancellations in 30 days pauses instant booking for 7 days | PDF p.4 |
 | `booking/dispute` | 24 h / 48 h windows, reply and decision deadlines, outcomes | PDF p.11 |
+| `booking/tracking` | ETA and distance text, stale-position rule (60 s) | PDF p.4 |
+| `booking/request-outcome` | Waiting / expired / declined / accepted, "offer next pros" rule | PDF p.4 |
+| `booking/grouping` | In-progress vs past bookings, when the code card and map show | PDF p.10 |
 | `booking/request-timer` | 30 s accept countdown | PDF p.6 |
 | `providers/ranking` | Rank by rating → distance → response speed (never money), featured slots, next-best offers | PDF p.4, p.12 |
 | `geo/distance` | Haversine km, distance formatting | new |
