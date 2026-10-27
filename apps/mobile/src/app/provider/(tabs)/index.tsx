@@ -1,11 +1,15 @@
-import { formatInr } from "@handyfix/shared";
-import { launchLine } from "@handyfix/shared";
+import { earningsSummary, formatInr, launchLine } from "@handyfix/shared";
+import { useQuery } from "@tanstack/react-query";
+import { Briefcase, CircleCheck, IndianRupee, Star, TrendingUp, type LucideIcon } from "lucide-react-native";
 import { Switch, View } from "react-native";
 import { Text } from "@/components/text";
 import { useRouter } from "expo-router";
 import { Body, Button, Card, ErrorBanner, InfoBanner, Screen, Title } from "@/components/ui";
 import { useSession } from "@/features/auth/session-provider";
+import { fetchProviderBookings } from "@/features/provider/api";
 import { useProviderRuntime } from "@/features/provider/provider-runtime";
+import { colors } from "@/theme/colors";
+import { IconTile, Logo } from "@/components/brand";
 
 /** What the pro should do next, from the account's status and KYC state. */
 function nextStep(status: string, kyc: string): { title: string; note: string; tone: "gold" | "ok" | "danger" } | null {
@@ -22,10 +26,27 @@ export default function ProviderHome() {
   const { provider, fullName } = useSession();
   const rt = useProviderRuntime();
   const step = nextStep(provider?.status ?? "", provider?.kyc_status ?? "");
+  const bookings = useQuery({
+    queryKey: ["provider-bookings", provider?.id],
+    enabled: !!provider?.id,
+    queryFn: () => fetchProviderBookings(provider!.id),
+  });
+  const today = earningsSummary(bookings.data ?? [], new Date()).todayTotal;
+  const num = (v: number | string | null | undefined, fallback: number) => (v === null || v === undefined || v === "" || Number.isNaN(Number(v)) ? fallback : Number(v));
+  const stats: { icon: LucideIcon; label: string; value: string }[] = [
+    { icon: IndianRupee, label: "Today's earnings", value: formatInr(today) },
+    { icon: Star, label: "Rating", value: `${num(provider?.rating, 0).toFixed(1)} ★` },
+    { icon: Briefcase, label: "Total jobs", value: String(num(provider?.total_jobs, 0)) },
+    { icon: TrendingUp, label: "Acceptance", value: `${num(provider?.acceptance_rate, 100).toFixed(0)}%` },
+  ];
 
   return (
     <Screen>
-      <Title>Hi{fullName ? `, ${fullName.split(" ")[0]}` : ""}</Title>
+      <View className="flex-row items-center justify-between"><Logo size={36} /><Text className="text-sm font-semibold text-brand">PRO</Text></View>
+      <View className="flex-row items-center gap-2">
+        <Title>Hi{fullName ? `, ${fullName.split(" ")[0]}` : ""}</Title>
+        {provider?.kyc_status === "approved" ? <CircleCheck size={22} color={colors.ok} accessibilityLabel="Verified pro" /> : null}
+      </View>
 
       {step ? (
         <Card>
@@ -47,7 +68,7 @@ export default function ProviderHome() {
             value={rt.online}
             disabled={!rt.canGoOnline || rt.toggling}
             onValueChange={() => void rt.toggleOnline()}
-            trackColor={{ false: "#ECE6DA", true: "#C16430" }}
+            trackColor={{ false: "#D9D2C4", true: "#C16430" }}
             thumbColor="#FFFFFF"
           />
         </View>
@@ -55,6 +76,16 @@ export default function ProviderHome() {
       </View>
       <ErrorBanner message={rt.error} />
       <InfoBanner message={rt.notice} />
+
+      <View className="flex-row flex-wrap justify-between gap-y-3">
+        {stats.map(({ icon: Icon, label, value }) => (
+          <View key={label} className="w-[48%] gap-2 rounded-3xl border border-line bg-card p-4">
+            <IconTile size={40}><Icon size={20} color={colors.brand} /></IconTile>
+            <Text className="text-xs font-semibold uppercase tracking-wider text-muted">{label}</Text>
+            <Text className="text-2xl font-extrabold text-fg">{value}</Text>
+          </View>
+        ))}
+      </View>
 
       <Card>
         <View className="flex-row items-end justify-between">

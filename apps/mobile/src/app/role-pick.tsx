@@ -2,9 +2,10 @@ import { providerPickSchema, rolesForVariant } from "@handyfix/shared";
 import { useEffect, useRef, useState } from "react";
 import { Pressable } from "react-native";
 import { Text } from "@/components/text";
+import { AuthShell } from "@/components/brand";
 import { chooseCustomerRole, chooseProviderRole } from "@/features/auth/api";
 import { useSession } from "@/features/auth/session-provider";
-import { Body, Button, ErrorBanner, InfoBanner, Screen, TextField, TextLink, Title } from "@/components/ui";
+import { Body, Button, ErrorBanner, InfoBanner, TextField, TextLink, Title } from "@/components/ui";
 import { env } from "@/lib/env";
 import { useZodForm } from "@/lib/use-form";
 
@@ -62,17 +63,17 @@ export default function RolePick() {
 
   if (single === "customer") {
     return (
-      <Screen>
+      <AuthShell>
         <Title>Setting up your account…</Title>
         <ErrorBanner message={error} />
         {error ? <Button label="Try again" onPress={() => void confirm()} /> : null}
         {error ? <TextLink label="Sign out" onPress={() => void signOut()} /> : null}
-      </Screen>
+      </AuthShell>
     );
   }
 
   return (
-    <Screen>
+    <AuthShell>
       <Title>{single === "provider" ? "Set up your pro account" : "How will you use HandyFix?"}</Title>
       {single ? <Body muted>Pros receive job requests and pay a small flat fee only when a job completes. Identity verification is required.</Body>
         : <Body muted>Pick one. An account is either a customer or a pro, so use a different email if you ever need both.</Body>}
@@ -86,7 +87,7 @@ export default function RolePick() {
       ) : null}
       <Button label="Continue" disabled={!choice} loading={busy} onPress={() => void confirm()} />
       <TextLink label="Sign out" onPress={() => void signOut()} />
-    </Screen>
+    </AuthShell>
   );
 }
 

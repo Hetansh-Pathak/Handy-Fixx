@@ -19,6 +19,7 @@ Package name: `in.handyfix.app`.
 | 4 / slice 1 | Auth, role pick, profiles |
 | 4 / slice 2 | Customer: services, pros with prices, 3-step booking |
 | 4 / slice 3 | Customer booking status: list, live status over Realtime, ETA/distance/live position with a map (key needed), code card, call (needs SQL function), next-best-pros rebook after a timeout or decline, cancel. 24 end-to-end checks against a mock backend. |
+| UI | Old HandyFix look ported (cream/terracotta, Plus Jakarta Sans, legacy-style home and auth, dashboard stats) and **two store apps from one codebase** (customer / provider variants, own package, scheme and permissions) |
 | 5a | Provider wallet screen: balance/dues, history, earnings, Razorpay top-up (uses the existing `create-wallet-topup-order` + webhook), withdrawal via `request_payout`. 17 checks on a mock; **Razorpay checkout itself untested (needs a dev build + keys)** |
 | 4 / slice 4 | Provider: online switch with heartbeat, full-screen request alert (Realtime + polling), accept/decline with wallet check, job steps, live trip location, completion code, flat-fee preview. Tested end to end (26 checks) against a mock backend only. |
 
@@ -35,6 +36,10 @@ Package name: `in.handyfix.app`.
 | 7 | **Phase 5**: Sentry, EAS builds, Play Console internal then closed testing, location declaration | QUEUED |
 | 8 | Delete `legacy/` web apps at mobile parity; rebuild the grant document sections for the new model | QUEUED |
 
+## Legacy modules not yet in the new apps (QUEUED)
+
+Customer: notifications page, about/contact pages, booking chat, reviews, saved profile photo. Provider: schedule/availability, reviews, notifications, settings (notification preferences), terms page, earnings chart, 9-step KYC onboarding, profile editing. Each is a slice; the legacy file is the visual spec.
+
 ## BLOCKED on the owner
 
 | Item | Needed |
@@ -43,6 +48,7 @@ Package name: `in.handyfix.app`.
 | Applying the SQL proposals | Owner reviews, then says "apply". Nothing is applied. Order: pricing, then arrived status, then provider wallet fee. |
 | Google Maps API key | For the live map: enable "Maps SDK for Android", restrict by package `in.handyfix.app` + SHA-1, add as EAS secret `GOOGLE_MAPS_API_KEY`, set `EXPO_PUBLIC_MAPS_ENABLED=1` |
 | Supabase dashboard | Confirm "Confirm email" is OFF; allow redirect `handyfix://**` |
+| Two Google OAuth Android clients | One per app: `in.handyfix.app` and `in.handyfix.pro` (each with its SHA-1). Also allow redirects `handyfix://**` and `handyfixpro://**` in Supabase |
 | Google sign-in setup | Owner follows `docs/GOOGLE_SIGNIN_SETUP.md` (Cloud OAuth clients, Supabase provider, env var, dev build) |
 | Razorpay | Edge function secrets `RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET`, webhook configured, functions deployed (check `supabase functions list`); test mode first |
 | Firebase + EAS accounts | Needed for push (4b) and builds |

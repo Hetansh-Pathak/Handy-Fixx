@@ -20,6 +20,10 @@
     "legacy:provider": "npm --prefix legacy/provider-app run dev",
     "mobile:install": "npm --prefix apps/mobile install",
     "mobile:typecheck": "npm --prefix apps/mobile run typecheck",
-    "mobile:start": "npm --prefix apps/mobile run start"
+    "mobile:start": "npm --prefix apps/mobile run start",
+    "web:customer": "npm --prefix apps/mobile run web:customer",
+    "web:provider": "npm --prefix apps/mobile run web:provider",
+    "start:customer": "npm --prefix apps/mobile run start:customer",
+    "start:provider": "npm --prefix apps/mobile run start:provider"
   }
 }

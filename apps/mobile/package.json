@@ -51,6 +51,7 @@
     "@types/aes-js": "^3.1.4",
     "@types/node": "^22.20.5",
     "@types/react": "~19.3.0",
+    "cross-env": "^10.1.0",
     "typescript": "~6.0.3"
   },
   "scripts": {
@@ -58,6 +59,12 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "web": "expo start --web",
+    "web:customer": "cross-env EXPO_PUBLIC_APP_VARIANT=customer expo start --web --port 8081",
+    "web:provider": "cross-env EXPO_PUBLIC_APP_VARIANT=provider expo start --web --port 8082",
+    "start:customer": "cross-env EXPO_PUBLIC_APP_VARIANT=customer expo start --dev-client",
+    "start:provider": "cross-env EXPO_PUBLIC_APP_VARIANT=provider expo start --dev-client",
+    "build:customer": "eas build --profile customer-dev --platform android",
+    "build:provider": "eas build --profile provider-dev --platform android",
     "typecheck": "tsc --noEmit",
     "export:android": "EXPO_OFFLINE=1 expo export --platform android",
     "test:e2e-web": "node e2e-web/auth-flow.cjs && node e2e-web/booking-flow.cjs && node e2e-web/provider-flow.cjs && node e2e-web/status-flow.cjs && node e2e-web/wallet-flow.cjs"

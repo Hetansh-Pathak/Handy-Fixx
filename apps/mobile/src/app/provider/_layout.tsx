@@ -20,7 +20,6 @@ export default function ProviderLayout() {
     <ProviderRuntime>
       <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: "#FAF6EF" } }}>
         <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="wallet" />
       </Stack>
     </ProviderRuntime>
   );

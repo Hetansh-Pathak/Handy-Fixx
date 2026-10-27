@@ -1,6 +1,6 @@
 # HandyFix: rules for Claude Code
 
-Home-services marketplace for tier-2 Indian cities. Migrating from three Vite web apps to **one React Native + Expo app** (customer + provider roles) with a web admin and a Supabase backend. Android first, iOS after the Play Store closed test.
+Home-services marketplace for tier-2 Indian cities. Migrating from three Vite web apps to **one React Native + Expo codebase that builds two store apps** (HandyFix for customers, HandyFix Pro for providers) with a web admin and a Supabase backend. Android first, iOS after the Play Store closed test.
 
 ## Layout
 
@@ -24,7 +24,7 @@ legacy/          Old web customer/provider apps. READ-ONLY UI spec. Deleted at m
 
 ## Product decisions (locked)
 
-- **One app, two roles, one role per account.** Role is picked once after sign-up (`/role-pick`) and routes to `/customer` or `/provider`. The role is a routing convenience, not a permission: a `service_providers` row means provider (authoritative), otherwise the `handyfix_role` flag on the auth user; real access is enforced by RLS and KYC. Never use `(group)/index` for two groups (groups add no URL segment, so they collide on `/`). Request background location only when someone picks the provider role, never for customers.
+- **One codebase, two store apps (owner decision, replaces "one app, two roles"), one role per account.** `EXPO_PUBLIC_APP_VARIANT` = `customer` | `provider` picks the app (name, package `in.handyfix.app` / `in.handyfix.pro`, scheme `handyfix` / `handyfixpro`, permissions); unset = a dev build with both. The customer app signs everyone up as a customer (no role question); the Pro app sets up a pro; an account of the other kind sees "use the other app" (`variantAllowsRole`). Role is still resolved from the account and routes to `/customer` or `/provider`; role-pick only shows in the dev build with both. The role is a routing convenience, not a permission: a `service_providers` row means provider (authoritative), otherwise the `handyfix_role` flag on the auth user; real access is enforced by RLS and KYC. Never use `(group)/index` for two groups (groups add no URL segment, so they collide on `/`). Request background location only when someone picks the provider role, never for customers.
 - **Business model** (source: HandyFix-complete.pdf): customer pays the price shown, platform fee for customers is ₹0. Provider pays a flat fee on completed jobs only, from a prepaid wallet: ₹15 (<₹500), ₹30 (₹500-1,500), ₹50 (>₹1,500), based on the service bill, parts excluded. Provider sets a rate inside an admin price band. Price is locked at booking; the bill grows only via extra work the customer approves. Customer pays the pro directly (UPI/cash); Razorpay is used for wallet top-up.
 - Fee-free launch: a provider's first 3 months or first 10 jobs (wallet check skipped, fee shown as "waived"). Declining or missing a request costs ₹0; the customer is offered the next best pros.
 - Booking statuses in the DB today: pending → confirmed → on_the_way → in_progress → completed (cancelled from pending/confirmed). The PDF adds `arrived` between on_the_way and in_progress; it does not exist yet and needs a new migration (ask first). Completion uses a 4-digit code, stored hashed, attempt-limited.
@@ -70,7 +70,7 @@ legacy/          Old web customer/provider apps. READ-ONLY UI spec. Deleted at m
 
 ## Design system
 
-Black, white and gold. Gold is the accent (primary buttons, highlights); backgrounds black or white; one primary button per step. Keep screens simple and tappable on a low-end Android phone.
+The old HandyFix look (owner decision): warm cream background `#FAF6EF`, white cards, charcoal text, terracotta `#C16430` accent for primary buttons and highlights, dark strip `#1C1C1C` for stats, Plus Jakarta Sans, lucide icons. Tokens live in `tailwind.config.js` (`canvas`, `card`, `fg`, `muted`, `field`, `line`, `brand`, `strip`) and `src/theme/colors.ts`; use `Text` from `@/components/text` (it picks the font file for the weight class). One primary button per step. Keep screens simple and tappable on a low-end Android phone. Copy that contradicts the business model (in-app payment, % discounts) is not ported.
 
 ## Mobile app install layout (important)
 

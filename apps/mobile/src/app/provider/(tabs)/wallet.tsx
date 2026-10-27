@@ -2,11 +2,10 @@ import {
   describeLedgerEntry, earningsSummary, formatInr, launchLine, topUpChoices, validateTopUp,
 } from "@handyfix/shared";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useRouter } from "expo-router";
 import { useState } from "react";
 import { View } from "react-native";
 import { Text } from "@/components/text";
-import { Body, Button, Card, Chip, ErrorBanner, InfoBanner, Screen, ScreenHeader, TextField } from "@/components/ui";
+import { Body, Button, Card, Chip, ErrorBanner, InfoBanner, Screen, TextField, Title } from "@/components/ui";
 import { useSession } from "@/features/auth/session-provider";
 import {
   createTopUpOrder, fetchLedger, fetchMinPayout, fetchPayouts, fetchProviderBookings, requestPayout,
@@ -17,7 +16,6 @@ import { openCheckout } from "@/lib/razorpay";
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 export default function WalletScreen() {
-  const router = useRouter();
   const queryClient = useQueryClient();
   const { provider } = useSession();
   const rt = useProviderRuntime();
@@ -101,7 +99,7 @@ export default function WalletScreen() {
 
   return (
     <Screen>
-      <ScreenHeader title="Wallet" onBack={() => router.back()} />
+      <Title>Wallet</Title>
       <ErrorBanner message={error} />
       <InfoBanner message={notice} />
 

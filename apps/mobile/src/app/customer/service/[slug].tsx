@@ -1,8 +1,9 @@
-import { formatDuration, formatInr, formatRating, serviceEmoji, sortProviders, type ProviderSort } from "@handyfix/shared";
+import { formatDuration, formatInr, formatRating, sortProviders, type ProviderSort } from "@handyfix/shared";
 import { useQuery } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useMemo, useState } from "react";
 import { Pressable, View } from "react-native";
+import { IconTile, ServiceIcon } from "@/components/brand";
 import { Text } from "@/components/text";
 import { Body, Button, Chip, ErrorBanner, Screen, ScreenHeader, TextField, Title } from "@/components/ui";
 import { useArea } from "@/features/customer/area-context";
@@ -44,7 +45,8 @@ export default function ServiceScreen() {
       {service.isSuccess && !service.data ? <Body muted>This service is not available.</Body> : null}
       {service.data ? (
         <View className="gap-1">
-          <Title>{serviceEmoji(service.data.icon_name)} {service.data.name}</Title>
+          <View className="mb-2 flex-row items-center gap-3"><IconTile size={52}><ServiceIcon name={service.data.icon_name} size={26} /></IconTile></View>
+          <Title>{service.data.name}</Title>
           {service.data.description ? <Body muted>{service.data.description}</Body> : null}
           <Text className="text-sm text-brand">
             {service.data.base_price ? `Starts from ${formatInr(service.data.base_price)}` : ""}
@@ -56,20 +58,21 @@ export default function ServiceScreen() {
       {(subItems.data?.length ?? 0) > 0 ? (
         <View className="gap-2">
           <Text className="text-lg font-semibold text-fg">What do you need?</Text>
-          {subItems.data!.map((s) => {
-            const selected = s.id === subId;
-            return (
-              <Pressable key={s.id} accessibilityRole="radio" accessibilityState={{ selected }} onPress={() => setSubId(selected ? null : s.id)}
-                className={`flex-row items-center gap-3 rounded-2xl border-2 p-3 ${selected ? "border-brand bg-brand/10" : "border-line bg-card"}`}>
-                <Text className="text-2xl">{s.icon ?? "🛠️"}</Text>
-                <View className="flex-1">
-                  <Text className="text-base font-semibold text-fg">{s.name}</Text>
+          <View className="flex-row flex-wrap justify-between gap-y-3">
+            {subItems.data!.map((s) => {
+              const selected = s.id === subId;
+              return (
+                <Pressable key={s.id} accessibilityRole="radio" accessibilityState={{ selected }} onPress={() => setSubId(selected ? null : s.id)}
+                  className={`w-[48%] gap-1 rounded-3xl border-2 p-4 ${selected ? "border-brand bg-brand-soft" : "border-line bg-card"}`}>
+                  <Text className="text-3xl">{s.icon ?? "🛠️"}</Text>
+                  <Text className="mt-1 text-base font-semibold text-fg">{s.name}</Text>
+                  {s.description ? <Text className="text-xs leading-4 text-muted" numberOfLines={2}>{s.description}</Text> : null}
+                  <Text className="mt-1 text-lg font-bold text-brand">{formatInr(s.base_price)}</Text>
                   {s.duration_minutes ? <Text className="text-xs text-muted">{formatDuration(s.duration_minutes)}</Text> : null}
-                </View>
-                <Text className="text-base font-bold text-brand">{formatInr(s.base_price)}</Text>
-              </Pressable>
-            );
-          })}
+                </Pressable>
+              );
+            })}
+          </View>
         </View>
       ) : null}
 
@@ -84,7 +87,7 @@ export default function ServiceScreen() {
       <ErrorBanner message={providers.isError ? "Could not load pros. Check your connection." : null} />
       {!needsSubItem && providers.isPending ? <Body muted>Finding pros near you…</Body> : null}
       {!needsSubItem && providers.isSuccess && sorted.length === 0 ? (
-        <View className="gap-3 rounded-2xl border border-line bg-card p-4">
+        <View className="gap-3 rounded-3xl border border-line bg-card p-4">
           <Text className="text-base font-semibold text-fg">No pros online{area.trim() ? ` in ${area.trim()}` : ""} right now</Text>
           <Body muted>Pros appear here while they have the app open. Try again in a moment or check your area.</Body>
           <Button label="Refresh" variant="secondary" onPress={() => void providers.refetch()} />
@@ -92,8 +95,11 @@ export default function ServiceScreen() {
       ) : null}
 
       {!needsSubItem ? sorted.map((p) => (
-        <View key={p.id} className="gap-3 rounded-2xl border border-line bg-card p-4">
+        <View key={p.id} className="gap-3 rounded-3xl border border-line bg-card p-4">
           <View className="flex-row items-start justify-between gap-3">
+            <View className="h-14 w-14 items-center justify-center rounded-full bg-brand">
+              <Text className="text-xl font-bold text-white">{p.fullName.trim().charAt(0).toUpperCase()}</Text>
+            </View>
             <View className="flex-1 gap-0.5">
               <Text className="text-lg font-semibold text-fg">{p.fullName}{p.isVerified ? "  ✓" : ""}</Text>
               <Text className="text-sm text-muted">

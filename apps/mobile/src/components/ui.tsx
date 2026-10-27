@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { useState, type ComponentProps } from "react";
 import { ActivityIndicator, Pressable, ScrollView, TextInput, View } from "react-native";
 import { Text } from "@/components/text";
+import { ArrowLeft } from "lucide-react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export function Screen({ children, scroll = true }: { children: ReactNode; scroll?: boolean }) {
@@ -109,7 +110,7 @@ export function ScreenHeader({ title, onBack }: { title: string; onBack: () => v
   return (
     <View className="flex-row items-center gap-2">
       <Pressable accessibilityRole="button" accessibilityLabel="Go back" onPress={onBack} hitSlop={12} className="min-h-[44px] min-w-[44px] items-center justify-center">
-        <Text className="text-3xl text-fg">‹</Text>
+        <ArrowLeft size={24} color="#1C1C1C" />
       </Pressable>
       <Text className="flex-1 text-xl font-semibold text-fg" numberOfLines={1}>{title}</Text>
     </View>

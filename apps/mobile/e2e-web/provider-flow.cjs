@@ -209,10 +209,11 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     .then(() => check("a server-side wallet rejection is shown as written", db.storedBookings.find((b) => b.id === r5.id).status === "pending"))
     .catch(async () => check("a server-side wallet rejection is shown as written", false, (await body()).slice(0, 200)));
   await T("Decline").click();
-  await sleep(800);
+  for (let i = 0; i < 20 && db.storedBookings.find((b) => b.id === r5.id).status !== "cancelled"; i += 1) await sleep(250);
 
   // ── 8. jobs list ─────────────────────────────────────────────────────────────
   await T("Jobs", true).click();
+  await sleep(2500);
   await waitBody("Done 5", 15000).then(() => check("the jobs tab counts every job (2 completed, 3 declined)", true)).catch(async () => check("the jobs tab counts every job (2 completed, 3 declined)", false, (await body()).slice(0, 160)));
   await T("Done 5", false).click();
   await waitBody("Waiting for you", 3000).catch(() => undefined);

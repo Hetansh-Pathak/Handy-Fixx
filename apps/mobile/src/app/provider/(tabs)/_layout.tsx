@@ -7,6 +7,7 @@ export default function ProviderTabs() {
     <Tabs screenOptions={tabScreenOptions}>
       <Tabs.Screen name="index" options={{ title: "Home", tabBarIcon: tabIcon(House) }} />
       <Tabs.Screen name="jobs" options={{ title: "Jobs", tabBarIcon: tabIcon(Briefcase) }} />
+      <Tabs.Screen name="wallet" options={{ title: "Wallet", tabBarIcon: tabIcon(Wallet) }} />
       <Tabs.Screen name="profile" options={{ title: "Profile", tabBarIcon: tabIcon(UserRound) }} />
     </Tabs>
   );
