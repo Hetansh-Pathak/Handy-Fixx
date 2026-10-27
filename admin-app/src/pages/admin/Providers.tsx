@@ -1,10 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import {
-  Search, Filter, ChevronLeft, ChevronRight, MoreVertical,
-  UserX, UserCheck, Eye, Loader2, Star, Briefcase,
-  MapPin, AlertTriangle, CheckCircle, XCircle, Phone
-} from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Search, ChevronLeft, ChevronRight, UserX, UserCheck, Loader2, Star } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -18,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { cn, formatDate, formatDateTime, timeAgo, maskAadhaar, maskPAN, STATUS_STYLES, STATUS_LABELS, SUSPEND_REASONS } from '@/lib/utils';
+import { cn, formatDate, timeAgo, maskAadhaar, maskPAN, STATUS_STYLES, STATUS_LABELS, SUSPEND_REASONS } from '@/lib/utils';
 
 const PAGE_SIZE = 20;
 

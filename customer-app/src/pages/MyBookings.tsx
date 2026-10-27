@@ -251,8 +251,8 @@ const MyBookings = () => {
       // Extract provider & service from data JSON or message text
       const data = (latest.data || first.data || {}) as Record<string, any>;
       let provider_name = data.provider_name || data.providerName || "Your Provider";
-      let service_name  = data.service_name  || data.serviceName  || "Home Service";
-      let provider_id   = data.provider_id   || data.providerId   || null;
+      const service_name  = data.service_name  || data.serviceName  || "Home Service";
+      const provider_id   = data.provider_id   || data.providerId   || null;
 
       // Fallback: parse from message string if data is empty
       if (!data.provider_name) {

@@ -9,7 +9,7 @@ database/
 ├── migrations/
 │   ├── customer/   # Migrations for the customer-app schema
 │   └── provider/   # Migrations for the provider-app schema
-└── functions/
+└── supabase/functions/   (all Edge Functions, single source)
     ├── send-welcome-email/     # Sends a welcome email after customer signup
     ├── send-provider-otp/      # Generates and sends an OTP for provider login
     └── verify-provider-otp/    # Verifies the OTP and returns a session

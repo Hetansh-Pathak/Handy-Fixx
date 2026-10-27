@@ -1,17 +1,14 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import {
-  Shield, Users, BookOpen, CheckCircle, XCircle, Clock,
-  AlertTriangle, TrendingUp, ArrowRight, RefreshCw, Loader2
-} from 'lucide-react';
+import { Shield, Users, BookOpen, CheckCircle, XCircle, Clock, AlertTriangle, TrendingUp, ArrowRight, RefreshCw } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { cn, formatDateTime, timeAgo, STATUS_STYLES } from '@/lib/utils';
+import { cn, timeAgo } from '@/lib/utils';
 
 interface DashboardCounts {
   pending_kyc: number;

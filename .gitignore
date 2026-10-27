@@ -40,3 +40,6 @@ coverage/
 
 # Supabase local CLI (do not commit)
 supabase/.temp/
+
+# Supabase CLI link state (project ref etc.)
+**/supabase/.temp/

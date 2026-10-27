@@ -1,11 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import {
-  Search, Filter, ChevronLeft, ChevronRight, Eye, Loader2,
-  Calendar, Clock, MapPin, User, Shield, AlertTriangle,
-  RefreshCw, CheckCircle, XCircle, UserCheck, ArrowRight,
-  Phone, Mail, FileText, Image as ImageIcon, Volume2
-} from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Search, ChevronLeft, ChevronRight, Eye, Loader2, MapPin, User, Shield, RefreshCw, XCircle, UserCheck, Phone, Mail, FileText, Volume2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -13,14 +8,14 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { cn, formatDate, formatDateTime, timeAgo, shortId, STATUS_STYLES, STATUS_LABELS, CANCEL_REASONS } from '@/lib/utils';
+import { cn, formatDate, timeAgo, shortId, STATUS_STYLES, STATUS_LABELS, CANCEL_REASONS } from '@/lib/utils';
 
 const PAGE_SIZE = 20;
 
@@ -81,7 +76,7 @@ const Bookings: React.FC = () => {
   // Filters
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [search, setSearch] = useState('');
-  const [cityFilter, setCityFilter] = useState('all');
+  const [cityFilter] = useState('all');
   const [realtimeAlert, setRealtimeAlert] = useState(false);
   const searchTimer = useRef<ReturnType<typeof setTimeout>>();
 
@@ -227,7 +222,7 @@ const Bookings: React.FC = () => {
       // Exclude current provider
       const filtered = (sps ?? []).filter(p => p.id !== b.provider_id);
       setEligibleProviders(filtered as EligibleProvider[]);
-    } catch (err) {
+    } catch {
       toast({ title: 'Error loading providers', description: 'Could not fetch eligible providers', variant: 'destructive' });
     } finally {
       setLoadingEligible(false);

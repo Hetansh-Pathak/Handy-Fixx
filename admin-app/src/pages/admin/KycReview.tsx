@@ -10,11 +10,8 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
-import { motion, AnimatePresence } from 'framer-motion';
-import {
-  Shield, CheckCircle2, XCircle, Search, Eye, Loader2,
-  ChevronLeft, AlertTriangle
-} from 'lucide-react';
+
+import { Shield, CheckCircle2, XCircle, Search, Eye, Loader2 } from 'lucide-react';
 import { cn, maskAadhaar, maskPAN, KYC_REJECTION_REASONS, formatDate } from '@/lib/utils';
 
 interface ProviderReviewItem {

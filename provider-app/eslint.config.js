@@ -23,4 +23,12 @@ export default tseslint.config(
       "@typescript-eslint/no-unused-vars": "off",
     },
   },
+  {
+    // shadcn/ui boilerplate and tailwind plugin loading
+    files: ["src/components/ui/**/*.{ts,tsx}", "tailwind.config.ts"],
+    rules: {
+      "@typescript-eslint/no-empty-object-type": "off",
+      "@typescript-eslint/no-require-imports": "off",
+    },
+  }
 );

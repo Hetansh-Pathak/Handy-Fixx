@@ -26,10 +26,15 @@ const About = () => {
   const { data: providerCount } = useQuery({
     queryKey: ["provider-count"],
     queryFn: async () => {
-      const { count } = await supabase
-        .from("service_providers")
-        .select("*", { count: "exact", head: true })
-        .eq("is_active", true);
+      // Customers cannot read service_providers directly (RLS); the view
+      // already limits rows to approved + active providers.
+      const { count } = await (supabase as unknown as {
+        from: (t: string) => {
+          select: (cols: string, opts: { count: "exact"; head: true }) => Promise<{ count: number | null }>;
+        };
+      })
+        .from("public_providers")
+        .select("*", { count: "exact", head: true });
       return count || 0;
     },
   });

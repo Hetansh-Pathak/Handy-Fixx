@@ -13,15 +13,13 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
-type RpcOk = { ok: true };
-type RpcFail = {
-  ok: false;
-  reason: string;       // 'wrong_code' | 'locked' | 'unauthorized' | ...
+type RpcResult = {
+  ok: boolean;
+  reason?: string;      // 'wrong_code' | 'locked' | 'invalid_status' | 'unauthorized' | ...
   attempts_left?: number;
   locked?: boolean;
   locked_until?: string;
 };
-type RpcResult = RpcOk | RpcFail;
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function formatLockTime(lockedUntil: string): string {

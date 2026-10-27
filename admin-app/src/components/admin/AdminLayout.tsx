@@ -1,10 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import {
-  LayoutDashboard, Shield, Users, BookOpen, FileText,
-  LogOut, Menu, X, ChevronLeft, Bell, Wallet
-} from 'lucide-react';
+import { LayoutDashboard, Shield, Users, BookOpen, FileText, LogOut, Menu, ChevronLeft, Wallet } from 'lucide-react';
 import { useAdminAuth } from '@/contexts/AdminAuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';

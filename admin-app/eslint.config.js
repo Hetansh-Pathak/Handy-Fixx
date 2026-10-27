@@ -22,5 +22,13 @@ export default tseslint.config(
       "react-refresh/only-export-components": ["warn", { allowConstantExport: true }],
       "@typescript-eslint/no-explicit-any": "warn",
     },
+  },
+  {
+    // shadcn/ui boilerplate and tailwind plugin loading
+    files: ["src/components/ui/**/*.{ts,tsx}", "tailwind.config.ts"],
+    rules: {
+      "@typescript-eslint/no-empty-object-type": "off",
+      "@typescript-eslint/no-require-imports": "off",
+    },
   }
 );
