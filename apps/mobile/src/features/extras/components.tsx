@@ -33,7 +33,7 @@ function BillPhoto({ path }: { path: string }) {
   if (!url.data) return <Text className="text-xs text-muted">Bill photo attached</Text>;
   return (
     <Pressable accessibilityRole="imagebutton" accessibilityLabel="Open the bill photo" onPress={() => void Linking.openURL(url.data!)}
-      className="h-20 w-20 overflow-hidden rounded-xl border border-line active:opacity-80">
+      className="h-20 w-20 overflow-hidden rounded-tile border border-line active:opacity-80">
       <Image source={{ uri: url.data }} className="h-full w-full" resizeMode="cover" />
     </Pressable>
   );
@@ -89,11 +89,11 @@ export function CustomerExtras({ bookingId, status, pro, total }: { bookingId: s
   };
 
   return (
-    <View className="gap-3 rounded-2xl border border-brand bg-brand/10 p-4">
+    <View className="gap-3 rounded-tile border border-brand bg-brand/10 p-4">
       <Text className="text-lg font-semibold text-fg">Extra work request</Text>
       <ErrorBanner message={error} />
       {pending.map((e) => (
-        <View key={e.id} className="gap-2 rounded-xl bg-card p-3">
+        <View key={e.id} className="gap-2 rounded-tile bg-card p-3">
           <View className="flex-row justify-between gap-3">
             <Text className="flex-1 text-base font-semibold text-fg">{e.title}</Text>
             <Text className="text-base font-bold text-brand">+ {formatInr(Number(e.amount))}</Text>
@@ -209,7 +209,7 @@ export function ProviderExtras({ bookingId, status, userId }: { bookingId: strin
           {kind === "part" ? (
             <View className="gap-2">
               <Text className="text-sm font-medium text-fg">Photo of the shop bill (required for parts)</Text>
-              {photo ? <Image source={{ uri: photo.uri }} className="h-24 w-24 rounded-xl" resizeMode="cover" accessibilityLabel="Bill photo" /> : null}
+              {photo ? <Image source={{ uri: photo.uri }} className="h-24 w-24 rounded-tile" resizeMode="cover" accessibilityLabel="Bill photo" /> : null}
               <View className="flex-row gap-2">
                 <View className="flex-1"><Button label="Camera" variant="secondary" onPress={() => void pick(true)} /></View>
                 <View className="flex-1"><Button label="Gallery" variant="secondary" onPress={() => void pick(false)} /></View>

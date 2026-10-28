@@ -3,12 +3,14 @@ import { useQuery } from "@tanstack/react-query";
 import * as Location from "expo-location";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useMemo, useState } from "react";
+import { BadgeCheck, Lock } from "lucide-react-native";
 import { Image, Pressable, View } from "react-native";
 import { IconTile, ServiceIcon } from "@/components/brand";
 import { Avatar } from "@/components/Avatar";
 import { CitySuggestions } from "@/components/CitySuggestions";
 import { Text } from "@/components/text";
-import { Body, Button, Chip, ErrorBanner, Screen, ScreenHeader, TextField, Title, ListSkeleton } from "@/components/ui";
+import { Body, Button, Chip, ErrorBanner, Screen, ScreenHeader, StatusPill, TextField, Title, ListSkeleton } from "@/components/ui";
+import { useThemeColors } from "@/theme/theme";
 import { useArea } from "@/features/customer/area-context";
 import { fetchServiceBySlug, fetchSubItems, searchProviders } from "@/features/customer/catalog-api";
 import { serviceImage } from "@/features/customer/service-images";
@@ -17,6 +19,7 @@ import type { ProviderListing, SubItemRow } from "@/features/customer/types";
 type SortChoice = ProviderSort;
 
 export default function ServiceScreen() {
+  const colors = useThemeColors();
   const router = useRouter();
   const { slug } = useLocalSearchParams<{ slug: string }>();
   const { area, setArea } = useArea();
@@ -50,6 +53,7 @@ export default function ServiceScreen() {
   );
   const canSortNearest = (providers.data?.listings ?? []).some((p) => p.point);
   const sorted = useMemo(() => sortProviders(withDistance, sort), [withDistance, sort]);
+  const lowestPrice = sorted.length ? Math.min(...sorted.map((p) => p.price)) : null;
 
   const pickNearest = async () => {
     setSort("nearest");
@@ -106,7 +110,7 @@ export default function ServiceScreen() {
                   return (
                     <Pressable key={g.section} accessibilityRole="tab" accessibilityState={{ selected }} accessibilityLabel={`${g.section}, ${g.items.length} options`}
                       onPress={() => setSection(g.section)}
-                      className={`w-[31%] items-center gap-1 rounded-2xl border-2 px-1 py-3 ${selected ? "border-brand bg-brand-soft" : "border-line bg-card"}`}>
+                      className={`w-[31%] items-center gap-1 rounded-tile border-2 px-1 py-3 ${selected ? "border-brand bg-brand-soft" : "border-line bg-card"}`}>
                       <Text className="text-2xl">{g.items[0]?.icon ?? "🛠️"}</Text>
                       <Text className="text-center text-xs font-semibold text-fg" numberOfLines={2}>{g.section}</Text>
                     </Pressable>
@@ -122,10 +126,10 @@ export default function ServiceScreen() {
               const visit = isCheckupVisit(s.name);
               return (
                 <Pressable key={s.id} accessibilityRole="radio" accessibilityState={{ selected }} onPress={() => setSubId(selected ? null : s.id)}
-                  className={`w-[48%] gap-1 rounded-3xl border-2 p-4 ${selected ? "border-brand bg-brand-soft" : visit ? "border-dashed border-brand/50 bg-card" : "border-line bg-card"}`}>
+                  className={`w-[48%] gap-1 rounded-panel border-2 p-4 ${selected ? "border-brand bg-brand-soft" : visit ? "border-dashed border-brand/50 bg-card" : "border-line bg-card"}`}>
                   <View className="flex-row items-start justify-between">
                     <Text className="text-3xl">{s.icon ?? "🛠️"}</Text>
-                    {visit ? <Text className="rounded-full bg-brand/15 px-2 py-0.5 text-[10px] font-bold uppercase text-brand">Visit</Text> : null}
+                    {visit ? <Text className="rounded-full bg-brand/15 px-2 py-0.5 text-xs font-bold uppercase text-brand">Visit</Text> : null}
                   </View>
                   <Text className="mt-1 text-base font-semibold text-fg">{s.name}</Text>
                   {s.description ? <Text className="text-xs leading-4 text-muted" numberOfLines={2}>{s.description}</Text> : null}
@@ -153,7 +157,7 @@ export default function ServiceScreen() {
       <ErrorBanner message={providers.isError ? "Could not load pros. Check your connection." : null} />
       {!needsSubItem && providers.isPending ? <ListSkeleton rows={2} /> : null}
       {!needsSubItem && providers.isSuccess && sorted.length === 0 ? (
-        <View className="gap-3 rounded-3xl border border-line bg-card p-4">
+        <View className="gap-3 rounded-panel border border-line bg-card p-4">
           <Text className="text-base font-semibold text-fg">No pros online{area.trim() ? ` in ${area.trim()}` : ""} right now</Text>
           <Body muted>
             {providers.data.offlineCount
@@ -166,24 +170,40 @@ export default function ServiceScreen() {
         </View>
       ) : null}
 
-      {!needsSubItem ? sorted.map((p) => (
-        <View key={p.id} className="gap-3 rounded-3xl border border-line bg-card p-4">
-          <View className="flex-row items-start justify-between gap-3">
-            <Avatar name={p.fullName} url={p.avatarUrl} size={56} />
-            <View className="flex-1 gap-0.5">
-              <Text className="text-lg font-semibold text-fg">{p.fullName}{p.isVerified ? "  ✓" : ""}</Text>
-              <Text className="text-sm text-muted">
-                ★ {formatRating(p.rating)}{p.totalReviews ? ` (${p.totalReviews})` : ""}  ·  {p.totalJobs} jobs
-                {p.experienceYears ? `  ·  ${p.experienceYears} yr exp` : ""}
-              </Text>
+      {!needsSubItem ? sorted.map((p) => {
+        const lowest = sorted.length > 1 && p.price === lowestPrice;
+        return (
+          <View key={p.id} className={`gap-3 rounded-panel border bg-card p-4 ${lowest ? "border-2 border-brand" : "border-line"}`}>
+            {lowest ? <StatusPill label="Lowest price" tone="brand" /> : null}
+            <View className="flex-row items-start justify-between gap-3">
+              <Avatar name={p.fullName} url={p.avatarUrl} size={52} />
+              <View className="flex-1 gap-0.5">
+                <View className="flex-row items-center gap-1">
+                  <Text className="flex-shrink text-lg font-bold text-fg">{p.fullName}{p.isVerified ? "  ✓" : ""}</Text>
+                  {p.isVerified ? <BadgeCheck size={18} color={colors.brand} accessibilityLabel="Verified" /> : null}
+                </View>
+                <Text className="text-sm text-muted">
+                  ★ {formatRating(p.rating)}{p.totalReviews ? ` (${p.totalReviews})` : ""}  ·  {p.totalJobs} jobs
+                  {p.experienceYears ? `  ·  ${p.experienceYears} yr exp` : ""}
+                </Text>
+              </View>
+              <View className="items-end">
+                <Text className="text-2xl font-extrabold text-price">{formatInr(p.price)}</Text>
+                <Text className="text-xs text-muted">final price</Text>
+              </View>
             </View>
-            <Text className="text-2xl font-bold text-brand">{formatInr(p.price)}</Text>
+            {p.distanceKm !== null ? <Text className="text-sm text-muted">About {formatDistance(p.distanceKm)} away</Text> : null}
+            {p.bio ? <Text className="text-sm text-muted" numberOfLines={2}>{p.bio}</Text> : null}
+            <Button label={`Book ${p.fullName.split(" ")[0]}`} onPress={() => book(p)} />
           </View>
-          {p.distanceKm !== null ? <Text className="text-sm text-muted">About {formatDistance(p.distanceKm)} away</Text> : null}
-          {p.bio ? <Text className="text-sm text-muted" numberOfLines={2}>{p.bio}</Text> : null}
-          <Button label={`Book ${p.fullName.split(" ")[0]}`} onPress={() => book(p)} />
+        );
+      }) : null}
+      {!needsSubItem && sorted.length > 0 ? (
+        <View className="flex-row items-center justify-center gap-1.5 py-1">
+          <Lock size={14} color={colors.muted} />
+          <Text className="text-xs text-muted">The price you see is the price you pay</Text>
         </View>
-      )) : null}
+      ) : null}
     </Screen>
   );
 }

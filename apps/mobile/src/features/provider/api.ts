@@ -1,5 +1,5 @@
 import {
-  callEdge, friendlyDbError, interpretPayout, isGuardedFieldError, patchFallbacks, type BookingPatch, type CompletionResult, type LedgerEntry, type PayoutRequestResult, type WalletSummary,
+  callEdge, friendlyDbError, interpretPayout, isGuardedFieldError, patchFallbacks, type BookingPatch, type CompletionResult, type LedgerEntry, type PayoutRequestResult, type RechargePack, type WalletSummary,
 } from "@handyfix/shared";
 import type { CheckoutOrder } from "@/lib/razorpay";
 import { getSupabase } from "@/lib/supabase";
@@ -133,7 +133,7 @@ export async function fetchWalletSummary(): Promise<WalletSummary> {
   if (error) throw readable(error);
   const d = (data ?? {}) as Partial<Record<keyof WalletSummary, number | string>>;
   const n = (v: number | string | undefined) => Number(v ?? 0) || 0;
-  return { balance: n(d.balance), dues: n(d.dues), available: n(d.available) };
+  return { balance: n(d.balance), dues: n(d.dues), available: n(d.available), held: n(d.held) };
 }
 
 /** Live position for the customer's map. `provider_locations.provider_id` is the AUTH user id, not the provider row id. */
@@ -178,8 +178,20 @@ export async function fetchMinPayout(): Promise<number | null> {
   return Number((data as { min_payout: number | string }).min_payout) || null;
 }
 
-export async function createTopUpOrder(amount: number): Promise<CheckoutOrder> {
-  return callEdge<CheckoutOrder>(getSupabase(), "create-wallet-topup-order", { amount });
+export async function createTopUpOrder(pack: RechargePack): Promise<CheckoutOrder> {
+  return callEdge<CheckoutOrder>(getSupabase(), "create-wallet-topup-order", { pack });
+}
+
+/**
+ * Asks the server whether Razorpay's signature is genuine, so the app can say "Payment received" at once.
+ * It never credits the wallet (only the webhook does). Null when the check is not available (function not deployed).
+ */
+export async function verifyTopUpPayment(ids: { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string }): Promise<{ verified: boolean; credited: boolean } | null> {
+  try {
+    return await callEdge<{ verified: boolean; credited: boolean }>(getSupabase(), "verify-wallet-payment", ids);
+  } catch {
+    return null;
+  }
 }
 
 export async function requestPayout(amount: number): Promise<PayoutRequestResult> {

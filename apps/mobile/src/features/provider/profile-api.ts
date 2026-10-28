@@ -37,7 +37,7 @@ export async function fetchProviderProfile(providerId: string): Promise<Provider
 }
 
 /** RLS lets a pro update only their own row; no row back means the update did not apply. */
-export async function saveProviderProfile(providerId: string, patch: ProviderProfilePatch): Promise<void> {
+export async function saveProviderProfile(providerId: string, patch: Omit<ProviderProfilePatch, "service_ids">): Promise<void> {
   const { data, error } = await getSupabase().from("service_providers").update(patch).eq("id", providerId).select("id").maybeSingle();
   if (error) throw readable(error);
   if (!data) throw new Error("Your profile could not be saved. Sign out and in again, then retry.");

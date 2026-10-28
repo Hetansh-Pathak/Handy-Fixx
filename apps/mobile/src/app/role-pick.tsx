@@ -94,7 +94,7 @@ export default function RolePick() {
 function RoleCard({ selected, title, note, onPress }: { selected: boolean; title: string; note: string; onPress: () => void }) {
   return (
     <Pressable accessibilityRole="radio" accessibilityState={{ selected }} onPress={onPress}
-      className={`gap-1 rounded-2xl border-2 p-4 ${selected ? "border-brand bg-brand/10" : "border-line bg-card"}`}>
+      className={`gap-1 rounded-tile border-2 p-4 ${selected ? "border-brand bg-brand/10" : "border-line bg-card"}`}>
       <Text className="text-lg font-semibold text-fg">{title}</Text>
       <Text className="text-sm text-muted">{note}</Text>
     </Pressable>

@@ -8,12 +8,14 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Text } from "@/components/text";
 import { Body, ErrorBanner, ScreenHeader, ListSkeleton } from "@/components/ui";
 import { useSession } from "@/features/auth/session-provider";
-import { colors } from "@/theme/colors";
+import { useThemeColors } from "@/theme/theme";
 import { chatKey, markRead, sendMessage, unreadKey } from "./api";
 import { useChat, useUnread } from "./use-chat";
+import { ScreenBackground } from "@/components/screen-background";
 
 /** "Message Rajesh" with a badge for unread messages. Shown only while chat is open or has history. */
 export function ChatButton({ bookingId, role, status, otherName }: { bookingId: string; role: ChatRole; status: string; otherName: string }) {
+  const colors = useThemeColors();
   const router = useRouter();
   const history = useChat(bookingId, status === "completed" || status === "cancelled");
   const mode = chatAvailable(status, (history.data?.length ?? 0) > 0);
@@ -23,10 +25,10 @@ export function ChatButton({ bookingId, role, status, otherName }: { bookingId: 
   const go = () => router.push(`/${role}/chat/${bookingId}`);
   return (
     <Pressable accessibilityRole="button" accessibilityLabel={`${mode === "open" ? "Message" : "Read chat with"} ${otherName}${count ? `, ${count} unread` : ""}`}
-      onPress={go} className="min-h-[52px] flex-row items-center justify-center gap-2 rounded-xl border border-line bg-card px-5 active:opacity-80">
+      onPress={go} className="min-h-[52px] flex-row items-center justify-center gap-2 rounded-tile border border-line bg-card px-5 active:opacity-80">
       <MessageCircle size={20} color={colors.brand} />
       <Text className="text-base font-semibold text-fg">{mode === "open" ? `Message ${otherName}` : "Read chat"}</Text>
-      {count > 0 ? <View className="min-w-[22px] items-center rounded-full bg-brand px-1.5 py-0.5"><Text className="text-xs font-bold text-white">{count}</Text></View> : null}
+      {count > 0 ? <View className="min-w-[22px] items-center rounded-full bg-brand px-1.5 py-0.5"><Text className="text-xs font-bold text-onbrand">{count}</Text></View> : null}
     </Pressable>
   );
 }
@@ -35,6 +37,7 @@ export function ChatButton({ bookingId, role, status, otherName }: { bookingId: 
 export function ChatScreen({ bookingId, role, status, otherName, onBack }: {
   bookingId: string; role: ChatRole; status: string; otherName: string; onBack: () => void;
 }) {
+  const colors = useThemeColors();
   const { userId } = useSession();
   const queryClient = useQueryClient();
   const chat = useChat(bookingId);
@@ -72,7 +75,7 @@ export function ChatScreen({ bookingId, role, status, otherName, onBack }: {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-canvas" edges={["top", "bottom"]}>
+    <ScreenBackground><SafeAreaView className="flex-1" edges={["top", "bottom"]}>
       <KeyboardAvoidingView className="flex-1" behavior={Platform.OS === "ios" ? "padding" : undefined}>
         <View className="px-5 pt-3"><ScreenHeader title={`Chat with ${otherName}`} onBack={onBack} /></View>
         <ScrollView ref={scroller} className="flex-1" contentContainerStyle={{ padding: 20, gap: 10, flexGrow: 1 }} keyboardShouldPersistTaps="handled">
@@ -88,9 +91,9 @@ export function ChatScreen({ bookingId, role, status, otherName, onBack }: {
             const own = m.sender_type === role;
             return (
               <View key={m.id} className={own ? "items-end" : "items-start"}>
-                <View className={`max-w-[80%] rounded-2xl px-4 py-2.5 ${own ? "rounded-br-md bg-brand" : "rounded-bl-md border border-line bg-card"}`}>
-                  <Text className={`text-base ${own ? "text-white" : "text-fg"}`}>{m.content}</Text>
-                  <Text className={`mt-1 text-right text-[11px] ${own ? "text-white/80" : "text-muted"}`}>{formatMessageTime(m.created_at)}</Text>
+                <View className={`max-w-[80%] rounded-tile px-4 py-2.5 ${own ? "rounded-br-md bg-brand" : "rounded-bl-md border border-line bg-card"}`}>
+                  <Text className={`text-base ${own ? "text-onbrand" : "text-fg"}`}>{m.content}</Text>
+                  <Text className={`mt-1 text-right text-xs ${own ? "text-onbrand opacity-80" : "text-muted"}`}>{formatMessageTime(m.created_at)}</Text>
                 </View>
               </View>
             );
@@ -105,11 +108,11 @@ export function ChatScreen({ bookingId, role, status, otherName, onBack }: {
                 <TextInput
                   accessibilityLabel="Message" value={draft} onChangeText={(t) => { setDraft(t); setError(null); }} multiline maxLength={1000}
                   placeholder="Type a message" placeholderTextColor={colors.mutedSoft} style={{ fontFamily: "PlusJakartaSans_400Regular", maxHeight: 120 }}
-                  className="min-h-[48px] flex-1 rounded-2xl border border-line bg-field px-4 py-3 text-base text-fg"
+                  className="min-h-[48px] flex-1 rounded-tile border border-line bg-field px-4 py-3 text-base text-fg"
                 />
                 <Pressable accessibilityRole="button" accessibilityLabel="Send message" disabled={sending || !draft.trim()} onPress={() => void send()}
                   className={`h-12 w-12 items-center justify-center rounded-full bg-brand ${sending || !draft.trim() ? "opacity-40" : "active:opacity-80"}`}>
-                  <Send size={20} color={colors.white} />
+                  <Send size={20} color={colors.onBrand} />
                 </Pressable>
               </View>
               <Text className="text-xs text-muted">Phone numbers cannot be shared here. Use the Call button on the booking.</Text>
@@ -119,6 +122,6 @@ export function ChatScreen({ bookingId, role, status, otherName, onBack }: {
           )}
         </View>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </SafeAreaView></ScreenBackground>
   );
 }

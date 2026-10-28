@@ -2,8 +2,10 @@ import { Stack } from "expo-router";
 import { Button, FullScreenMessage } from "@/components/ui";
 import { useSession } from "@/features/auth/session-provider";
 import { ProviderRuntime } from "@/features/provider/provider-runtime";
+import { useThemeColors } from "@/theme/theme";
 
 export default function ProviderLayout() {
+  const colors = useThemeColors();
   const { provider, signOut } = useSession();
 
   // A suspended pro is locked out of the app (same rule as the old provider portal).
@@ -18,7 +20,7 @@ export default function ProviderLayout() {
   // The runtime owns online status, the heartbeat and the incoming-request alert for every provider screen.
   return (
     <ProviderRuntime>
-      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: "#FAF6EF" } }}>
+      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.canvas } }}>
         <Stack.Screen name="(tabs)" />
       </Stack>
     </ProviderRuntime>

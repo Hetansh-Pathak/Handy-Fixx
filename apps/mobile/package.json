@@ -12,6 +12,7 @@
     "aes-js": "^3.1.2",
     "expo": "~58.0.20",
     "expo-audio": "~58.0.10",
+    "expo-blur": "~58.0.5",
     "expo-build-properties": "~58.0.11",
     "expo-constants": "~58.0.13",
     "expo-dev-client": "~58.0.16",
@@ -70,7 +71,7 @@
     "build:provider": "eas build --profile provider-dev --platform android",
     "typecheck": "tsc --noEmit",
     "export:android": "EXPO_OFFLINE=1 expo export --platform android",
-    "test:e2e-web": "node e2e-web/auth-flow.cjs && node e2e-web/booking-flow.cjs && node e2e-web/provider-flow.cjs && node e2e-web/status-flow.cjs && node e2e-web/wallet-flow.cjs && node e2e-web/features-flow.cjs"
+    "test:e2e-web": "node e2e-web/auth-flow.cjs && node e2e-web/booking-flow.cjs && node e2e-web/provider-flow.cjs && node e2e-web/status-flow.cjs && node e2e-web/wallet-flow.cjs && node e2e-web/features-flow.cjs && node e2e-web/services-flow.cjs"
   },
   "private": true
 }

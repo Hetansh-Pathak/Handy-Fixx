@@ -8,7 +8,7 @@ import { Body, Button, Card, ErrorBanner, Screen, ScreenHeader, TextField, TextL
 import { useSession } from "@/features/auth/session-provider";
 import { env } from "@/lib/env";
 import { getSupabase } from "@/lib/supabase";
-import { colors } from "@/theme/colors";
+import { useThemeColors } from "@/theme/theme";
 
 /** Reads the readable reason the function sent back, if any. */
 async function reasonFrom(error: unknown): Promise<string | undefined> {
@@ -26,6 +26,7 @@ async function reasonFrom(error: unknown): Promise<string | undefined> {
 export function DeleteAccountScreen({ role, activeBookings, walletBalance, walletDue }: {
   role: "customer" | "provider"; activeBookings: number; walletBalance?: number; walletDue?: number;
 }) {
+  const colors = useThemeColors();
   const router = useRouter();
   const { signOut, email } = useSession();
   const [word, setWord] = useState("");
@@ -53,7 +54,7 @@ export function DeleteAccountScreen({ role, activeBookings, walletBalance, walle
   return (
     <Screen>
       <ScreenHeader title="Delete account" onBack={() => (router.canGoBack() ? router.back() : router.replace("/"))} />
-      <View className="flex-row items-start gap-3 rounded-2xl border border-danger bg-danger/10 p-4">
+      <View className="flex-row items-start gap-3 rounded-tile border border-danger bg-danger/10 p-4">
         <TriangleAlert size={22} color={colors.danger} />
         <Text className="flex-1 text-base text-danger">This cannot be undone. Your profile, saved address and documents are removed.</Text>
       </View>

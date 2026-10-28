@@ -102,14 +102,14 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   const dt = Date.now() - t0;
   check("a request arrives by Realtime well before the 8 s polling fallback", dt < 6000, `${dt} ms`);
   const popupText = await body();
-  check("the popup shows the request and what the pro earns, with no timer",
-    popupText.includes("Kitchen tap leaks") && popupText.includes("You earn ₹349") && popupText.includes("No timer") && !/seconds/i.test(popupText), popupText.slice(0, 260));
+  check("the popup shows the request, what the pro earns and the 3% fee (waived in launch), with no timer",
+    popupText.includes("Kitchen tap leaks") && popupText.includes("You earn ₹349") && popupText.includes("HandyFix fee ₹10 waived") && popupText.includes("No timer") && !/seconds/i.test(popupText), popupText.slice(0, 260));
   await sleep(700);
   await shot("32-request-popup");
   await openRequest();
   const alertText = await body();
   check("the request screen shows the earning and the fee before deciding (fee waived in launch)",
-    alertText.includes("You earn ₹349") && alertText.includes("HandyFix fee ₹15 waived") && alertText.includes("You keep ₹349"), alertText.slice(0, 260));
+    alertText.includes("You earn ₹349") && alertText.includes("HandyFix fee ₹10 waived") && alertText.includes("You keep ₹349"), alertText.slice(0, 260));
   check("the customer's phone is not shown before accepting", !alertText.includes("9876500001"));
   await T("Accept").click();
   await see("Ready to start");
@@ -138,7 +138,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   await see("Job completed");
   const doneText = await body();
   check("the right code completes the job; the fee is shown as waived and nothing is charged in launch",
-    db.storedBookings.find((b) => b.id === r1.id).status === "completed" && doneText.includes("HandyFix fee ₹15 waived") && doneText.includes("You keep ₹349") && db.wallet.available === 0);
+    db.storedBookings.find((b) => b.id === r1.id).status === "completed" && doneText.includes("HandyFix fee ₹10 waived") && doneText.includes("You keep ₹349") && db.wallet.available === 0);
   await shot("34-job-completed");
   await T("Done").click();
 
@@ -169,9 +169,11 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   await alertUp(6000);
   await openRequest();
   const blockedText = await body();
-  check("with an empty wallet the request says to top up and Accept is disabled", blockedText.includes("Wallet below the fee. Top up ₹100 to accept.") && blockedText.includes("HandyFix fee ₹15") && !blockedText.includes("waived"), blockedText.slice(0, 260));
-  const acceptBtn = page.locator('[aria-disabled="true"]:visible', { hasText: "Accept" });
+  check("with an empty wallet the request says to recharge the ₹49 pack and Accept is disabled",
+    blockedText.includes("Recharge ₹49 to accept. Your wallet is below the ₹10 fee.") && blockedText.includes("HandyFix fee ₹10") && !blockedText.includes("waived"), blockedText.slice(0, 260));
+  const acceptBtn = page.locator('[aria-disabled="true"]:visible', { hasText: /^Accept$/ });
   check("Accept is disabled", (await acceptBtn.count()) >= 1);
+  check("a Recharge button leads to the wallet", (await count("Recharge ₹49 to accept")) >= 1);
   await sleep(700);
   await shot("35-request-blocked");
   await T("Decline").click();
@@ -185,9 +187,10 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   pushBookingChange(r4);
   await alertUp(6000);
   await openRequest();
-  check("with ₹200 the fee is charged (not waived) and Accept works", (await body()).includes("HandyFix fee ₹15") && !(await body()).includes("waived"));
+  check("with ₹200 the fee is charged (not waived) and Accept works", (await body()).includes("HandyFix fee ₹10") && !(await body()).includes("waived"));
   await T("Accept").click();
   await see("Ready to start");
+  check("accepting holds the ₹10 fee (spendable ₹190, held ₹10)", db.wallet.available === 190 && db.wallet.held === 10, JSON.stringify(db.wallet));
   await T("Start trip").click();
   await see("On the way");
   await T("Start job").click();
@@ -196,15 +199,15 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   await T("Enter customer's code").click();
   await see("Job completed");
   const paid = await body();
-  check("completing a job outside the launch period deducts the flat fee", db.wallet.available === 185 && paid.includes("HandyFix fee ₹15") && paid.includes("You keep ₹334"), `wallet=${db.wallet.available}`);
+  check("completing a job outside the launch period charges the held 3% fee", db.wallet.available === 190 && db.wallet.held === 0 && paid.includes("HandyFix fee ₹10") && paid.includes("You keep ₹339"), JSON.stringify(db.wallet));
   await T("Done").click();
   await see("Jobs");
   await T("Home", true).click();
-  await waitBody("Wallet ₹185", 20000).then(() => check("the wallet strip shows the new balance", true)).catch(() => check("the wallet strip shows the new balance", false));
+  await waitBody("Wallet ₹190", 20000).then(() => check("the wallet strip shows the new balance", true)).catch(() => check("the wallet strip shows the new balance", false));
 
   // the server is the authority: if it disagrees with the screen, its message is shown as written
   await goHome();
-  await waitBody("Wallet ₹185");
+  await waitBody("Wallet ₹190");
   await sleep(1200);
   db.wallet = { available: 0, dues: 0 };
   const r5 = newRequest();
@@ -212,7 +215,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   await alertUp(6000);
   await openRequest();
   await T("Accept").click();
-  await see("Wallet below the fee. Top up Rs 100 to accept.", 8000)
+  await see("Recharge ₹49 to accept. Your wallet is below the ₹10 fee.", 8000)
     .then(() => check("a server-side wallet rejection is shown as written", db.storedBookings.find((b) => b.id === r5.id).status === "pending"))
     .catch(async () => check("a server-side wallet rejection is shown as written", false, (await body()).slice(0, 200)));
   await T("Decline").click();

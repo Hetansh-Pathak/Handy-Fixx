@@ -7,10 +7,11 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import * as Location from "expo-location";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { Lock } from "lucide-react-native";
 import { View } from "react-native";
 import { CitySuggestions } from "@/components/CitySuggestions";
 import { Text } from "@/components/text";
-import { Body, Button, Card, Chip, ErrorBanner, InfoBanner, Screen, ScreenHeader, TextField, Title, ListSkeleton } from "@/components/ui";
+import { Body, Button, Card, Chip, ErrorBanner, InfoBanner, Screen, ScreenHeader, StatusPill, TextField, Title, ListSkeleton, WarnBanner } from "@/components/ui";
 import { loadCustomerProfile, loadEmailVerified } from "@/features/auth/api";
 import { EmailVerificationCard } from "@/features/auth/EmailVerificationCard";
 import { useSession } from "@/features/auth/session-provider";
@@ -197,7 +198,12 @@ export default function BookScreen() {
   return (
     <Screen>
       <ScreenHeader title={`Book ${ctx.provider.fullName.split(" ")[0]}`} onBack={back} />
-      <Text className="text-sm font-semibold uppercase tracking-widest text-brand">Step {step} of 3</Text>
+      <View className="gap-2">
+        <Text className="text-sm font-semibold uppercase tracking-widest text-brand">Step {step} of 3</Text>
+        <View className="flex-row gap-1.5" accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+          {[1, 2, 3].map((n) => <View key={n} className={`h-1.5 flex-1 rounded-full ${n <= step ? "bg-brand" : "bg-line"}`} />)}
+        </View>
+      </View>
       <ErrorBanner message={error} />
 
       {step === 1 ? (
@@ -253,11 +259,14 @@ export default function BookScreen() {
           </Card>
           <Card>
             <Row label="Service price" value={formatInr(quote.servicePrice)} />
-            <Row label="Platform fee" value={formatInr(quote.platformFee)} />
+            <View className="flex-row items-center justify-between gap-4">
+              <Text className="text-base text-muted">Platform fee</Text>
+              <StatusPill label={formatInr(quote.platformFee)} tone="ok" />
+            </View>
             <View className="my-1 h-px bg-line" />
             <Row label="Total" value={formatInr(quote.total)} strong />
           </Card>
-          <InfoBanner message={`Price is locked. Pay ${ctx.provider.fullName.split(" ")[0]} directly by UPI or cash after the service.`} />
+          <WarnBanner icon={Lock} message={`Price is locked. Pay ${ctx.provider.fullName.split(" ")[0]} directly by UPI or cash after the service.`} />
           <TextField label="Describe the problem (optional)" value={notes} onChangeText={setNotes} multiline maxLength={1000}
             placeholder="e.g. Kitchen tap leaking since yesterday, water under the sink" />
           <AttachmentPicker value={attachments} onChange={setAttachments} />
@@ -265,7 +274,7 @@ export default function BookScreen() {
           {pause.data ? <ErrorBanner message={pause.data} /> : null}
           {!env.bookingEnabled ? <InfoBanner message="Booking opens soon. We are finishing our new pricing." /> : null}
           {uploading ? <InfoBanner message="Booking saved. Uploading your photos and voice note…" /> : null}
-          <Button label={`Confirm · ${formatInr(quote.total)}`} loading={busy}
+          <Button label={`Confirm · ${formatInr(quote.total)}`} icon={Lock} loading={busy}
             disabled={!env.bookingEnabled || verified.isPending || verified.data === false || !!pause.data} onPress={() => void confirm()} />
         </>
       ) : null}
@@ -277,7 +286,7 @@ function Row({ label, value, strong = false }: { label: string; value: string; s
   return (
     <View className="flex-row justify-between gap-4">
       <Text className="text-base text-muted">{label}</Text>
-      <Text className={`flex-1 text-right text-base ${strong ? "font-bold text-brand" : "text-fg"}`}>{value}</Text>
+      <Text className={`flex-1 text-right text-base ${strong ? "text-xl font-extrabold text-price" : "text-fg"}`}>{value}</Text>
     </View>
   );
 }

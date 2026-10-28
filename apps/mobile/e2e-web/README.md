@@ -11,6 +11,7 @@ the script, so it needs no Supabase project, phone or network. Two suites:
 - `wallet-flow.cjs`: the pro's wallet: balance and dues, history, earnings, top-up validation and order creation (native Razorpay checkout cannot run on web), quick-pick amounts, withdrawal rules and the dues lock.
 
 - `features-flow.cjs`: the legacy port: the pro's 9-step identity check (validation, saving, resume), working hours, reviews (names shown safely), notifications, and the customer's chat (phone numbers refused, price lists allowed, read-only after the job), rating and the late-cancel warning and marking.
+- `services-flow.cjs`: the pro's My services screen (services, ticking jobs, own price inside the band, saving, the screen before the database change) and the customer list honouring it (unticked pro hidden, own rate shown).
 - `variant-flow.cjs customer|provider`: the two store apps. Start the dev server with `EXPO_PUBLIC_APP_VARIANT=customer` (or `provider`) first. Checks that the customer app skips the role question, the Pro app only asks for pro details, and a pro opening the customer app is sent to the Pro app.
 - `preview.cjs customer|provider`: not a test; writes phone-size screenshots of the main screens to `e2e-web/shots/preview/<variant>/`.
 

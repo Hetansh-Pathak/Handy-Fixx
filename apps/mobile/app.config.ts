@@ -3,7 +3,7 @@ import type { ExpoConfig } from "expo/config";
 
 const GOLD = "#C16430"; // brand terracotta (notification accent)
 const BLACK = "#0A0A0A"; // launcher icon background (the logo tile is dark)
-const CANVAS = "#FAF6EF"; // app background, same as the old HandyFix sites
+const CANVAS = "#05070D"; // splash + window background: the apnabanda "Black + Blur" canvas (the native splash cannot follow the theme)
 const MIC_REASON = "HandyFix uses the microphone so you can record a voice note describing the problem for your pro.";
 
 // FCM / Google services file. On EAS, upload it as a file secret and expose its path via
@@ -46,7 +46,7 @@ const config: ExpoConfig = {
   scheme: IDENTITY.scheme,
   version: "0.1.0",
   orientation: "portrait",
-  userInterfaceStyle: "light",
+  userInterfaceStyle: "automatic", // Profile > Appearance offers Light / Dark / System; System needs this
   icon: "./assets/images/icon.png",
   backgroundColor: CANVAS,
   android: {

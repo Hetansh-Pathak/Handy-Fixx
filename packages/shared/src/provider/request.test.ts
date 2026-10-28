@@ -35,13 +35,13 @@ describe("openRequests", () => {
 
 describe("requestEconomics (PDF p.7: earning and fee shown before deciding)", () => {
   it("normal job: the fee comes off what you keep", () => {
-    expect(requestEconomics({ price: 349, launchActive: false })).toEqual({ earning: 349, fee: 15, feeWaived: false, youKeep: 334 });
+    expect(requestEconomics({ price: 349, launchActive: false })).toEqual({ earning: 349, fee: 10, feeWaived: false, youKeep: 339 });
   });
   it("launch period: the real fee is shown as waived and you keep everything", () => {
-    expect(requestEconomics({ price: 349, launchActive: true })).toEqual({ earning: 349, fee: 15, feeWaived: true, youKeep: 349 });
+    expect(requestEconomics({ price: 349, launchActive: true })).toEqual({ earning: 349, fee: 10, feeWaived: true, youKeep: 349 });
   });
-  it("uses the larger slabs for bigger jobs", () => {
-    expect(requestEconomics({ price: 1500, launchActive: false })).toMatchObject({ fee: 30, youKeep: 1470 });
+  it("3% up to the ₹50 cap for bigger jobs", () => {
+    expect(requestEconomics({ price: 1500, launchActive: false })).toMatchObject({ fee: 45, youKeep: 1455 });
     expect(requestEconomics({ price: 1800, launchActive: false })).toMatchObject({ fee: 50, youKeep: 1750 });
   });
   it("a zero price has no fee and nothing to waive", () => {

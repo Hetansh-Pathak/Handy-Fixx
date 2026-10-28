@@ -8,7 +8,7 @@ export type ExtraWorkItem = {
   id: string;
   description: string;
   amount: Rupees;
-  /** `service` counts toward the fee slab; `part` (parts/materials) does not. */
+  /** `service` counts toward the fee; `part` (parts/materials) does not. */
   kind: ExtraWorkKind;
   status: ExtraWorkStatus;
   /** Required for parts so the customer can see the bill (no hidden markup). */
@@ -21,7 +21,7 @@ export type Bill = {
   extraServiceTotal: Rupees;
   /** Approved parts/materials only. */
   partsTotal: Rupees;
-  /** rate + approved service extras. This is what the fee slab is picked from. */
+  /** rate + approved service extras. The fee is worked out from this. */
   serviceBill: Rupees;
   /** Platform fee added to the customer's bill: always ₹0. */
   customerPlatformFee: Rupees;

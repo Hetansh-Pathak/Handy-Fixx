@@ -10,7 +10,7 @@ import { Body, Button, Card, Screen, ScreenHeader, Title } from "@/components/ui
 import { providerRowKey, useSession } from "@/features/auth/session-provider";
 import { kycKey } from "@/features/kyc/api";
 import { useKycWizard } from "@/features/kyc/wizard-context";
-import { colors } from "@/theme/colors";
+import { useThemeColors } from "@/theme/theme";
 
 const NEEDS = [
   "Your Aadhaar card (front, and back if you can)",
@@ -20,6 +20,7 @@ const NEEDS = [
 ];
 
 export default function KycHome() {
+  const colors = useThemeColors();
   const router = useRouter();
   const queryClient = useQueryClient();
   const { userId, provider } = useSession();

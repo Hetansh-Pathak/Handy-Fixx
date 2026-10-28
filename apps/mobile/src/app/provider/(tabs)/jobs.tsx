@@ -45,9 +45,9 @@ export default function ProviderJobs() {
             <Pressable key={s.key} accessibilityRole="tab" accessibilityState={{ selected }} accessibilityLabel={`${s.label}, ${n}`}
               onPress={() => setTab(s.key)}
               className={`min-h-[44px] flex-row items-center gap-2 rounded-full border px-4 ${selected ? "border-brand bg-brand" : "border-line bg-card"}`}>
-              <Text className={`text-sm font-semibold ${selected ? "text-white" : "text-fg"}`}>{s.label}</Text>
-              <View className={`min-w-[22px] items-center rounded-full px-1.5 ${selected ? "bg-white/25" : s.key === "new" && n ? "bg-brand" : "bg-field"}`}>
-                <Text className={`text-xs font-bold ${selected || (s.key === "new" && n) ? "text-white" : "text-muted"}`}>{n}</Text>
+              <Text className={`text-sm font-semibold ${selected ? "text-onbrand" : "text-fg"}`}>{s.label}</Text>
+              <View className={`min-w-[22px] items-center rounded-full px-1.5 ${selected ? "bg-onbrand/20" : s.key === "new" && n ? "bg-brand" : "bg-field"}`}>
+                <Text className={`text-xs font-bold ${selected || (s.key === "new" && n) ? "text-onbrand" : "text-muted"}`}>{n}</Text>
               </View>
             </Pressable>
           );
@@ -63,7 +63,7 @@ export default function ProviderJobs() {
         return (
           <Pressable key={b.id} accessibilityRole="button" accessibilityLabel={`Job ${serviceNameOf(b)}`}
             onPress={() => router.push({ pathname: "/provider/job/[id]", params: { id: b.id } })}
-            className={`gap-1 rounded-2xl border bg-card p-4 active:opacity-80 ${current === "new" ? "border-brand" : "border-line"}`}>
+            className={`gap-1 rounded-tile border bg-card p-4 active:opacity-80 ${current === "new" ? "border-brand" : "border-line"}`}>
             <View className="flex-row justify-between gap-3">
               <Text className="flex-1 text-lg font-semibold text-fg">{serviceNameOf(b)}</Text>
               <Text className="text-lg font-bold text-brand">{formatInr(b.provider_amount ?? 0)}</Text>
