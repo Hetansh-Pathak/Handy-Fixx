@@ -12,6 +12,7 @@ import { Text } from "@/components/text";
 import { Body, Button, Card, Chip, ErrorBanner, InfoBanner, Screen, ScreenHeader, TextField } from "@/components/ui";
 import { providerRowKey, useSession } from "@/features/auth/session-provider";
 import { fetchServices } from "@/features/customer/catalog-api";
+import { loadErrorMessage } from "@/lib/load-error";
 import { AvatarEditor } from "@/features/provider/AvatarEditor";
 import { fetchProviderProfile, providerProfileKey, saveProviderProfile } from "@/features/provider/profile-api";
 
@@ -195,7 +196,7 @@ function EditForm({ providerId }: { providerId: string }) {
       </Section>
 
       <Section title="Services you offer" hint="You only get requests for the services you pick." error={errors.serviceIds}>
-        {services.isError ? <Body muted>Could not load services.</Body> : null}
+        {services.isError ? <Body muted>{loadErrorMessage("services", services.error)}</Body> : null}
         <View className="flex-row flex-wrap gap-2">
           {(services.data ?? []).map((s) => (
             <Chip key={s.id} label={s.name} selected={values.serviceIds.includes(s.id)} onPress={() => toggleService(s.id)} />

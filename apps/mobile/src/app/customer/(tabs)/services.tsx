@@ -9,6 +9,7 @@ import { Body, Button, ErrorBanner, Title } from "@/components/ui";
 import { useArea } from "@/features/customer/area-context";
 import { BannerCarousel } from "@/features/customer/BannerCarousel";
 import { fetchServices } from "@/features/customer/catalog-api";
+import { loadErrorMessage } from "@/lib/load-error";
 import { ServiceGrid } from "@/features/customer/ServiceGrid";
 import { groupServices } from "@/features/customer/service-groups";
 import { colors } from "@/theme/colors";
@@ -70,7 +71,7 @@ export default function AllServices() {
           </ScrollView>
         ) : null}
 
-        <ErrorBanner message={services.isError ? "Could not load services." : null} />
+        <ErrorBanner message={services.isError ? loadErrorMessage("services", services.error) : null} />
         {services.isError ? <Button label="Try again" variant="secondary" onPress={() => void services.refetch()} /> : null}
         {services.isPending ? <Body muted>Loading services…</Body> : null}
         {services.isSuccess && visible.length === 0 ? <Body muted>No services match “{search}”.</Body> : null}

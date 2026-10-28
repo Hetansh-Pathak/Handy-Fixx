@@ -24,6 +24,8 @@
     "web:customer": "npm --prefix apps/mobile run web:customer",
     "web:provider": "npm --prefix apps/mobile run web:provider",
     "start:customer": "npm --prefix apps/mobile run start:customer",
-    "start:provider": "npm --prefix apps/mobile run start:provider"
+    "start:provider": "npm --prefix apps/mobile run start:provider",
+    "env:check": "node scripts/env-doctor.mjs",
+    "env:fix": "node scripts/env-doctor.mjs --fix"
   }
 }

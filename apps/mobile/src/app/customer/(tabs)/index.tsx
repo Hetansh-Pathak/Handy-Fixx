@@ -10,6 +10,7 @@ import { Body, Button, ErrorBanner } from "@/components/ui";
 import { useSession } from "@/features/auth/session-provider";
 import { useArea } from "@/features/customer/area-context";
 import { fetchServices } from "@/features/customer/catalog-api";
+import { loadErrorMessage } from "@/lib/load-error";
 import { ServiceGrid } from "@/features/customer/ServiceGrid";
 import { env } from "@/lib/env";
 import { colors } from "@/theme/colors";
@@ -115,7 +116,7 @@ export default function CustomerHome() {
         {/* Popular services: the full list with search and categories is the Services tab */}
         <View className="gap-5 px-5 pt-10" accessibilityLabel="Popular services">
           <SectionHeading title="Every home service, one tap away" subtitle="Trusted professionals for every corner of your home" />
-          <ErrorBanner message={services.isError ? "Could not load services." : null} />
+          <ErrorBanner message={services.isError ? loadErrorMessage("services", services.error) : null} />
           {services.isError ? <Button label="Try again" variant="secondary" onPress={() => void services.refetch()} /> : null}
           {services.isPending ? <Body muted>Loading services…</Body> : null}
           <ServiceGrid services={popular} />
