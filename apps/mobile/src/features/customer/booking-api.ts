@@ -98,10 +98,11 @@ export type BookingRow = {
   longitude: number | null;
   provider_eta_minutes: number | null;
   cancellation_reason: string | null;
+  completed_at: string | null;
 };
 
 const BOOKING_COLUMNS =
-  "id, status, created_at, booking_date, booking_time, address, city, pincode, special_instructions, sub_item_id, sub_item_name, provider_id, service_id, provider_amount, platform_fee, total_amount, latitude, longitude, provider_eta_minutes, cancellation_reason";
+  "id, status, created_at, booking_date, booking_time, address, city, pincode, special_instructions, sub_item_id, sub_item_name, provider_id, service_id, provider_amount, platform_fee, total_amount, latitude, longitude, provider_eta_minutes, cancellation_reason, completed_at";
 
 export async function fetchBooking(id: string): Promise<{ booking: BookingRow; serviceName: string | null; providerName: string | null } | null> {
   const supabase = getSupabase();
@@ -130,13 +131,14 @@ export async function fetchCompletionCode(bookingId: string): Promise<string | n
 }
 
 /**
- * The pro's phone, only after they accept (PDF p.2). Needs the server function in
- * supabase/proposals/…customer_booking_contact; until it exists this returns null and the Call button stays hidden.
+ * The pro's phone, only after they accept (PDF p.2). Customers cannot read service_providers, so this goes
+ * through get_booking_provider(), which returns the phone only while the booking is confirmed or underway.
  */
 export async function fetchProviderPhone(bookingId: string): Promise<string | null> {
-  const { data, error } = await getSupabase().rpc("get_booking_provider_phone", { p_booking_id: bookingId });
-  if (error) return null;
-  return typeof data === "string" && data.trim() ? data.trim() : null;
+  const { data, error } = await getSupabase().rpc("get_booking_provider", { p_booking_id: bookingId });
+  if (error || !data) return null;
+  const phone = (data as { phone?: string | null }).phone;
+  return typeof phone === "string" && phone.trim() ? phone.trim() : null;
 }
 
 export type ProviderPosition = { latitude: number; longitude: number; updated_at: string };

@@ -19,13 +19,15 @@ export type ProviderBooking = {
   longitude: number | null;
   provider_amount: number | null;
   total_amount: number | null;
+  parts_amount: number | null;
+  completed_at: string | null;
   sub_item_name: string | null;
   special_instructions: string | null;
   services: { name: string } | { name: string }[] | null;
 };
 
 const BOOKING_COLUMNS =
-  "id, status, created_at, booking_date, booking_time, address, city, pincode, customer_name, customer_phone, latitude, longitude, provider_amount, total_amount, sub_item_name, special_instructions, services(name)";
+  "id, status, created_at, booking_date, booking_time, address, city, pincode, customer_name, customer_phone, latitude, longitude, provider_amount, total_amount, parts_amount, completed_at, sub_item_name, special_instructions, services(name)";
 
 export const serviceNameOf = (b: ProviderBooking): string => {
   const s = Array.isArray(b.services) ? b.services[0] : b.services;
@@ -95,6 +97,23 @@ export async function completeWithCode(bookingId: string, code: string): Promise
   const { data, error } = await getSupabase().rpc("complete_booking_with_code", { p_booking_id: bookingId, p_code: code });
   if (error) throw readable(error);
   return data as CompletionResult;
+}
+
+/** The fee record the database wrote when the job closed (PDF p.8): bill, slab, charged or waived, returned. */
+export type FeeRecord = { service_bill: number; slab_fee: number; charged: number; waived: number; refunded: number };
+
+export async function fetchFeeRecord(bookingId: string): Promise<FeeRecord | null> {
+  const { data, error } = await getSupabase()
+    .from("booking_fees")
+    .select("service_bill, slab_fee, charged, waived, refunded")
+    .eq("booking_id", bookingId)
+    .maybeSingle();
+  if (error || !data) return null;
+  const r = data as Record<keyof FeeRecord, number | string>;
+  return {
+    service_bill: Number(r.service_bill), slab_fee: Number(r.slab_fee), charged: Number(r.charged),
+    waived: Number(r.waived), refunded: Number(r.refunded ?? 0),
+  };
 }
 
 export async function fetchWalletSummary(): Promise<WalletSummary> {

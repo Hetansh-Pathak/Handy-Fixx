@@ -11,6 +11,7 @@ export * from "./booking/completion-code";
 export * from "./booking/attachments";
 export * from "./booking/cancellation";
 export * from "./booking/dispute";
+export * from "./booking/extras";
 export * from "./booking/request-timer";
 export * from "./booking/tracking";
 export * from "./booking/request-outcome";

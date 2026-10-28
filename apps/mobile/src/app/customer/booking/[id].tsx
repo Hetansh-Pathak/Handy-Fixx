@@ -18,6 +18,8 @@ import {
 } from "@/features/customer/booking-api";
 import type { ProviderListing } from "@/features/customer/types";
 import { useBookingLive } from "@/features/customer/use-booking-live";
+import { CustomerDispute } from "@/features/disputes/components";
+import { BillCard, CustomerExtras, useExtras } from "@/features/extras/components";
 
 const FINISHED = ["completed", "cancelled"];
 
@@ -83,6 +85,7 @@ export default function BookingStatusScreen() {
     queryFn: () => fetchAlternatives(booking!),
   });
   const profile = useQuery({ queryKey: ["customer-profile", userId], enabled: !!userId, queryFn: () => loadCustomerProfile(userId!) });
+  const extras = useExtras(id, status);
 
   if (query.isPending) return <Screen><Body muted>Loading…</Body></Screen>;
   if (query.isError || !query.data || !booking) {
@@ -196,6 +199,8 @@ export default function BookingStatusScreen() {
         </View>
       ) : null}
 
+      <CustomerExtras bookingId={booking.id} status={status} pro={pro} total={Number(booking.total_amount ?? 0)} />
+
       {showsCompletionCode(status) ? (
         <Card>
           <Text className="text-sm font-semibold uppercase tracking-widest text-brand">Job completion code (OTP)</Text>
@@ -228,13 +233,13 @@ export default function BookingStatusScreen() {
         <AttachmentGallery bookingId={booking.id} />
       </Card>
       {attachFailed ? <ErrorBanner message={`${attachFailed} ${attachFailed === "1" ? "file" : "files"} could not be uploaded, so your pro cannot see ${attachFailed === "1" ? "it" : "them"}. Your booking is saved; describe the problem to your pro when they call.${attachError ? ` (Reason: ${attachError})` : ""}`} /> : null}
-      <Card>
-        <Line label="Platform fee" value={formatInr(booking.platform_fee ?? 0)} />
-        <Line label="Total" value={formatInr(booking.total_amount ?? 0)} strong />
-      </Card>
+      <BillCard providerAmount={booking.provider_amount} rows={extras.data ?? []} payTo={status === "completed" ? pro : undefined} />
 
       {status === "completed" ? (
-        <InfoBanner message={`All done. Pay ${pro} ${formatInr(booking.total_amount ?? 0)} directly by UPI or cash. Rating your pro and reporting a problem are coming soon.`} />
+        <>
+          <InfoBanner message={`All done. Pay ${pro} ${formatInr(booking.total_amount ?? 0)} directly by UPI or cash.`} />
+          <CustomerDispute bookingId={booking.id} completedAt={booking.completed_at} />
+        </>
       ) : null}
       {outcome === "accepted" || outcome === "waiting" ? (
         <InfoBanner message={`Pay ${pro} directly by UPI or cash after the service.`} />

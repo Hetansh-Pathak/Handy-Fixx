@@ -11,7 +11,9 @@ import { Text } from "@/components/text";
 import { Body, Button, Card, ErrorBanner, InfoBanner, Screen, ScreenHeader, TextField, Title } from "@/components/ui";
 import { AttachmentGallery } from "@/features/attachments/components";
 import { useSession } from "@/features/auth/session-provider";
-import { applyBookingPatch, completeWithCode, fetchProviderBooking, serviceNameOf, type ProviderBooking } from "@/features/provider/api";
+import { ProviderDispute } from "@/features/disputes/components";
+import { ProviderExtras } from "@/features/extras/components";
+import { applyBookingPatch, completeWithCode, fetchFeeRecord, fetchProviderBooking, serviceNameOf, type ProviderBooking } from "@/features/provider/api";
 import { useProviderRuntime } from "@/features/provider/provider-runtime";
 import { startJobTracking, stopJobTracking, ensureBackgroundLocation } from "@/features/provider/tracking";
 import { env } from "@/lib/env";
@@ -46,6 +48,13 @@ export default function JobScreen() {
   useEffect(() => { if (id) markRequestSeen(id); }, [id, markRequestSeen]);
 
   const booking = query.data;
+  const feeRecord = useQuery({
+    queryKey: ["fee-record", id],
+    enabled: booking?.status === "completed",
+    queryFn: () => fetchFeeRecord(id),
+    // The database writes the record as the job closes; retry briefly if it is not there yet.
+    refetchInterval: (q) => (q.state.data || q.state.dataUpdateCount > 6 ? false : 5_000),
+  });
   if (query.isPending) return <Screen><ScreenHeader title="Job" onBack={() => router.back()} /><Body muted>Loading…</Body></Screen>;
   if (query.isError || !booking || !providerId) {
     return (
@@ -60,8 +69,10 @@ export default function JobScreen() {
   const opts = { withArrivedStep: env.arrivedStatus };
   const step = providerStep(status, opts);
   const progress = jobProgress(status, opts);
+  // provider_amount includes approved extras; parts never count toward the fee (PDF p.3, p.8).
   const price = Number(booking.provider_amount ?? 0);
-  const economics = requestEconomics({ price, launchActive: rt.launch.active });
+  const serviceBill = Math.max(0, price - Number(booking.parts_amount ?? 0));
+  const economics = requestEconomics({ price: serviceBill, launchActive: rt.launch.active });
   const acceptCheck = checkCanAccept({ wallet: rt.wallet, estimatedServiceBill: price, launchActive: rt.launch.active });
   const blocked = !acceptCheck.ok ? acceptBlockMessage(acceptCheck) : null;
   const destination = booking.latitude != null && booking.longitude != null ? { latitude: Number(booking.latitude), longitude: Number(booking.longitude) } : null;
@@ -129,7 +140,7 @@ export default function JobScreen() {
       }
       await stopJobTracking().catch(() => undefined);
       // A preview of the fee. The database settles the real one when it completes the job.
-      setSettlement(settleJob({ outcome: "completed", serviceBill: price, customerTotal: Number(booking.total_amount ?? price), wallet: walletSnapshot, launchActive: rt.launch.active }));
+      setSettlement(settleJob({ outcome: "completed", serviceBill, customerTotal: Number(booking.total_amount ?? price), wallet: walletSnapshot, launchActive: rt.launch.active }));
       await reload();
       await refresh();
     } catch (e) {
@@ -179,6 +190,8 @@ export default function JobScreen() {
         </Text>
       ) : null}
 
+      {userId && (status === "in_progress" || status === "completed") ? <ProviderExtras bookingId={booking.id} status={status} userId={userId} /> : null}
+
       {status === "in_progress" && !settlement ? (
         <Card>
           <Text className="text-lg font-semibold text-fg">Finish the job</Text>
@@ -192,18 +205,28 @@ export default function JobScreen() {
       {settlement || status === "completed" ? (
         <Card>
           <Text className="text-lg font-semibold text-ok">Job completed</Text>
-          <Line label="Final bill" value={formatInr(price)} />
-          {settlement ? (
+          <Line label="Final bill (customer pays you)" value={formatInr(Number(booking.total_amount ?? price))} />
+          {Number(booking.parts_amount ?? 0) > 0 ? <Line label="Parts (no fee)" value={formatInr(Number(booking.parts_amount))} /> : null}
+          {feeRecord.data ? (
+            <>
+              <Line label="Service bill for the fee" value={formatInr(feeRecord.data.service_bill)} />
+              <Line label="HandyFix fee" value={feeRecord.data.waived > 0 ? `${formatInr(feeRecord.data.slab_fee)} waived` : formatInr(feeRecord.data.charged)} />
+              {feeRecord.data.refunded > 0 ? <Line label="Fee returned" value={formatInr(feeRecord.data.refunded)} /> : null}
+              <Line label="You keep" value={formatInr(Number(booking.total_amount ?? price) - feeRecord.data.charged + feeRecord.data.refunded)} strong />
+            </>
+          ) : settlement ? (
             <>
               <Line label="HandyFix fee" value={settlement.waived > 0 ? `${formatInr(settlement.slabFee)} waived` : formatInr(settlement.slabFee)} />
               <Line label="You keep" value={formatInr(settlement.providerNet)} strong />
-              {settlement.addedToDue > 0 ? <Text className="text-sm text-danger">Your wallet was short, so {formatInr(settlement.addedToDue)} was added to your dues. Top up to accept new jobs.</Text> : null}
             </>
           ) : null}
-          <Text className="text-xs text-muted">The customer can raise a problem for 24 hours after completion.</Text>
+          {settlement && settlement.addedToDue > 0 ? <Text className="text-sm text-danger">Your wallet was short, so {formatInr(settlement.addedToDue)} was added to your dues. Top up to accept new jobs.</Text> : null}
+          <Text className="text-xs text-muted">The customer can report a problem for 24 hours after completion (48 hours for repair quality). You can reply within 24 hours.</Text>
           <Button label={PROVIDER_ACTION_LABEL.done} onPress={() => router.replace("/provider/jobs")} />
         </Card>
       ) : null}
+
+      {status === "completed" ? <ProviderDispute bookingId={booking.id} /> : null}
 
       {status === "cancelled" ? <Card><Body muted>This job was cancelled. Nothing was charged.</Body></Card> : null}
     </Screen>
