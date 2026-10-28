@@ -3,6 +3,10 @@
 Paste the short prompt at the bottom into a new chat. Everything the new chat needs is in this file, in `CLAUDE.md`
 and in `docs/PROGRESS.md`. Written 2026-10-28.
 
+**Branches:** `handyfix-merge-changes` is the saved, stable state (this file is on it). **All new work for this handoff happens on the
+branch `Ritesh`**, created from `handyfix-merge-changes`. Never commit this work to `handyfix-merge-changes` directly; the owner merges
+`Ritesh` back later (ask before opening a pull request).
+
 ## 1. Mission
 `apps/mobile` (Expo / React Native, one codebase, two store apps) must become the complete, production-quality product described in
 `HandyFix-complete.pdf` (17 pages). The old web apps in `legacy/` (customer-app, provider-app) hold UI and flow ideas and some
@@ -12,7 +16,7 @@ Goal: best flow, functionality and UI/UX, one checkpoint at a time.
 Do **not** edit `legacy/`. Do not port the old 12% customer fee, the QR / "record payment" step, the 30-second accept timer, or any
 copy that says customers pay inside the app. These were replaced by the PDF model (see section 5).
 
-## 2. State of play (all on GitHub, branch `handyfix-merge-changes`)
+## 2. State of play (all on GitHub, branch `handyfix-merge-changes`; new work goes on `Ritesh`)
 - Database (Supabase project `jviwwhjwtyneqrguumro`, "Handy-fix"): the four migrations are **applied live**: price bands and locked price
   (`enforce_booking_price`), `arrived` status, flat wallet fee with launch waiver (`booking_fees`, `enforce_wallet_before_accept`),
   extra work (`booking_extras`) and disputes (`booking_disputes`) with their RPCs.
@@ -56,7 +60,7 @@ society tie-ups and ads (after 500+ bookings).
 - One vertical slice at a time, commit after each working slice, update `docs/PROGRESS.md`.
 - Before saying anything is finished run from the repo root: `npm run typecheck && npm run lint && npm run test && npm run build`, and
   `npm run mobile:typecheck`. Report real results, including failures.
-- Start every session: `git fetch origin`, `git status -sb`, `git log --oneline HEAD..origin/<branch>`, pull if behind, read `docs/PROGRESS.md`,
+- Work on the branch `Ritesh` only. Start every session: `git fetch origin`, `git switch Ritesh`, `git status -sb`, `git log --oneline HEAD..origin/Ritesh`, pull if behind, read `docs/PROGRESS.md`,
   then `npm install` and `npm run env:check`.
 - Keep `apps/mobile` outside the npm workspace (own `package-lock.json`; runtime deps of `packages/shared` must also be in
   `apps/mobile/package.json`).
@@ -113,4 +117,4 @@ The owner made some changes today **inside `legacy/` on their own computer** tha
 7. Full check run, web export, then a phone test checklist for the owner.
 
 ## Short prompt to paste into the new chat
-> Continue the HandyFix project. Follow CLAUDE.md "Start every session" (git fetch, status, pull if behind, read docs/PROGRESS.md). Then read docs/NEXT_CHAT_PORT_LEGACY.md and do checkpoint 1: inspect my local legacy changes (branch `my-legacy-changes` or the diff I paste), then port every legacy feature that matches HandyFix-complete.pdf into apps/mobile, one checkpoint at a time, with tests in packages/shared first. Do not port the old 12% fee, QR payment or the 30-second timer. Ask me before every push and before any database, RLS or edge-function change. Explain everything in simple words, with the exact folder for each command (I use Windows + VS Code).
+> Continue the HandyFix project on the branch `Ritesh` (created from handyfix-merge-changes; never commit to handyfix-merge-changes). Follow CLAUDE.md "Start every session" (git fetch, git switch Ritesh, status, pull if behind, read docs/PROGRESS.md). Then read docs/NEXT_CHAT_PORT_LEGACY.md and do checkpoint 1: inspect my local legacy changes (branch `my-legacy-changes` or the diff I paste), then port every legacy feature that matches HandyFix-complete.pdf into apps/mobile, one checkpoint at a time, with tests in packages/shared first. Do not port the old 12% fee, QR payment or the 30-second timer. Ask me before every push and before any database, RLS or edge-function change. Explain everything in simple words, with the exact folder for each command (I use Windows + VS Code).
