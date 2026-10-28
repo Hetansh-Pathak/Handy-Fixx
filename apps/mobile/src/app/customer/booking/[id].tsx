@@ -20,6 +20,7 @@ import type { ProviderListing } from "@/features/customer/types";
 import { useBookingLive } from "@/features/customer/use-booking-live";
 import { CustomerDispute } from "@/features/disputes/components";
 import { BillCard, CustomerExtras, useExtras } from "@/features/extras/components";
+import { RateYourPro } from "@/features/reviews/components";
 
 const FINISHED = ["completed", "cancelled"];
 
@@ -238,6 +239,8 @@ export default function BookingStatusScreen() {
       {status === "completed" ? (
         <>
           <InfoBanner message={`All done. Pay ${pro} ${formatInr(booking.total_amount ?? 0)} directly by UPI or cash.`} />
+          <RateYourPro bookingId={booking.id} providerId={booking.provider_id} userId={userId} proName={pro}
+            customerName={profile.data?.full_name ?? fullName} serviceName={booking.sub_item_name ?? serviceName ?? null} />
           <CustomerDispute bookingId={booking.id} completedAt={booking.completed_at} />
         </>
       ) : null}
