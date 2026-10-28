@@ -1,6 +1,6 @@
 # HandyFix progress (keep this file current: update it at the end of every slice)
 
-Last updated: 2026-10-28 (DB proposals applied). Branch: `handyfix-merge-changes` (backup of the state before the flat-fee work: `develop`).
+Last updated: 2026-10-28 (legacy port, checkpoint 2). Working branch: `Ritesh` (created from `handyfix-merge-changes`, which stays untouched). Plan: `docs/NEXT_CHAT_PORT_LEGACY.md`.
 Source of truth for the product: `HandyFix-complete.pdf`; rules and decisions: `CLAUDE.md`; slice history: `docs/ROADMAP.md`.
 
 ## How the owner starts a session
@@ -21,13 +21,14 @@ and proposes a short plan. No need to explain the project again.
 - Catalogue: sections + 266 sub-services seeded on the live project (308 sub-services, 11 services verified read-only on 2026-10-28).
 - Local setup tooling: `npm run env:check` / `env:fix`, `docs/LOCAL_SETUP.md`.
 - **Slice 5b (2026-10-28): extra work + disputes in the mobile apps.** Customer: extra-work card with one-tap Approve/Decline and bill photo, bill card (service, extras, parts, ₹0 fee), "Report a problem" (24 h / 48 h repair quality, safety any time) and one appeal. Pro: add extra work (labour or parts with bill photo), withdraw, real fee record from `booking_fees` after completion (parts excluded), dispute reply and appeal. Call button now uses the applied `get_booking_provider`. Shared: `booking/extras.ts`, dispute rules aligned with the DB (`safety` category).
+- **Port checkpoint 2 (2026-10-28): Pro identity check (KYC) wizard in `apps/mobile`.** 9 screens `app/provider/kyc/[step]` + status page `app/provider/kyc/index`; answers save after every step and resume where the pro stopped; selfie from the front camera, ID photos from camera or gallery (shrunk to 1600 px JPEG before upload to the private `provider-kyc` bucket); duplicate Aadhaar/PAN, under-18, bad checksum and wrong-format cases explained in plain words; rejected applications reopen at step 1 with the reviewer's reason and a "Change" link per answer; Pro home card shows start / continue / under review (re-checks every 30 s) / fix; Partner Agreement rewritten for the flat-fee model (`TERMS_VERSION` v1.1). Shared (+43 tests): `kyc/wizard.ts`, `kyc/sha256.ts` (same salted hash as the web app, no native module), `kyc/terms.ts`. **No database change:** the KYC tables, `submit_kyc`, bucket and policies were checked live (read-only) and already exist. The Pro build now allows the CAMERA permission (needed for selfie and ID photos) and adds `expo-image-manipulator`: **the Pro development build must be rebuilt.** Service-area picker extracted to `features/provider/ServiceAreasField` and reused by Edit profile.
 - Web reference screens for the new flows: `docs/reference-ui-flat-fee/` (spec only).
 
 ## NEXT (in this order)
 
 1. **Set the app build env vars, then rebuild both apps.** The DB is ready (pricing, `arrived`, wallet fee, extra work and disputes are live). In EAS (`eas env:create --environment production`): `EXPO_PUBLIC_PDF_PRICING_LIVE=1` and `EXPO_PUBLIC_ARRIVED_STATUS=1`, then rebuild `customer-production` and `provider-production`. Set admin price bands on the Price bands page (no band is enforced until set). Run `supabase/verify/02_after_migration_check_READONLY.sql` and a real test booking end to end (accept, arrive, code, fee row).
 2. **Test slice 5b on a phone** end to end (needs NEXT 1 builds): add extra work, approve, complete, fee record, report a problem.
-3. **Pro KYC wizard, payout details form, pro sets own rate inside the band (slice 5b-rest).**
+3. **Port checkpoint 3: pro sets own rate inside the band, payout details on the wallet tab** (KYC wizard is done), then checkpoints 4-8 of `docs/NEXT_CHAT_PORT_LEGACY.md`.
 4. **Slice 4b: push to a closed app** (FCM edge function + token table). Needs a Firebase project from the owner.
 5. **Slice 6:** chat with phone-number blocking, reviews, notifications, account deletion.
 6. **Security (ask first, needs a migration):** `confirm_user_email` is callable by anyone; provider OTP codes are plaintext and unlimited. Hash the completion code if not already.

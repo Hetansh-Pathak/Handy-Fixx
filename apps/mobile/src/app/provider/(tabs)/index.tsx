@@ -1,4 +1,4 @@
-import { earningsSummary, formatInr, launchLine } from "@handyfix/shared";
+import { earningsSummary, formatInr, kycStatusView, launchLine } from "@handyfix/shared";
 import { useQuery } from "@tanstack/react-query";
 import { Briefcase, CircleCheck, IndianRupee, Star, TrendingUp, type LucideIcon } from "lucide-react-native";
 import { Switch, View } from "react-native";
@@ -11,21 +11,14 @@ import { useProviderRuntime } from "@/features/provider/provider-runtime";
 import { colors } from "@/theme/colors";
 import { IconTile, Logo } from "@/components/brand";
 
-/** What the pro should do next, from the account's status and KYC state. */
-function nextStep(status: string, kyc: string): { title: string; note: string; tone: "gold" | "ok" | "danger" } | null {
-  if (kyc === "approved" && status === "active") return null;
-  if (kyc === "pending") return { title: "Under review", note: "We are checking your documents. This usually takes a short while.", tone: "gold" };
-  if (kyc === "rejected") return { title: "Verification needs changes", note: "Your documents were not accepted. The identity wizard arrives in a later update.", tone: "danger" };
-  return { title: "Verify your identity to start", note: "Complete the 9-step identity check to receive jobs. The wizard arrives in a later update.", tone: "gold" };
-}
-
-const TONE = { gold: "text-brand", ok: "text-ok", danger: "text-danger" } as const;
+const TONE = { brand: "text-brand", ok: "text-ok", danger: "text-danger" } as const;
 
 export default function ProviderHome() {
   const router = useRouter();
   const { provider, fullName } = useSession();
   const rt = useProviderRuntime();
-  const step = nextStep(provider?.status ?? "", provider?.kyc_status ?? "");
+  const kyc = kycStatusView(provider?.kyc_status, provider?.kyc_rejection_reason, provider?.onboarding_step);
+  const showKyc = kyc.action !== "none";
   const bookings = useQuery({
     queryKey: ["provider-bookings", provider?.id],
     enabled: !!provider?.id,
@@ -48,10 +41,13 @@ export default function ProviderHome() {
         {provider?.kyc_status === "approved" ? <CircleCheck size={22} color={colors.ok} accessibilityLabel="Verified pro" /> : null}
       </View>
 
-      {step ? (
+      {showKyc ? (
         <Card>
-          <Text className={`text-lg font-semibold ${TONE[step.tone]}`}>{step.title}</Text>
-          <Body muted>{step.note}</Body>
+          <Text className={`text-lg font-semibold ${TONE[kyc.tone]}`}>{kyc.title}</Text>
+          <Body muted>{kyc.note}</Body>
+          {kyc.button ? <Button label={kyc.button} onPress={() => router.push("/provider/kyc")} /> : (
+            <Button label="View status" variant="secondary" onPress={() => router.push("/provider/kyc")} />
+          )}
         </Card>
       ) : null}
 

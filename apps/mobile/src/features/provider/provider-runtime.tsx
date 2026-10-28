@@ -58,7 +58,9 @@ export function ProviderRuntime({ children }: { children: ReactNode }) {
     ? null
     : provider?.kyc_status === "pending"
       ? "Your documents are under review. You can go online once you are approved."
-      : "Complete your identity check to go online.";
+      : provider?.kyc_status === "rejected"
+        ? "Fix what the reviewer asked for and submit your identity check again to go online."
+        : "Complete your identity check to go online.";
 
   // ── wallet and launch period ───────────────────────────────────────────────
   const walletQuery = useQuery({

@@ -62,8 +62,9 @@ const config: ExpoConfig = {
     // Permissions pulled in by default modules that HandyFix does not use. Play reviewers flag unused
     // sensitive permissions. SYSTEM_ALERT_WINDOW is only needed by the dev client overlay.
     blockedPermissions: [
-      // Microphone and camera are for the customer's problem photos and voice note; the Pro app only views them.
-      ...(isPro ? ["android.permission.RECORD_AUDIO", "android.permission.CAMERA"] : []),
+      // The voice note is the customer's; the Pro app never records audio. The Pro app does need the camera
+      // (identity selfie and ID photos, and the bill photo for parts), so CAMERA stays allowed.
+      ...(isPro ? ["android.permission.RECORD_AUDIO"] : []),
       "android.permission.READ_EXTERNAL_STORAGE",
       "android.permission.WRITE_EXTERNAL_STORAGE",
       ...(isCustomer ? customerBlocked : []),
@@ -107,7 +108,9 @@ const config: ExpoConfig = {
     }],
     ["expo-image-picker", {
       photosPermission: "HandyFix lets you add photos of the problem so your pro knows what to bring.",
-      cameraPermission: isPro ? false : "HandyFix uses the camera so you can photograph the problem for your pro.",
+      cameraPermission: isPro
+        ? "HandyFix Pro uses the camera for your identity selfie, your ID photos and the bill photo for parts."
+        : "HandyFix uses the camera so you can photograph the problem for your pro.",
       // `false` here strips RECORD_AUDIO from the manifest, which the customer's voice note needs.
       microphonePermission: isPro ? false : MIC_REASON,
     }],

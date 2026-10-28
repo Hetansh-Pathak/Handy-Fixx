@@ -1,11 +1,7 @@
-import {
-  addServiceArea, fieldErrors, isProviderIdentityLocked, isValidPincode, MAX_SERVICE_AREAS, normalizeServiceArea,
-  providerProfileSchema, suggestCities, toProviderProfilePatch, type ProviderProfileInput,
-} from "@handyfix/shared";
+import { fieldErrors, isProviderIdentityLocked, providerProfileSchema, toProviderProfilePatch, type ProviderProfileInput } from "@handyfix/shared";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import * as Location from "expo-location";
 import { useRouter } from "expo-router";
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { View } from "react-native";
 import { CitySuggestions } from "@/components/CitySuggestions";
 import { Text } from "@/components/text";
@@ -14,6 +10,7 @@ import { providerRowKey, useSession } from "@/features/auth/session-provider";
 import { fetchServices } from "@/features/customer/catalog-api";
 import { loadErrorMessage } from "@/lib/load-error";
 import { AvatarEditor } from "@/features/provider/AvatarEditor";
+import { ServiceAreasField } from "@/features/provider/ServiceAreasField";
 import { fetchProviderProfile, providerProfileKey, saveProviderProfile } from "@/features/provider/profile-api";
 
 const EMPTY: ProviderProfileInput = {
@@ -44,9 +41,6 @@ function EditForm({ providerId }: { providerId: string }) {
 
   const [values, setValues] = useState<ProviderProfileInput>(EMPTY);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [areaInput, setAreaInput] = useState("");
-  const [areaError, setAreaError] = useState<string | null>(null);
-  const [locating, setLocating] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const filled = useRef(false);
@@ -82,51 +76,8 @@ function EditForm({ providerId }: { providerId: string }) {
     });
   };
 
-  const suggestions = useMemo(() => suggestCities(areaInput, values.serviceAreas), [areaInput, values.serviceAreas]);
-
-  const addArea = (input: string) => {
-    const r = addServiceArea(values.serviceAreas, input);
-    if (!r.ok) return setAreaError(r.error);
-    set("serviceAreas")(r.areas);
-    setAreaInput("");
-    setAreaError(null);
-  };
-
-  const removeArea = (area: string) => set("serviceAreas")(values.serviceAreas.filter((a) => a !== area));
-
   const toggleService = (id: string) =>
     set("serviceIds")(values.serviceIds.includes(id) ? values.serviceIds.filter((s) => s !== id) : [...values.serviceIds, id]);
-
-  /** Adds the city and pincode the phone is in right now (foreground permission only). */
-  const addCurrentArea = async () => {
-    setLocating(true);
-    setAreaError(null);
-    try {
-      const perm = await Location.requestForegroundPermissionsAsync();
-      if (!perm.granted) throw new Error("Location permission was denied. You can type the city or pincode instead.");
-      const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
-      const [place] = await Location.reverseGeocodeAsync(pos.coords).catch(() => []);
-      const found = [place?.postalCode, place?.city, place?.subregion]
-        .filter((v): v is string => !!v)
-        .map(normalizeServiceArea)
-        .filter((v): v is string => !!v);
-      let areas = values.serviceAreas;
-      for (const a of found) {
-        const r = addServiceArea(areas, a);
-        if (r.ok) areas = r.areas;
-      }
-      if (areas === values.serviceAreas) {
-        throw new Error(found.length ? "Your current area is already in the list." : "Could not find a Gujarat city or pincode here. Type it instead.");
-      }
-      set("serviceAreas")(areas);
-      const city = found.find((a) => !isValidPincode(a));
-      if (city && !values.city.trim()) set("city")(city);
-    } catch (e) {
-      setAreaError(e instanceof Error ? e.message : "Could not get your location.");
-    } finally {
-      setLocating(false);
-    }
-  };
 
   const save = async () => {
     const r = providerProfileSchema.safeParse(values);
@@ -176,23 +127,8 @@ function EditForm({ providerId }: { providerId: string }) {
       <Section title="Where you work" hint="Customers in these cities and pincodes can book you." error={errors.serviceAreas}>
         <TextField label="Base city" value={values.city} onChangeText={set("city")} error={errors.city} autoCapitalize="words" placeholder="e.g. Ahmedabad" />
         <CitySuggestions query={values.city} onPick={set("city")} limit={4} />
-        {values.serviceAreas.length ? (
-          <View className="flex-row flex-wrap gap-2">
-            {values.serviceAreas.map((a) => <Chip key={a} label={`${a}  ✕`} selected onPress={() => removeArea(a)} />)}
-          </View>
-        ) : <Body muted>No areas yet.</Body>}
-        <TextField label="Add a city or pincode" value={areaInput} onChangeText={(t) => { setAreaInput(t); setAreaError(null); }}
-          error={areaError ?? undefined} autoCapitalize="words" returnKeyType="done" onSubmitEditing={() => addArea(areaInput)}
-          hint={`${values.serviceAreas.length} of ${MAX_SERVICE_AREAS}. Tap an area to remove it.`} />
-        {suggestions.length ? (
-          <View className="flex-row flex-wrap gap-2">
-            {suggestions.map((c) => <Chip key={c} label={`+ ${c}`} onPress={() => addArea(c)} />)}
-          </View>
-        ) : null}
-        <View className="flex-row gap-2">
-          <View className="flex-1"><Button label="Add" variant="secondary" disabled={!areaInput.trim()} onPress={() => addArea(areaInput)} /></View>
-          <View className="flex-[2]"><Button label="Add my current area" variant="secondary" loading={locating} onPress={() => void addCurrentArea()} /></View>
-        </View>
+        <ServiceAreasField areas={values.serviceAreas} onChange={set("serviceAreas")}
+          onCityFound={(city) => { if (!values.city.trim()) set("city")(city); }} />
       </Section>
 
       <Section title="Services you offer" hint="You only get requests for the services you pick." error={errors.serviceIds}>

@@ -13,6 +13,9 @@ export type ProviderRow = {
   full_name: string;
   status: string;
   kyc_status: string;
+  /** The reviewer's reason after a rejection; shown on the home card and in the wizard. */
+  kyc_rejection_reason: string | null;
+  onboarding_step: number | null;
   phone: string | null;
   email: string | null;
   is_online: boolean | null;
@@ -100,10 +103,12 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     queryKey: providerRowKey(userId),
     enabled: !!client && !!userId && !recovering,
     retry: 2,
+    // While the identity check is under review, look again every 30 s so approval shows without a restart.
+    refetchInterval: (q) => (q.state.data?.kyc_status === "pending" ? 30_000 : false),
     queryFn: async (): Promise<ProviderRow | null> => {
       const { data, error } = await client!
         .from("service_providers")
-        .select("id, full_name, status, kyc_status, phone, email, is_online, kyc_reviewed_at, total_jobs, rating, acceptance_rate")
+        .select("id, full_name, status, kyc_status, kyc_rejection_reason, onboarding_step, phone, email, is_online, kyc_reviewed_at, total_jobs, rating, acceptance_rate")
         .eq("user_id", userId!)
         .maybeSingle();
       if (error) throw error;
