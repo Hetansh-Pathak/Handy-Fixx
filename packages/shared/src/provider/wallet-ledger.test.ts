@@ -1,5 +1,18 @@
 import { describe, expect, it } from "vitest";
-import { describeLedgerEntry, earningsSummary, interpretPayout, payoutErrorMessage } from "./wallet-ledger";
+import { describeLedgerEntry, earningsSummary, indiaDay, interpretPayout, payoutErrorMessage } from "./wallet-ledger";
+
+describe("indiaDay", () => {
+  it("converts to the calendar day in India (UTC+5:30)", () => {
+    expect(indiaDay("2026-10-28T20:45:04Z")).toBe("2026-10-29");
+    expect(indiaDay("2026-10-28T18:29:59Z")).toBe("2026-10-28");
+    expect(indiaDay("2026-10-28T18:30:00Z")).toBe("2026-10-29");
+    expect(indiaDay(new Date("2026-10-28T10:00:00Z"))).toBe("2026-10-28");
+  });
+  it("is null for a missing or bad value", () => {
+    expect(indiaDay(null)).toBeNull();
+    expect(indiaDay("not a date")).toBeNull();
+  });
+});
 
 describe("describeLedgerEntry", () => {
   it("shows a fee as a red minus with a readable label", () => {
@@ -39,6 +52,21 @@ describe("earningsSummary", () => {
       { status: "cancelled", provider_amount: 999, booking_date: "2026-10-27" },
     ], now);
     expect(s).toEqual({ jobs: 4, total: 600, monthJobs: 3, monthTotal: 500, todayTotal: 300 });
+  });
+  it("counts a job on the India-time day it was completed (the 2 AM case that showed ₹0)", () => {
+    // Completed 02:15 IST on 29 Oct = 20:45 UTC on 28 Oct; booked for 29 Oct; viewed at 03:57 IST on 29 Oct.
+    const job = { status: "completed", provider_amount: "949.00", booking_date: "2026-10-29", completed_at: "2026-10-28T20:45:04Z" };
+    expect(earningsSummary([job], new Date("2026-10-28T22:27:46Z"))).toMatchObject({ todayTotal: 949, monthTotal: 949, monthJobs: 1 });
+  });
+  it("uses the completion day, not the booked day", () => {
+    const job = { status: "completed", provider_amount: 500, booking_date: "2026-10-30", completed_at: "2026-10-27T06:00:00Z" };
+    expect(earningsSummary([job], now).todayTotal).toBe(500);
+    expect(earningsSummary([job], new Date("2026-10-30T06:00:00Z")).todayTotal).toBe(0);
+  });
+  it("rolls 'today' and 'this month' over at India midnight, not UTC midnight", () => {
+    const job = { status: "completed", provider_amount: 200, completed_at: "2026-10-31T19:00:00Z" }; // 1 Nov 00:30 IST
+    const s = earningsSummary([job], new Date("2026-10-31T20:00:00Z")); // 1 Nov 01:30 IST
+    expect(s).toMatchObject({ todayTotal: 200, monthJobs: 1 });
   });
   it("handles a booking with no date", () => {
     expect(earningsSummary([{ status: "completed", provider_amount: 50 }], now)).toMatchObject({ jobs: 1, total: 50, monthJobs: 0 });
