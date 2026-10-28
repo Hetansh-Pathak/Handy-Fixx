@@ -1,6 +1,6 @@
 # HandyFix progress (keep this file current: update it at the end of every slice)
 
-Last updated: 2026-10-28 (legacy port, checkpoints 2-8 done on branch `Ritesh`; nothing pushed yet). Working branch: `Ritesh` (created from `handyfix-merge-changes`, which stays untouched). Plan: `docs/NEXT_CHAT_PORT_LEGACY.md`. How to test: `docs/LOCAL_TEST_GUIDE.md`.
+Last updated: 2026-10-28 (legacy port, checkpoints 2-8 done on branch `Ritesh`; nothing pushed yet). Working branch: `Ritesh` (created from `handyfix-merge-changes`, which stays untouched). Plan: `docs/NEXT_CHAT_PORT_LEGACY.md` (done) and **`docs/NEXT_CHAT_FINISH_PDF.md` (what is left, start here)**. How to test: `docs/LOCAL_TEST_GUIDE.md`.
 Source of truth for the product: `HandyFix-complete.pdf`; rules and decisions: `CLAUDE.md`; slice history: `docs/ROADMAP.md`.
 
 ## How the owner starts a session
@@ -37,6 +37,8 @@ and proposes a short plan. No need to explain the project again.
 
 ## NEXT (in this order)
 
+00. **BUG (owner, 2026-10-28): "I've arrived" does nothing on the Pro app.** Cause found read-only on the live project: the `arrived` enum value exists, but the live guard `guard_booking_update` refuses `on_the_way > arrived` and `arrived > in_progress`. Fix written and tested on a throwaway database: proposal `20261113000000_guard_allow_arrived` (`supabase/dryrun/10_guard_arrived_DRYRUN.sql`, then `apply_10_guard_arrived_COMMIT.sql`). **Not applied: waiting for the owner.** The app now shows a plain-words message instead of raw database text (`friendlyDbError` in the Pro API). Details and follow-ups: `docs/NEXT_CHAT_FINISH_PDF.md` section 1.
+
 0. **Queued for later (owner, 2026-10-28): checkpoint 7 (UI polish pass over every screen, after the owner picks the look) and checkpoint 8 (full check run, web export, phone test checklist).** Only a first pass exists: loading skeletons, friendly errors, contrast fixes for green text and placeholders, working back buttons. Not done: a screen-by-screen review, small-screen and low-end Android checks, screen-reader labels audit, Hindi/regional text.
 
 1. **Owner: test on a phone** with `docs/LOCAL_TEST_GUIDE.md` (needs new dev builds: the Pro app now uses the camera and `expo-image-manipulator`).
@@ -52,7 +54,7 @@ and proposes a short plan. No need to explain the project again.
 
 - Firebase project (push to a closed app). Google Maps API key. A hosted privacy policy and terms page. A Pro EAS project ID (`eas init` with `EXPO_PUBLIC_APP_VARIANT=provider`).
 - **Database proposals waiting for approval** (all in `supabase/proposals/`, each with `supabase/dryrun/N_..._DRYRUN.sql` that ends in ROLLBACK and `apply_N_..._COMMIT.sql`):
-  `20261108` reviews fix (broken today) · `20261109` pro area for Nearest · `20261110` chat hardening (closes a hole: anyone can post in any chat) · `20261111` delete account (+ `proposals/functions/delete-account/index.ts`) · `20261112` late-cancel limit in the database.
+  `20261113` arrived-step guard (**"I've arrived" broken today**) · `20261108` reviews fix (broken today) · `20261109` pro area for Nearest · `20261110` chat hardening (closes a hole: anyone can post in any chat) · `20261111` delete account (+ `proposals/functions/delete-account/index.ts`) · `20261112` late-cancel limit in the database.
   Still not applied from before: `20261103` contact, `20261104` avatars, `20261105` attachment read fix, `20261106` catalogue (check which are needed).
 - **Decision: pro's own rate.** The live `provider_services` table has no write policy for pros, so a pro cannot save a rate today; and customers always pick a catalogue sub-item whose price is the same for every pro, so a service-level rate almost never applies. Options: (a) per-sub-item rates: new table + change `enforce_booking_price` (recommended, matches the PDF "leak repair ₹249-449"); (b) keep service-level rates only, add an insert/update policy; (c) drop pro rates for the pilot. Also no band is set on 10 of 11 services yet (admin Price bands page).
 - **Decision: brand colour contrast.** `#C16430` gives white button text 4.09:1 and brand text on cream 3.8:1; WCAG AA needs 4.5:1. `#B05526` passes (5.0:1) and looks almost the same. Kept `#C16430` as locked; change in `tailwind.config.js` and `src/theme/colors.ts` (brand) if approved.

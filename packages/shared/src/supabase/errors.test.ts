@@ -11,6 +11,14 @@ describe("friendlyDbError", () => {
     expect(m).not.toMatch(/row-level|policy|bookings/);
     expect(m).toMatch(/not allowed|cannot/i);
   });
+  it("explains a refused job step instead of a vague 'not allowed'", () => {
+    const arrived = friendlyDbError({ code: "42501", message: "Invalid status change on_the_way -> arrived (completion requires the customer code)" });
+    expect(arrived).toMatch(/arrived/i);
+    expect(arrived).not.toMatch(/on_the_way|->|completion requires/);
+    const other = friendlyDbError({ code: "42501", message: "Invalid status change pending -> in_progress (completion requires the customer code)" });
+    expect(other).toMatch(/step|refresh/i);
+    expect(other).not.toMatch(/pending|in_progress|->/);
+  });
   it("explains duplicates and missing links in plain words", () => {
     expect(friendlyDbError({ code: "23505", message: "duplicate key value violates unique constraint" })).toMatch(/already/i);
     expect(friendlyDbError({ code: "23503", message: "violates foreign key constraint" })).toMatch(/no longer exists|try again/i);

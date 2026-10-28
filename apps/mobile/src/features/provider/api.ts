@@ -1,5 +1,5 @@
 import {
-  callEdge, friendlyAuthError, interpretPayout, isGuardedFieldError, patchFallbacks, type BookingPatch, type CompletionResult, type LedgerEntry, type PayoutRequestResult, type WalletSummary,
+  callEdge, friendlyDbError, interpretPayout, isGuardedFieldError, patchFallbacks, type BookingPatch, type CompletionResult, type LedgerEntry, type PayoutRequestResult, type WalletSummary,
 } from "@handyfix/shared";
 import type { CheckoutOrder } from "@/lib/razorpay";
 import { getSupabase } from "@/lib/supabase";
@@ -36,7 +36,7 @@ export const serviceNameOf = (b: ProviderBooking): string => {
 
 /** The database may raise a readable rule (e.g. "Wallet below the fee…"): show it as written. */
 function readable(error: { message: string; code?: string }): Error {
-  return new Error(error.code === "P0001" ? error.message : friendlyAuthError(error.message));
+  return new Error(friendlyDbError(error));
 }
 
 /** Going online/offline. The database can keep a pro offline (not approved), so it returns the real value. */

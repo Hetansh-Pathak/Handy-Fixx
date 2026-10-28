@@ -11,6 +11,10 @@ export function friendlyDbError(error: { code?: string | null; message?: string 
     return "No internet connection. Check your internet and try again.";
   }
   if (code === "PGRST301" || /jwt expired|invalid jwt/i.test(message)) return "Your session ended. Please sign in again.";
+  if (/invalid status change .*-> ?arrived/i.test(message)) {
+    return "The \"I've arrived\" step is not switched on in the HandyFix database yet. Ask the HandyFix team to apply the arrived-step update.";
+  }
+  if (/invalid status change/i.test(message)) return "That step is not available right now. Refresh the job and try again.";
   if (code === "42501" || /row-level security|permission denied/i.test(message)) return "You are not allowed to do that right now.";
   if (code === "23505") return "That already exists.";
   if (code === "23503") return "Something this depends on no longer exists. Please refresh and try again.";

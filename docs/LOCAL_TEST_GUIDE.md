@@ -132,7 +132,7 @@ Use **two phones** or one phone plus the browser. Use a test customer and a test
 3. Submit. The Home card says "Under review". Approve the pro in the admin app (`npm run admin`, then KYC review). Within about 30 seconds the Pro app shows Verified.
 4. **Working hours** (Profile > Working hours): add Monday 9 AM to 5 PM, try adding an overlapping one (it must refuse), try "Copy to weekdays".
 5. **Wallet**: top up, then add payout details (UPI) in the Payout details card. Withdrawal only opens when you are approved and have saved UPI or bank.
-6. Go online. When a customer books you, accept, travel, "I've arrived", start, add extra work, enter the customer's code.
+6. Go online. When a customer books you, accept, travel, "I've arrived" (needs proposal 10 first), start, add extra work, enter the customer's code.
 7. **Chat** from the job screen. Try to send a phone number: it must be refused.
 8. **Notifications** (the bell on Home) and **My reviews** (Profile).
 9. Profile > **Delete account** (it will say it is not switched on yet until the function is approved: that is expected).
@@ -154,6 +154,7 @@ To check one safely: open the Supabase dashboard, **SQL Editor**, paste the whol
 
 | Order | Dry run file | What it fixes |
 |---|---|---|
+| 0 | `10_guard_arrived_DRYRUN.sql` | **"I've arrived" button does nothing** (the database refuses that step). Run the dry run (prints `true, true`), then `apply_10_guard_arrived_COMMIT.sql`. **Do this first.** |
 | 1 | `5_reviews_DRYRUN.sql` | Customers cannot rate today. Also stops fake reviews and double job counting. **Most urgent.** |
 | 2 | `7_chat_hardening_DRYRUN.sql` | Closes a hole where anyone can post into anyone's chat; blocks phone numbers on the server. |
 | 3 | `6_provider_location_DRYRUN.sql` | Lets customers sort by Nearest (pros share an area rounded to about 1 km). |
