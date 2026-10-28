@@ -17,7 +17,7 @@ import { useSession } from "@/features/auth/session-provider";
 import { uploadBookingAttachments, type LocalAttachment, type UploadResult } from "@/features/attachments/api";
 import { AttachmentPicker } from "@/features/attachments/components";
 import { ClockPicker } from "@/features/customer/ClockPicker";
-import { createBooking, EmailNotVerifiedError } from "@/features/customer/booking-api";
+import { bookingPauseKey, createBooking, EmailNotVerifiedError, fetchBookingPause } from "@/features/customer/booking-api";
 import { fetchBookingContext } from "@/features/customer/catalog-api";
 import { env } from "@/lib/env";
 
@@ -36,6 +36,7 @@ export default function BookScreen() {
   });
   const profile = useQuery({ queryKey: ["customer-profile", userId], enabled: !!userId, queryFn: () => loadCustomerProfile(userId!) });
   const verified = useQuery({ queryKey: ["email-verified", userId], enabled: !!userId, queryFn: loadEmailVerified });
+  const pause = useQuery({ queryKey: bookingPauseKey(userId), enabled: !!userId, queryFn: () => fetchBookingPause(userId!) });
 
   const [step, setStep] = useState<Step>(1);
   const now = new Date();
@@ -243,10 +244,11 @@ export default function BookScreen() {
             placeholder="e.g. Kitchen tap leaking since yesterday, water under the sink" />
           <AttachmentPicker value={attachments} onChange={setAttachments} />
           {verified.isSuccess && !verified.data && userId ? <EmailVerificationCard userId={userId} email={null} /> : null}
+          {pause.data ? <ErrorBanner message={pause.data} /> : null}
           {!env.bookingEnabled ? <InfoBanner message="Booking opens soon. We are finishing our new pricing." /> : null}
           {uploading ? <InfoBanner message="Booking saved. Uploading your photos and voice note…" /> : null}
           <Button label={`Confirm · ${formatInr(quote.total)}`} loading={busy}
-            disabled={!env.bookingEnabled || verified.isPending || verified.data === false} onPress={() => void confirm()} />
+            disabled={!env.bookingEnabled || verified.isPending || verified.data === false || !!pause.data} onPress={() => void confirm()} />
         </>
       ) : null}
     </Screen>

@@ -1,3 +1,5 @@
+import { bookingStartsAt } from "./schedule";
+
 export const LATE_CANCEL_LIMIT = 3;
 export const LATE_CANCEL_WINDOW_DAYS = 30;
 export const INSTANT_BOOKING_PAUSE_DAYS = 7;
@@ -23,4 +25,46 @@ export function instantBookingPause(
   const limitReachedAt = recent[recent.length - 1]!;
   const until = new Date(limitReachedAt + INSTANT_BOOKING_PAUSE_DAYS * DAY_MS);
   return until.getTime() > now.getTime() ? { paused: true, until } : { paused: false };
+}
+
+export const LATE_CANCEL_HOURS = 2;
+export const CUSTOMER_CANCEL_REASON = "Cancelled by customer";
+/** Stored in `bookings.cancellation_reason`, so late cancellations can be counted from the bookings list. */
+export const LATE_CANCEL_REASON = `${CUSTOMER_CANCEL_REASON} (late)`;
+
+/**
+ * The PDF limits "late cancellations" but does not define them. Working definition (confirm with the owner):
+ * a pro had already accepted, and the customer cancels less than 2 hours before the booked start. A request
+ * still waiting for an answer never counts, because no pro was committed yet.
+ */
+export function isLateCancellation(
+  input: { status: string; bookingDate: string | null | undefined; bookingTime: string | null | undefined },
+  now: Date,
+): boolean {
+  if (!["confirmed", "on_the_way", "arrived", "in_progress"].includes(input.status)) return false;
+  const startsAt = bookingStartsAt(input.bookingDate, input.bookingTime);
+  if (!startsAt) return false;
+  return startsAt.getTime() - now.getTime() < LATE_CANCEL_HOURS * 3_600_000;
+}
+
+export const cancellationReasonFor = (late: boolean): string => (late ? LATE_CANCEL_REASON : CUSTOMER_CANCEL_REASON);
+
+export function lateCancellationTimes(
+  rows: readonly { status: string; cancellation_reason: string | null; cancelled_at: string | null }[],
+): Date[] {
+  const out: Date[] = [];
+  for (const r of rows) {
+    if (r.status !== "cancelled" || r.cancellation_reason !== LATE_CANCEL_REASON || !r.cancelled_at) continue;
+    const d = new Date(r.cancelled_at);
+    if (Number.isFinite(d.getTime())) out.push(d);
+  }
+  return out;
+}
+
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+export function pauseMessage(pause: { paused: false } | { paused: true; until: Date }): string | null {
+  if (!pause.paused) return null;
+  const d = pause.until;
+  return `Instant booking is paused until ${d.getDate()} ${MONTHS[d.getMonth()]} because of ${LATE_CANCEL_LIMIT} late cancellations in ${LATE_CANCEL_WINDOW_DAYS} days.`;
 }

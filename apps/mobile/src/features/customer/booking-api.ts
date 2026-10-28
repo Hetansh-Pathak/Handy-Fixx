@@ -1,4 +1,5 @@
 import {
+  LATE_CANCEL_WINDOW_DAYS, cancellationReasonFor, instantBookingPause, lateCancellationTimes, pauseMessage,
   isBookingTime, isSlotAvailable, nextBestPros, parseDateString, quoteBooking, reconcileQuote, toDateString, toDbTime,
   type BookingQuote, type BookingSlot, type NewBookingInput, type QuoteCheck, type StoredTotals,
 } from "@handyfix/shared";
@@ -104,7 +105,7 @@ export type BookingRow = {
 const BOOKING_COLUMNS =
   "id, status, created_at, booking_date, booking_time, address, city, pincode, special_instructions, sub_item_id, sub_item_name, provider_id, service_id, provider_amount, platform_fee, total_amount, latitude, longitude, provider_eta_minutes, cancellation_reason, completed_at";
 
-export async function fetchBooking(id: string): Promise<{ booking: BookingRow; serviceName: string | null; providerName: string | null } | null> {
+export async function fetchBooking(id: string): Promise<{ booking: BookingRow; serviceName: string | null; serviceSlug: string | null; providerName: string | null } | null> {
   const supabase = getSupabase();
   const { data, error } = await supabase.from("bookings").select(BOOKING_COLUMNS).eq("id", id).maybeSingle();
   if (error) throw new Error(error.message);
@@ -112,12 +113,13 @@ export async function fetchBooking(id: string): Promise<{ booking: BookingRow; s
   const booking = data as BookingRow;
 
   const [service, provider] = await Promise.all([
-    booking.service_id ? supabase.from("services").select("name").eq("id", booking.service_id).maybeSingle() : Promise.resolve({ data: null }),
+    booking.service_id ? supabase.from("services").select("name, slug").eq("id", booking.service_id).maybeSingle() : Promise.resolve({ data: null }),
     booking.provider_id ? supabase.from("public_providers").select("full_name").eq("id", booking.provider_id).maybeSingle() : Promise.resolve({ data: null }),
   ]);
   return {
     booking,
-    serviceName: (service.data as { name: string } | null)?.name ?? null,
+    serviceName: (service.data as { name: string; slug: string | null } | null)?.name ?? null,
+    serviceSlug: (service.data as { name: string; slug: string | null } | null)?.slug ?? null,
     providerName: (provider.data as { full_name: string | null } | null)?.full_name ?? null,
   };
 }
@@ -247,11 +249,33 @@ export async function rebookWithProvider(args: {
   return created;
 }
 
-/** Customers can cancel while a booking is still pending or confirmed. */
-export async function cancelBooking(id: string) {
+/**
+ * Customers can cancel while a booking is still pending or confirmed. A late cancellation (a pro had already
+ * accepted and the start is under 2 hours away) is marked in the reason so it can be counted (PDF p.4).
+ */
+export async function cancelBooking(id: string, late = false) {
   const { error } = await getSupabase()
     .from("bookings")
-    .update({ status: "cancelled", cancelled_at: new Date().toISOString(), cancellation_reason: "Cancelled by customer" })
+    .update({ status: "cancelled", cancelled_at: new Date().toISOString(), cancellation_reason: cancellationReasonFor(late) })
     .eq("id", id);
   if (error) throw new Error(error.message);
+}
+
+export const bookingPauseKey = (userId: string | null) => ["booking-pause", userId] as const;
+
+/**
+ * "Three late cancellations in 30 days pauses instant booking for a week." Counted from the customer's own
+ * cancelled bookings. This is checked in the app; a database rule would make it tamper-proof (see PROGRESS).
+ */
+export async function fetchBookingPause(userId: string): Promise<string | null> {
+  const since = new Date(Date.now() - LATE_CANCEL_WINDOW_DAYS * 86_400_000).toISOString();
+  const { data, error } = await getSupabase()
+    .from("bookings")
+    .select("status, cancellation_reason, cancelled_at")
+    .eq("customer_id", userId)
+    .eq("status", "cancelled")
+    .gte("cancelled_at", since);
+  if (error) return null; // never block a booking because this check could not run
+  const rows = (data ?? []) as { status: string; cancellation_reason: string | null; cancelled_at: string | null }[];
+  return pauseMessage(instantBookingPause(lateCancellationTimes(rows), new Date()));
 }

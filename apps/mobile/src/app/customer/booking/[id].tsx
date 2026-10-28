@@ -1,5 +1,5 @@
 import {
-  customerCanCancel, customerStatusLabel, formatBookingWhen, formatInr, formatRating, needsAlternatives, quoteBooking,
+  customerCanCancel, customerStatusLabel, formatBookingWhen, formatInr, formatRating, isLateCancellation, needsAlternatives, quoteBooking,
   reconcileQuote, requestOutcome, showsCompletionCode, showsLiveMap, trackingSummary, type BookingStatus,
 } from "@handyfix/shared";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -98,7 +98,7 @@ export default function BookingStatusScreen() {
     );
   }
 
-  const { serviceName, providerName } = query.data;
+  const { serviceName, serviceSlug, providerName } = query.data;
   const pro = providerName?.split(" ")[0] ?? "your pro";
   const destination = booking.latitude != null && booking.longitude != null ? { latitude: Number(booking.latitude), longitude: Number(booking.longitude) } : null;
   const proPoint = position.data ? { latitude: position.data.latitude, longitude: position.data.longitude } : null;
@@ -115,11 +115,13 @@ export default function BookingStatusScreen() {
     return customerStatusLabel(status, providerName ? pro : undefined);
   })();
 
+  const lateCancel = isLateCancellation({ status: booking.status, bookingDate: booking.booking_date, bookingTime: booking.booking_time }, now);
+
   const cancel = async () => {
     setBusy("cancel");
     setError(null);
     try {
-      await cancelBooking(booking.id);
+      await cancelBooking(booking.id, lateCancel);
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["booking", id] }),
         queryClient.invalidateQueries({ queryKey: ["customer-bookings"] }),
@@ -248,11 +250,25 @@ export default function BookingStatusScreen() {
         <InfoBanner message={`Pay ${pro} directly by UPI or cash after the service.`} />
       ) : null}
 
+      {status === "completed" && booking.provider_id && serviceSlug ? (
+        <Button label={`Book ${pro} again`} variant="secondary" onPress={() => router.push({
+          pathname: "/customer/book/[providerId]",
+          params: { providerId: booking.provider_id!, service: serviceSlug, ...(booking.sub_item_id ? { sub: booking.sub_item_id } : {}) },
+        })} />
+      ) : null}
+      {status === "cancelled" && serviceSlug ? (
+        <Button label="Book again" variant="secondary" onPress={() => router.push({ pathname: "/customer/service/[slug]", params: { slug: serviceSlug } })} />
+      ) : null}
       <Button label="Back to home" onPress={() => router.replace("/customer")} />
       {customerCanCancel(status) && !confirmingCancel ? <Button label="Cancel booking" variant="secondary" onPress={() => setConfirmingCancel(true)} /> : null}
       {customerCanCancel(status) && confirmingCancel ? (
         <Card>
           <Text className="text-base font-semibold text-fg">Cancel this booking?</Text>
+          {lateCancel ? (
+            <Text className="text-sm text-danger">
+              {pro} has already accepted and the start is less than 2 hours away, so this counts as a late cancellation. 3 late cancellations in 30 days pause instant booking for a week.
+            </Text>
+          ) : <Text className="text-sm text-muted">Cancelling is free.</Text>}
           <Button label="Yes, cancel it" variant="danger" loading={busy === "cancel"} onPress={() => void cancel()} />
           <Button label="Keep booking" variant="secondary" onPress={() => setConfirmingCancel(false)} />
         </Card>
