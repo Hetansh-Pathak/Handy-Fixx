@@ -10,9 +10,10 @@ import { configureNotificationHandler, notifyNewRequest, onRequestTapped } from 
 import { getSupabase } from "@/lib/supabase";
 import { fetchPendingRequests, fetchWalletSummary, serviceNameOf, setOnline, touchPresence, type ProviderBooking } from "./api";
 import { RequestPopup } from "./RequestPopup";
-import { ensureBackgroundLocation, startPresence, stopPresence } from "./tracking";
+import { clearApproxArea, ensureBackgroundLocation, shareApproxArea, startPresence, stopPresence } from "./tracking";
 
 const HEARTBEAT_MS = 30_000;
+const AREA_REFRESH_MS = 10 * 60_000;
 const POLL_MS = 8_000;
 
 type Runtime = {
@@ -83,8 +84,10 @@ export function ProviderRuntime({ children }: { children: ReactNode }) {
       if (s === "active") void touchPresence(providerId).catch(() => undefined);
     });
     void touchPresence(providerId).catch(() => undefined);
+    void shareApproxArea(providerId); // for the customer's "Nearest" sort; also covers a restart while online
     const id = setInterval(() => { if (appActive.current) void touchPresence(providerId).catch(() => undefined); }, HEARTBEAT_MS);
-    return () => { clearInterval(id); sub.remove(); };
+    const area = setInterval(() => { if (appActive.current) void shareApproxArea(providerId); }, AREA_REFRESH_MS);
+    return () => { clearInterval(id); clearInterval(area); sub.remove(); };
   }, [online, providerId]);
 
   // ── incoming requests: realtime for speed, polling as the safety net ───────
@@ -150,6 +153,7 @@ export function ProviderRuntime({ children }: { children: ReactNode }) {
         await setOnline(providerId, false);
         setOnlineState(false);
         await stopPresence().catch(() => undefined);
+        void clearApproxArea(providerId);
       } else {
         const actual = await setOnline(providerId, true);
         setOnlineState(actual);

@@ -1,4 +1,4 @@
-import { isProviderAvailable, offersService, resolveListedPrice, servesArea } from "@handyfix/shared";
+import { isProviderAvailable, offersService, readPoint, resolveListedPrice, servesArea } from "@handyfix/shared";
 import { getSupabase } from "@/lib/supabase";
 import type { ProviderListing, ServiceRow, SubItemRow } from "./types";
 
@@ -52,10 +52,10 @@ type ProviderViewRow = {
   is_email_verified: boolean | null;
   city: string | null;
   updated_at: string | null;
+  /** Only present once the pro-location proposal is applied. */
+  approx_latitude?: number | string | null;
+  approx_longitude?: number | string | null;
 };
-
-const PROVIDER_COLUMNS =
-  "id, full_name, avatar_url, bio, rating, total_reviews, total_jobs, experience_years, pincodes, service_ids, is_online, is_verified, is_email_verified, city, updated_at";
 
 /**
  * Pros who are online right now, offer this service and cover the customer's area, each with the price
@@ -75,7 +75,7 @@ type ProviderSearchArgs = { service: ServiceRow; subItem: SubItemRow | null; are
 export async function searchProviders(args: ProviderSearchArgs): Promise<{ listings: ProviderListing[]; offlineCount: number }> {
   const supabase = getSupabase();
   const [providers, rates] = await Promise.all([
-    supabase.from("public_providers").select(PROVIDER_COLUMNS),
+    supabase.from("public_providers").select("*"),
     supabase.from("provider_services").select("provider_id, custom_price").eq("service_id", args.service.id),
   ]);
   if (providers.error) fail(providers.error);
@@ -118,6 +118,7 @@ export async function searchProviders(args: ProviderSearchArgs): Promise<{ listi
       kycApproved: true,
       city: p.city,
       pincodes: p.pincodes,
+      point: readPoint(p.approx_latitude, p.approx_longitude),
     });
   }
   return { listings, offlineCount };

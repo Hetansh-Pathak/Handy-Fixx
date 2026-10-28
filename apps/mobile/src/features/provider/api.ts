@@ -52,6 +52,18 @@ export async function touchPresence(providerId: string): Promise<void> {
   if (error) throw readable(error);
 }
 
+/**
+ * Shares the pro's area (rounded to about 1 km) so customers can sort by "Nearest", or clears it when the pro
+ * goes offline. Best effort: until the location proposal is applied the columns do not exist, and a failure here
+ * must never stop a pro from going online.
+ */
+export async function publishApproxLocation(providerId: string, point: { latitude: number; longitude: number } | null): Promise<void> {
+  await getSupabase()
+    .from("service_providers")
+    .update({ approx_latitude: point?.latitude ?? null, approx_longitude: point?.longitude ?? null })
+    .eq("id", providerId);
+}
+
 export async function fetchPendingRequests(providerId: string): Promise<ProviderBooking[]> {
   const { data, error } = await getSupabase()
     .from("bookings").select(BOOKING_COLUMNS).eq("provider_id", providerId).eq("status", "pending").order("created_at", { ascending: true });

@@ -1,5 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { approxPoint } from "@handyfix/shared";
 import * as Location from "expo-location";
+import { publishApproxLocation } from "./api";
 import {
   JOB_LOCATION_TASK, JOB_TRACKING_KEY, PRESENCE_KEY, PRESENCE_TASK, type JobTrackingState, type PresenceState,
 } from "@/tasks/provider-tasks";
@@ -60,3 +62,21 @@ export async function stopJobTracking(): Promise<void> {
     await Location.stopLocationUpdatesAsync(JOB_LOCATION_TASK);
   }
 }
+
+/**
+ * Tells customers roughly where this pro works (rounded to about 1 km) while online, for "Nearest".
+ * Needs the foreground permission only; quietly does nothing without it.
+ */
+export async function shareApproxArea(providerId: string): Promise<void> {
+  try {
+    const perm = await Location.getForegroundPermissionsAsync();
+    if (!perm.granted) return;
+    const pos = (await Location.getLastKnownPositionAsync()) ?? (await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }));
+    const point = pos ? approxPoint(pos.coords) : null;
+    if (point) await publishApproxLocation(providerId, point);
+  } catch {
+    /* optional feature: never blocks going online */
+  }
+}
+
+export const clearApproxArea = (providerId: string): Promise<void> => publishApproxLocation(providerId, null).catch(() => undefined);

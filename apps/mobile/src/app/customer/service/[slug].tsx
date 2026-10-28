@@ -1,5 +1,6 @@
-import { formatDuration, formatInr, formatRating, groupSubItems, isCheckupVisit, sortProviders, type ProviderSort } from "@handyfix/shared";
+import { distanceKm, formatDistance, formatDuration, formatInr, formatRating, groupSubItems, isCheckupVisit, sortProviders, type LatLng, type ProviderSort } from "@handyfix/shared";
 import { useQuery } from "@tanstack/react-query";
+import * as Location from "expo-location";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useMemo, useState } from "react";
 import { Image, Pressable, View } from "react-native";
@@ -13,7 +14,7 @@ import { fetchServiceBySlug, fetchSubItems, searchProviders } from "@/features/c
 import { serviceImage } from "@/features/customer/service-images";
 import type { ProviderListing, SubItemRow } from "@/features/customer/types";
 
-type SortChoice = Extract<ProviderSort, "top_rated" | "cheapest">;
+type SortChoice = ProviderSort;
 
 export default function ServiceScreen() {
   const router = useRouter();
@@ -39,7 +40,34 @@ export default function ServiceScreen() {
     queryFn: () => searchProviders({ service: service.data!, subItem, area, now: new Date() }),
   });
 
-  const sorted = useMemo(() => sortProviders(providers.data?.listings ?? [], sort), [providers.data, sort]);
+  // "Nearest" needs the customer's position (asked only when they tap it) and pros who share their area.
+  const [here, setHere] = useState<LatLng | null>(null);
+  const [locating, setLocating] = useState(false);
+  const [locationNote, setLocationNote] = useState<string | null>(null);
+  const withDistance = useMemo(
+    () => (providers.data?.listings ?? []).map((p) => ({ ...p, distanceKm: here && p.point ? distanceKm(here, p.point) : null })),
+    [providers.data, here],
+  );
+  const canSortNearest = (providers.data?.listings ?? []).some((p) => p.point);
+  const sorted = useMemo(() => sortProviders(withDistance, sort), [withDistance, sort]);
+
+  const pickNearest = async () => {
+    setSort("nearest");
+    if (here) return;
+    setLocating(true);
+    setLocationNote(null);
+    try {
+      const perm = await Location.requestForegroundPermissionsAsync();
+      if (!perm.granted) throw new Error("Allow location to sort by distance, or type your area above.");
+      const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      setHere({ latitude: pos.coords.latitude, longitude: pos.coords.longitude });
+    } catch (e) {
+      setSort("top_rated");
+      setLocationNote(e instanceof Error ? e.message : "Could not get your location.");
+    } finally {
+      setLocating(false);
+    }
+  };
   const needsSubItem = (subItems.data?.length ?? 0) > 0 && !subItem;
 
   const book = (p: ProviderListing) =>
@@ -117,7 +145,9 @@ export default function ServiceScreen() {
       <View className="flex-row gap-2">
         <Chip label="Top rated" selected={sort === "top_rated"} onPress={() => setSort("top_rated")} />
         <Chip label="Cheapest" selected={sort === "cheapest"} onPress={() => setSort("cheapest")} />
+        {canSortNearest ? <Chip label={locating ? "Locating…" : "Nearest"} selected={sort === "nearest"} disabled={locating} onPress={() => void pickNearest()} /> : null}
       </View>
+      {locationNote ? <Text className="text-sm text-muted">{locationNote}</Text> : null}
 
       {needsSubItem ? <Body muted>Choose what you need above to see pros and prices.</Body> : null}
       <ErrorBanner message={providers.isError ? "Could not load pros. Check your connection." : null} />
@@ -149,6 +179,7 @@ export default function ServiceScreen() {
             </View>
             <Text className="text-2xl font-bold text-brand">{formatInr(p.price)}</Text>
           </View>
+          {p.distanceKm !== null ? <Text className="text-sm text-muted">About {formatDistance(p.distanceKm)} away</Text> : null}
           {p.bio ? <Text className="text-sm text-muted" numberOfLines={2}>{p.bio}</Text> : null}
           <Button label={`Book ${p.fullName.split(" ")[0]}`} onPress={() => book(p)} />
         </View>

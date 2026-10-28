@@ -1,4 +1,4 @@
-import type { ProviderCard } from "@handyfix/shared";
+import type { LatLng, ProviderCard } from "@handyfix/shared";
 
 export type ServiceRow = {
   id: string;
@@ -32,4 +32,6 @@ export type ProviderListing = ProviderCard & {
   totalReviews: number;
   totalJobs: number;
   isVerified: boolean;
+  /** The pro's area rounded to about 1 km. Null until the pro shares it (needs the location proposal). */
+  point: LatLng | null;
 };
