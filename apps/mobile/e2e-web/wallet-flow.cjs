@@ -50,7 +50,7 @@ const check = (name, ok, extra = "") => {
   await L("Mobile number").fill("98765 43211");
   await T("Continue").click();
   await see("Verify your identity to start");
-  Object.assign(db.providerRows[0], { status: "active", kyc_status: "approved", kyc_reviewed_at: new Date(Date.now() - 200 * 86400000).toISOString(), total_jobs: 40 });
+  Object.assign(db.providerRows[0], { status: "active", kyc_status: "approved", kyc_reviewed_at: new Date(Date.now() - 200 * 86400000).toISOString(), total_jobs: 40, upi_id: "ravi@okaxis" });
   const pid = db.providerRows[0].id;
   const today = new Date().toISOString().slice(0, 10);
   db.storedBookings.push(

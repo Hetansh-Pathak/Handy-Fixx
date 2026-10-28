@@ -8,9 +8,10 @@
 -- of a pro who is not on their job.
 --
 -- What this does
---   1. Adds approx_latitude / approx_longitude to service_providers. The Pro app writes the pro's area
---      ROUNDED TO 2 DECIMALS (about 1 km) while the pro is online, and clears it when the pro goes offline.
---      A check constraint keeps the numbers inside real latitude/longitude ranges.
+--   1. Adds approx_latitude / approx_longitude to service_providers as numeric(5,2) / numeric(6,2): the DATABASE keeps
+--      only 2 decimals (about 1 km), whatever an app sends, so an exact position can never be stored. The Pro app writes
+--      the pro's area while the pro is online and clears it when the pro goes offline. A check constraint keeps the
+--      numbers inside real latitude/longitude ranges.
 --   2. Adds the two columns at the END of the public_providers view (the view customers already read), so
 --      nothing that reads it today changes. The view still shows only approved, active pros.
 --
@@ -19,8 +20,8 @@
 -- ═══════════════════════════════════════════════════════════════════════════
 
 ALTER TABLE public.service_providers
-  ADD COLUMN IF NOT EXISTS approx_latitude  numeric(7,4),
-  ADD COLUMN IF NOT EXISTS approx_longitude numeric(8,4);
+  ADD COLUMN IF NOT EXISTS approx_latitude  numeric(5,2),
+  ADD COLUMN IF NOT EXISTS approx_longitude numeric(6,2);
 
 DO $$
 BEGIN

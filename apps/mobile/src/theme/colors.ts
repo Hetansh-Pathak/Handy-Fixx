@@ -7,7 +7,7 @@ export const colors = {
   mutedSoft: "#6B665D",
   field: "#EFEAE1",
   line: "#ECE6DA",
-  brand: "#B05526",
+  brand: "#C16430",
   brandSoft: "#FBEBE0",
   sun: "#FBB614",
   ok: "#17804B",

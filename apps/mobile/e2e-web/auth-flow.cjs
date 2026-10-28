@@ -7,7 +7,7 @@ const path = require("path");
 const OUT = path.join(__dirname, "shots");
 require("fs").mkdirSync(OUT, { recursive: true });
 
-const { installMock, db, jwt, BASE: MOCK_BASE } = require("./mock-supabase.cjs");
+const { installMock, installRealtime, db, jwt, BASE: MOCK_BASE } = require("./mock-supabase.cjs");
 
 const results = [];
 let L;
@@ -21,6 +21,7 @@ const check = (name, ok, extra = "") => { results.push({ name, ok }); console.lo
   page.on("pageerror", (e) => errors.push("pageerror: " + e.message));
   page.on("console", (m) => { if (m.type() === "error" && !/Failed to load resource|ERR_|favicon/.test(m.text())) errors.push("console: " + m.text().slice(0, 200)); });
   await installMock(page);
+  await installRealtime(page); // the home screens now listen for notifications
   L = (n) => page.locator(`[aria-label="${n}"]:visible`).last();
   const shot = (n) => page.screenshot({ path: path.join(OUT, n + ".png") });
   const text = async () => (await page.locator("body").innerText()).replace(/\s+/g, " ");

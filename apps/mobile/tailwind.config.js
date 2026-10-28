@@ -15,7 +15,7 @@ module.exports = {
         muted: "#5C5851", // --muted-foreground
         field: "#EFEAE1", // --secondary / --muted
         line: "#ECE6DA", // --border
-        brand: { DEFAULT: "#B05526", dark: "#9A4A20", soft: "#FBEBE0" }, // --primary / --accent
+        brand: { DEFAULT: "#C16430", dark: "#A24F22", soft: "#FBEBE0" }, // --primary / --accent
         strip: "#1C1C1C", // dark stat strip
         sun: "#FBB614", // yellow promo banners and logo
         ok: "#17804B",

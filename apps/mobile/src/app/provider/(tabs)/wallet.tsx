@@ -160,7 +160,7 @@ export default function WalletScreen() {
         )}
         {(payouts.data ?? []).map((p) => (
           <View key={p.id} className="flex-row justify-between">
-            <Text className="text-sm text-muted">{p.requested_at.slice(0, 10)}</Text>
+            <Text className="text-sm text-muted">{(p.requested_at ?? "").slice(0, 10)}</Text>
             <Text className="text-sm text-fg">{formatInr(Number(p.amount))} · {p.status}</Text>
           </View>
         ))}

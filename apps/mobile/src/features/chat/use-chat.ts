@@ -17,7 +17,8 @@ export function useChat(bookingId: string | undefined, enabled = true) {
     if (!bookingId || !enabled) return;
     const supabase = getSupabase();
     const channel = supabase
-      .channel(`chat-${bookingId}`)
+      // Unique per subscription: the chat button and the chat screen can both be mounted for one booking.
+      .channel(`chat-${bookingId}-${Math.random().toString(36).slice(2, 8)}`)
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages", filter: `booking_id=eq.${bookingId}` }, () => {
         void queryClient.invalidateQueries({ queryKey: chatKey(bookingId) });
         void queryClient.invalidateQueries({ queryKey: ["chat-unread", bookingId] });

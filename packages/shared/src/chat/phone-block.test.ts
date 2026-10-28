@@ -46,6 +46,12 @@ describe("containsPhoneNumber: everyday messages that must pass", () => {
     "the code is 4821",
     "the tap leaks since two days, maybe three",
     "okay",
+    "I charge 1500, 2000 or 3000 depending on the work",
+    "1500, 2000, 3000",
+    "Rs 6000, 1500, 2500",
+    "10 15 20 30 40 50",
+    "parts: 450, 1200, 800, 3500",
+    "order 1000200030004000",
   ];
   for (const text of allowed) it(`allows: ${JSON.stringify(text)}`, () => expect(containsPhoneNumber(text)).toBe(false));
 });

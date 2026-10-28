@@ -72,13 +72,16 @@ function ScheduleScreen({ providerId, approved }: { providerId: string; approved
   const copyToWeekdays = (day: DayName) => {
     const copied = copyDayTo(data, day, WEEKDAYS);
     if (!copied.length) return setError(`Set ${LABEL[day]}'s hours first, then copy them.`);
-    void run(() => replaceDays(providerId, WEEKDAYS.filter((d) => d !== day), copied));
+    const others = WEEKDAYS.filter((d) => d !== day);
+    const oldIds = data.filter((r) => others.includes(r.day_of_week as DayName)).map((r) => r.id);
+    void run(() => replaceDays(providerId, others, copied, oldIds));
   };
 
   return (
     <Screen>
       <ScreenHeader title="Working hours" onBack={() => router.back()} />
       <Body muted>Customers can only book you for times inside these hours. With no hours set, you are bookable every day from 8 AM to 8 PM.</Body>
+      {rows.isSuccess && data.length === 0 ? <InfoBanner message="No hours set yet, so customers can book you any day from 8 AM to 8 PM. Add hours to narrow that down. To stop getting requests, use the Go online switch on Home." /> : null}
       {!approved ? <InfoBanner message="You can set your hours now. They apply once your identity check is approved." /> : null}
       <ErrorBanner message={error ?? (rows.isError ? "Could not load your working hours. Check your internet." : null)} />
       {rows.isError ? <Button label="Try again" variant="secondary" onPress={() => void rows.refetch()} /> : null}

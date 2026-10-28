@@ -16,7 +16,7 @@
 --   2. Adds a BEFORE INSERT trigger: chat is open only while the booking is confirmed, on_the_way, arrived or in_progress;
 --      the text must be 1 to 1000 characters; and a phone number is refused. A phone number here means a 10-digit
 --      run starting 6-9 (or 0 + 9-10 digits for a landline) after removing the spaces, dashes and dots people put
---      between digits. Digits in Hindi or Gujarati script count too. Spelled-out digits are checked by the app only.
+--      between digits (a comma is not removed, so "1500, 2000, 3000" is a price list, not a number). Digits in Hindi or Gujarati script count too. Spelled-out digits are checked by the app only.
 --
 -- It does not change existing messages. Safe to re-run. Rollback is at the bottom.
 -- ═══════════════════════════════════════════════════════════════════════════
@@ -37,8 +37,8 @@ BEGIN
   END IF;
   -- Devanagari and Gujarati digits to 0-9, then drop separators between digits ("98 76-54.3210" -> "9876543210").
   v_clean := translate(lower(p_content), '०१२३४५६७८९૦૧૨૩૪૫૬૭૮૯', '01234567890123456789');
-  v_clean := regexp_replace(v_clean, '(\d)[\s\-.,()/_+*#]+(?=\d)', '\1', 'g');
-  IF v_clean ~ '[6-9]\d{9}' OR v_clean ~ '0\d{9,10}' THEN
+  v_clean := regexp_replace(v_clean, '(\d)[\s\-.()/_+*#]+(?=\d)', '\1', 'g');
+  IF v_clean ~ '[6-9]\d{9}' OR v_clean ~ '(^|\D)0\d{9,10}' THEN
     RETURN 'For your safety, phone numbers cannot be shared in chat. You can call each other from the Call button once the booking is confirmed.';
   END IF;
   RETURN NULL;

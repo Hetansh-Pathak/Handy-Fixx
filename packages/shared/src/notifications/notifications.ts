@@ -51,7 +51,9 @@ export function relativeTime(iso: string, now: Date): string {
   const seconds = (now.getTime() - t.getTime()) / 1000;
   if (seconds < 60) return "Just now";
   if (seconds < 3600) return `${Math.floor(seconds / 60)} min ago`;
-  if (seconds < 86_400 && t.getUTCDate() === now.getUTCDate()) return `${Math.floor(seconds / 3600)} h ago`;
-  if (seconds < 2 * 86_400) return "Yesterday";
+  const sameDay = t.getFullYear() === now.getFullYear() && t.getMonth() === now.getMonth() && t.getDate() === now.getDate();
+  if (sameDay) return `${Math.floor(seconds / 3600)} h ago`;
+  const yesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+  if (t.getFullYear() === yesterday.getFullYear() && t.getMonth() === yesterday.getMonth() && t.getDate() === yesterday.getDate()) return "Yesterday";
   return `${t.getDate()} ${MONTHS[t.getMonth()]}`;
 }

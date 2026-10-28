@@ -30,7 +30,7 @@ export async function ensureRequestChannel() {
     lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
     bypassDnd: true,
     enableLights: true,
-    lightColor: "#B05526",
+    lightColor: "#C16430",
   });
 }
 

@@ -35,12 +35,19 @@ export async function deleteWindow(id: string): Promise<void> {
   if (error) throw failed();
 }
 
-/** Replaces the hours of the listed days with `rows` (used by "Copy to weekdays"). */
-export async function replaceDays(providerId: string, days: readonly string[], rows: readonly AvailabilityRow[]): Promise<void> {
+/**
+ * Replaces the hours of the listed days with `rows` (used by "Copy to weekdays"). The new rows are added first and the
+ * old ones removed after, so a lost connection can leave a duplicate window but never an empty week.
+ */
+export async function replaceDays(providerId: string, days: readonly string[], rows: readonly AvailabilityRow[], oldIds: readonly string[]): Promise<void> {
   const supabase = getSupabase();
-  const del = await supabase.from("provider_availability").delete().eq("provider_id", providerId).in("day_of_week", [...days]);
-  if (del.error) throw failed();
-  if (!rows.length) return;
-  const ins = await supabase.from("provider_availability").insert(rows.map((r) => ({ ...r, provider_id: providerId })));
-  if (ins.error) throw failed();
+  if (rows.length) {
+    const ins = await supabase.from("provider_availability").insert(rows.map((r) => ({ ...r, provider_id: providerId })));
+    if (ins.error) throw failed();
+  }
+  if (oldIds.length) {
+    const del = await supabase.from("provider_availability").delete().eq("provider_id", providerId).in("id", [...oldIds]);
+    if (del.error) throw failed();
+  }
+  void days;
 }

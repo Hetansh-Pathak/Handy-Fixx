@@ -126,15 +126,17 @@ export type KycSavePlan = {
 
 export async function saveKycPlan(providerId: string, plan: KycSavePlan): Promise<void> {
   const supabase = getSupabase();
-  if (Object.keys(plan.kyc).length) {
-    const { error } = await supabase.from("provider_kyc").upsert({ provider_id: providerId, ...plan.kyc }, { onConflict: "provider_id" });
-    if (error) throw readable(error);
-  }
+  // The plain details go first. The document paths go last: if this step fails, the caller deletes the files it
+  // uploaded, and nothing in the database points at them yet.
   if (Object.keys(plan.provider).length) {
     // RLS lets a pro update only their own row; no row back means the update did not apply.
     const { data, error } = await supabase.from("service_providers").update(plan.provider).eq("id", providerId).select("id").maybeSingle();
     if (error) throw readable(error);
     if (!data) throw new Error("Your details could not be saved. Sign out and in again, then retry.");
+  }
+  if (Object.keys(plan.kyc).length) {
+    const { error } = await supabase.from("provider_kyc").upsert({ provider_id: providerId, ...plan.kyc }, { onConflict: "provider_id" });
+    if (error) throw readable(error);
   }
 }
 

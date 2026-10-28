@@ -25,7 +25,8 @@ export function useNotifications(role: NotifRole) {
     const supabase = getSupabase();
     const [table, column] = TABLE[role];
     const channel = supabase
-      .channel(`notifs-${role}-${ownerId}`)
+      // A unique name per subscription: the bell and the list can be on screen together, and one name cannot be joined twice.
+      .channel(`notifs-${role}-${ownerId}-${Math.random().toString(36).slice(2, 8)}`)
       .on("postgres_changes", { event: "*", schema: "public", table, filter: `${column}=eq.${ownerId}` }, () => {
         void queryClient.invalidateQueries({ queryKey: notificationsKey(role, ownerId) });
       })

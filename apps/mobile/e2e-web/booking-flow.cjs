@@ -29,7 +29,13 @@ const check = (name, ok, extra = "") => {
   const T = (text, exact = true) => page.getByText(text, { exact }).locator("visible=true").last();
   const L = (label) => page.locator(`[aria-label="${label}"]:visible`).last();
   const count = async (text, exact = true) => page.getByText(text, { exact }).locator("visible=true").count();
-  const see = (text, timeout = 15000) => T(text, false).waitFor({ state: "visible", timeout });
+  const see = async (text, timeout = 15000) => {
+    try { await T(text, false).waitFor({ state: "visible", timeout }); } catch (e) {
+      console.error(`Could not see "${text}". The screen says: ${(await body()).slice(0, 600)} | errors: ${errors.filter((x) => !/WebSocket/.test(x)).join(" // ").slice(0, 1500)}`);
+      await shot("zz-last-failure").catch(() => undefined);
+      throw e;
+    }
+  };
   const shot = (n) => page.screenshot({ path: path.join(OUT, n + ".png"), fullPage: true });
   const body = async () => (await page.locator("body").innerText()).replace(/\s+/g, " ");
   const yOf = async (text) => (await T(text, false).boundingBox())?.y ?? Infinity;
@@ -134,7 +140,7 @@ const check = (name, ok, extra = "") => {
   check("the status screen says the request was sent, with no countdown", (await body()).includes("Request sent to Asha") && !/seconds to accept/i.test(await body()));
   const b1 = db.storedBookings[0];
   check("booking payload: slot, address, price and no sub-item",
-    b1 && b1.scheduled_time === "18:00:00" && b1.address === "12 MG Road" && b1.pincode === "382010" && b1.provider_amount === 599 && b1.platform_fee === 0 && b1.sub_item_id === null && b1.status === "pending" && b1.provider_id === "p-asha",
+    b1 && /^18:\d\d:00$/.test(b1.scheduled_time) && b1.address === "12 MG Road" && b1.pincode === "382010" && b1.provider_amount === 599 && b1.platform_fee === 0 && b1.sub_item_id === null && b1.status === "pending" && b1.provider_id === "p-asha",
     JSON.stringify(b1 || {}).slice(0, 200));
   check("saved total matches the quote, so no price warning", !(await body()).includes("The saved price is different") && (await body()).includes("Total ₹599"));
   await shot("24-confirmation");

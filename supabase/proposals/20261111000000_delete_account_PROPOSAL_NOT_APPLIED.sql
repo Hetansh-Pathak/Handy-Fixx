@@ -34,7 +34,7 @@ BEGIN
   SELECT id INTO v_provider FROM public.service_providers WHERE user_id = p_user_id;
 
   SELECT count(*) INTO v_active FROM public.bookings
-  WHERE (customer_id = p_user_id OR (v_provider IS NOT NULL AND provider_id = v_provider))
+  WHERE (customer_id = p_user_id OR user_id = p_user_id OR (v_provider IS NOT NULL AND provider_id = v_provider))
     AND status::text IN ('pending', 'confirmed', 'on_the_way', 'arrived', 'in_progress');
   IF v_active > 0 THEN
     RAISE EXCEPTION 'You have % booking(s) in progress. Finish or cancel them first.', v_active USING ERRCODE = '22023';
@@ -64,12 +64,12 @@ BEGIN
   DELETE FROM public.customer_notifications WHERE user_id = p_user_id;
 
   BEGIN
-    UPDATE public.bookings SET customer_name = 'Deleted user', customer_phone = NULL WHERE customer_id = p_user_id;
+    UPDATE public.bookings SET customer_name = 'Deleted user', customer_phone = NULL WHERE customer_id = p_user_id OR user_id = p_user_id;
   EXCEPTION WHEN OTHERS THEN
     v_warnings := v_warnings || ('bookings: ' || SQLERRM);
   END;
   BEGIN
-    UPDATE public.reviews SET reviewer_name = 'A customer' WHERE customer_id = p_user_id;
+    UPDATE public.reviews SET reviewer_name = 'A customer' WHERE customer_id = p_user_id OR user_id = p_user_id;
   EXCEPTION WHEN OTHERS THEN
     v_warnings := v_warnings || ('reviews: ' || SQLERRM);
   END;

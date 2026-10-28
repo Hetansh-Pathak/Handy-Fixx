@@ -67,7 +67,7 @@ legacy/          Old web customer/provider apps. READ-ONLY UI spec. Deleted at m
 
 ## Provider wallet facts (slice 5a)
 
-- `provider/wallet` shows `get_wallet_summary()`, the ledger (`wallet_transactions`, own rows via RLS), payouts and earnings (completed bookings' `provider_amount`). Top-up: edge function `create-wallet-topup-order` (whole rupees ₹100-₹50,000 in the app) → `react-native-razorpay` (lazy, native only) → the server webhook credits the ledger; the app polls the ledger, it never credits locally. Withdrawal: `request_payout(p_amount)` RPC (needs approved KYC and saved UPI/bank details; the payout-details form is not built yet).
+- `provider/wallet` shows `get_wallet_summary()`, the ledger (`wallet_transactions`, own rows via RLS), payouts and earnings (completed bookings' `provider_amount`). Top-up: edge function `create-wallet-topup-order` (whole rupees ₹100-₹50,000 in the app) → `react-native-razorpay` (lazy, native only) → the server webhook credits the ledger; the app polls the ledger, it never credits locally. Withdrawal: `request_payout(p_amount)` RPC (needs approved KYC and saved UPI/bank details; the payout-details card is on the Wallet tab).
 - Payment keys live only in Edge Function secrets. `react-native-razorpay` is a native module: it needs a development build (not Expo Go).
 
 ## Customer booking status facts (slice 3)
@@ -76,7 +76,7 @@ legacy/          Old web customer/provider apps. READ-ONLY UI spec. Deleted at m
 - The completion code (`booking_completion_codes`, customer-only RLS) is shown from `arrived`/`in_progress`.
 - **Calling the pro needs a server function** (`supabase/proposals/20261103000000_customer_booking_contact`): the KYC migration hid `service_providers` from customers, so the old phone join returns nothing. Until it is applied the Call button is hidden (the app does not break).
 - The embedded live map needs a Google Maps API key at build time (`GOOGLE_MAPS_API_KEY`, an EAS secret) and `EXPO_PUBLIC_MAPS_ENABLED=1`. Without them the card shows ETA and distance plus "Open in Google Maps".
-- Rating, reporting a problem, extra-work approval and chat are not built yet (slices 5b and 6).
+- Rating, reporting a problem, extra-work approval and chat are built (slices 5b, 6 and the legacy port). Rating needs proposal `20261108` before it can save.
 
 ## Auth facts (verified against the repo, not assumed)
 
@@ -84,6 +84,16 @@ legacy/          Old web customer/provider apps. READ-ONLY UI spec. Deleted at m
 - **Never call `confirm_user_email`** (legacy provider login did): it is `SECURITY DEFINER` with no `REVOKE`, so anyone can confirm any email. Fixing it needs a migration (ask first).
 - The provider OTP functions (`send-provider-otp` / `verify-provider-otp`) store codes in plaintext with no attempt limit, unlike the customer ones. Do not build on them until they are hardened.
 - Password reset uses the implicit flow: `handyfix://reset-password#access_token=…&type=recovery`. The Supabase dashboard must allow the redirect URL `handyfix://**`.
+
+## Legacy-port facts (branch Ritesh, 2026-10-28)
+
+- Pro identity check (KYC): `app/provider/kyc/*`, rules in `packages/shared/src/kyc/wizard.ts`; answers save after every step, photos are shrunk to 1600 px and go to the private `provider-kyc` bucket under the pro's own auth id folder; `submit_kyc()` does the final check. The Pro build allows the CAMERA permission (needed for the selfie).
+- Chat is for confirmed..in_progress bookings only; phone numbers are refused by `containsPhoneNumber` (comma is not a separator, so price lists pass). Server-side twins are in proposals, not applied.
+- Late cancel = accepted pro and start under 2 hours away (`isLateCancellation`); stored as `cancellation_reason = 'Cancelled by customer (late)'`.
+- Working hours (`provider_availability`) are applied by the customer's time picker only (`restrictToWindows`); no hours set means no limit.
+- New realtime subscriptions must use a unique channel name (`Math.random` suffix): joining the same name twice crashes the app.
+- Never show raw database text: wrap errors with `friendlyDbError` (shared). `P0001` and `22023` messages are written for people and pass through.
+- Browser tests: `apps/mobile/e2e-web` (mocked backend); `features-flow.cjs` covers the port. The mock must serve any new table the app reads, or the screen shows an error.
 
 ## Design system
 

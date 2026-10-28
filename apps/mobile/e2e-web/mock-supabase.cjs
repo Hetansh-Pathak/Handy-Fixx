@@ -5,7 +5,7 @@ const b64 = (o) => Buffer.from(JSON.stringify(o)).toString("base64url");
 const jwt = (sub, email) => `${b64({ alg: "HS256", typ: "JWT" })}.${b64({ sub, email, role: "authenticated", aud: "authenticated", exp: 4102444800 })}.sig`;
 
 // ── fake backend state ───────────────────────────────────────────────────────
-const db = { users: {}, providerRows: [], profiles: [], bookings: 0, verified: new Set(), calls: [], storedBookings: [], pricingMode: "pdf", locations: [], wallet: { available: 0, dues: 0 }, ledger: [], payouts: [], minPayout: 200, payoutDetails: true, launchActive: true, serverWalletRule: true, sockets: [], completionCode: "4321" };
+const db = { tables: {}, users: {}, providerRows: [], profiles: [], bookings: 0, verified: new Set(), calls: [], storedBookings: [], pricingMode: "pdf", locations: [], wallet: { available: 0, dues: 0 }, ledger: [], payouts: [], minPayout: 200, payoutDetails: true, launchActive: true, serverWalletRule: true, sockets: [], completionCode: "4321" };
 let nextId = 1;
 const userJson = (u) => ({ id: u.id, aud: "authenticated", role: "authenticated", email: u.email, email_confirmed_at: "2026-01-01T00:00:00Z",
   app_metadata: { provider: "email" }, user_metadata: u.meta, created_at: "2026-01-01T00:00:00Z" });
@@ -92,7 +92,11 @@ async function installMock(page) {
         const wantsRows = (req.headers()["prefer"] || "").includes("return=representation");
         return wantsRows ? json(route, 200, row ? [row] : []) : route.fulfill({ status: 204, headers: CORS });
       }
-      const rows = db.providerRows.filter((r) => u && r.user_id === u.id);
+      let rows = db.providerRows.filter((r) => u && r.user_id === u.id);
+      const id = (url.searchParams.get("id") || "").replace("eq.", "");
+      if (id) rows = db.providerRows.filter((r) => r.id === id);
+      // .single() asks for one object, not a list (like PostgREST does)
+      if ((req.headers()["accept"] || "").includes("vnd.pgrst.object")) return rows[0] ? json(route, 200, rows[0]) : json(route, 406, { message: "JSON object requested, multiple (or no) rows returned" });
       return json(route, 200, rows);
     }
     if (p === "/rest/v1/bookings") {
@@ -155,6 +159,15 @@ async function installMock(page) {
       const row = db.storedBookings.find((r) => r.id === bid);
       return json(route, 200, row && ["arrived", "in_progress", "confirmed", "on_the_way"].includes(row.status) ? [{ code: db.completionCode }] : []);
     }
+    if (p === "/rest/v1/rpc/get_booking_provider") {
+      // Current contact function: returns the pro's phone only while the booking is confirmed or underway.
+      if (db.phoneRpcMissing) return json(route, 404, { code: "PGRST202", message: "Could not find the function public.get_booking_provider" });
+      const b = body();
+      const u = userFromAuth(req);
+      const row = db.storedBookings.find((r) => r.id === b.p_booking_id);
+      const ok = row && u && row.customer_id === u.id && ["confirmed", "on_the_way", "arrived", "in_progress"].includes(row.status);
+      return json(route, 200, ok ? { phone: "9876500099", full_name: "Asha" } : null);
+    }
     if (p === "/rest/v1/rpc/get_booking_provider_phone") {
       if (db.phoneRpcMissing) return json(route, 404, { code: "PGRST202", message: "Could not find the function public.get_booking_provider_phone" });
       const b = body();
@@ -202,9 +215,9 @@ async function installMock(page) {
       if (amt < db.minPayout) return json(route, 200, { ok: false, reason: "below_minimum", min_payout: db.minPayout });
       if (amt > db.wallet.available) return json(route, 200, { ok: false, reason: "insufficient_balance" });
       db.wallet.available -= amt;
-      const row = { id: "po" + (db.payouts.length + 1), amount: amt, status: "pending", created_at: new Date().toISOString() };
+      const row = { id: "po" + (db.payouts.length + 1), amount: amt, status: "pending", requested_at: new Date().toISOString() };
       db.payouts.unshift(row);
-      db.ledger.unshift({ id: "l-po" + db.payouts.length, type: "payout", amount: -amt, note: "Withdrawal request", created_at: row.created_at });
+      db.ledger.unshift({ id: "l-po" + db.payouts.length, type: "payout", amount: -amt, note: "Withdrawal request", created_at: row.requested_at });
       return json(route, 200, { ok: true, payout_id: row.id, amount: amt });
     }
     if (p === "/rest/v1/rpc/complete_booking_with_code") {
@@ -235,6 +248,39 @@ async function installMock(page) {
       const b = body();
       db.locations = db.locations.filter((l) => l.booking_id !== b.booking_id).concat([b]);
       return route.fulfill({ status: 201, headers: CORS });
+    }
+    // Tables added by later slices (working hours, reviews, chat, notifications, identity check): small in-memory tables.
+    const simple = ["provider_availability", "reviews", "messages", "customer_notifications", "provider_notifications", "provider_kyc"];
+    const name = simple.find((t) => p === "/rest/v1/" + t);
+    if (name) {
+      const rows = (db.tables[name] ??= []);
+      const eq = (list) => {
+        let out = list;
+        for (const [k, v] of url.searchParams) {
+          if (typeof v === "string" && v.startsWith("eq.")) out = out.filter((r) => String(r[k]) === v.slice(3));
+          if (typeof v === "string" && v.startsWith("neq.")) out = out.filter((r) => String(r[k]) !== v.slice(4));
+        }
+        return out;
+      };
+      const wantsRows = (req.headers()["prefer"] || "").includes("return=representation");
+      if (m === "HEAD") return route.fulfill({ status: 200, headers: { ...CORS, "content-range": `*/${eq(rows).length}` } });
+      if (m === "GET") return json(route, 200, eq(rows));
+      if (m === "POST") {
+        const b = body();
+        const added = (Array.isArray(b) ? b : [b]).map((r) => ({ id: name + "-" + nextId++, created_at: new Date().toISOString(), is_read: false, ...r }));
+        // an upsert on a keyed table (provider_kyc) replaces the row instead of adding a second one
+        for (const r of added) {
+          const i = name === "provider_kyc" ? rows.findIndex((x) => x.provider_id === r.provider_id) : -1;
+          if (i >= 0) Object.assign(rows[i], r); else rows.push(r);
+        }
+        return wantsRows ? json(route, 201, added) : route.fulfill({ status: 201, headers: CORS });
+      }
+      if (m === "PATCH") { for (const r of eq(rows)) Object.assign(r, body()); return route.fulfill({ status: 204, headers: CORS }); }
+      if (m === "DELETE") {
+        const gone = new Set(eq(rows).map((r) => r.id));
+        db.tables[name] = rows.filter((r) => !gone.has(r.id));
+        return route.fulfill({ status: 204, headers: CORS });
+      }
     }
     return json(route, 404, { error: "unmocked " + p });
   });

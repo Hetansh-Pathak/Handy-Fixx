@@ -62,11 +62,14 @@ export default function BookScreen() {
   const slotsFor = (d: Date, at: Date) => restrictToWindows(availableTimes(d, at), windowsOn(hours.data ?? [], d));
 
   // Start on the first day that still has a free slot, and prefill the address from the profile once.
+  // Wait for the pro's hours before choosing a day, and move off a day that turns out to be a day off.
+  const hoursReady = hours.isSuccess;
   useEffect(() => {
-    if (date) return;
+    if (!hoursReady) return;
+    if (date && slotsFor(date, new Date()).length > 0) return;
     const first = dates.find((d) => slotsFor(d, new Date()).length > 0);
-    if (first) setDate(first);
-  }, [date, dates, hours.data]); // eslint-disable-line react-hooks/exhaustive-deps
+    setDate(first ?? null);
+  }, [date, dates, hoursReady, hours.data]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (filled.current || !profile.isSuccess) return;
@@ -200,6 +203,13 @@ export default function BookScreen() {
       {step === 1 ? (
         <>
           <Title>When?</Title>
+          {hours.isPending ? <ListSkeleton rows={1} /> : null}
+          {hours.isError ? (
+            <View className="gap-2">
+              <ErrorBanner message="Could not check this pro's working hours. Check your internet." />
+              <Button label="Try again" variant="secondary" onPress={() => void hours.refetch()} />
+            </View>
+          ) : null}
           <Text className="text-base font-semibold text-fg">Date</Text>
           <View className="flex-row flex-wrap gap-2">
             {dates.map((d) => (
@@ -214,7 +224,7 @@ export default function BookScreen() {
           <Text className="text-base font-semibold text-fg">Time</Text>
           <ClockPicker options={times} value={slot} onChange={(t) => { setSlot(t); setErrors({}); }} />
           {errors.time || errors.date ? <Text className="text-sm text-danger">{errors.time ?? errors.date}</Text> : null}
-          <Button label="Continue" onPress={next1} />
+          <Button label="Continue" disabled={!hoursReady} onPress={next1} />
         </>
       ) : null}
 

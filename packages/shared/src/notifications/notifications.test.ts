@@ -55,16 +55,23 @@ describe("unreadCount", () => {
 });
 
 describe("relativeTime", () => {
-  const now = new Date("2026-11-05T12:00:00Z");
+  // Local-time dates, so the result does not depend on the machine's time zone.
+  const now = new Date(2026, 10, 5, 15, 0);
+  const at = (d: number, h: number, m = 0) => new Date(2026, 10, d, h, m).toISOString();
   it("says just now, minutes, hours, yesterday, then the date", () => {
-    expect(relativeTime("2026-11-05T11:59:40Z", now)).toBe("Just now");
-    expect(relativeTime("2026-11-05T11:55:00Z", now)).toBe("5 min ago");
-    expect(relativeTime("2026-11-05T09:00:00Z", now)).toBe("3 h ago");
-    expect(relativeTime("2026-11-04T10:00:00Z", now)).toBe("Yesterday");
-    expect(relativeTime("2026-10-20T10:00:00Z", now)).toMatch(/20 Oct/);
+    expect(relativeTime(new Date(2026, 10, 5, 14, 59, 40).toISOString(), now)).toBe("Just now");
+    expect(relativeTime(at(5, 14, 55), now)).toBe("5 min ago");
+    expect(relativeTime(at(5, 9), now)).toBe("6 h ago");
+    expect(relativeTime(at(4, 10), now)).toBe("Yesterday");
+    expect(relativeTime(new Date(2026, 9, 20, 10).toISOString(), now)).toMatch(/20 Oct/);
+  });
+  it("uses the local calendar day, so 11 PM last night is Yesterday at 2 AM", () => {
+    const early = new Date(2026, 10, 5, 2, 0);
+    expect(relativeTime(at(4, 23), early)).toBe("Yesterday");
+    expect(relativeTime(at(5, 0, 30), early)).toBe("1 h ago");
   });
   it("copes with a bad date and a time slightly in the future", () => {
     expect(relativeTime("nope", now)).toBe("");
-    expect(relativeTime("2026-11-05T12:00:30Z", now)).toBe("Just now");
+    expect(relativeTime(new Date(2026, 10, 5, 15, 0, 30).toISOString(), now)).toBe("Just now");
   });
 });

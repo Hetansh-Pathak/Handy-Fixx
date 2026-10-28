@@ -26,7 +26,8 @@ const DIGIT_WORDS: Record<string, string> = {
 
 const WORDS = Object.keys(DIGIT_WORDS).sort((a, b) => b.length - a.length).join("|");
 const UNIT = `\\d|(?<![a-z])(?:${WORDS})(?![a-z])`;
-const SEPARATORS = "[\\s\\-.,()/_+*#]*";
+// A comma is NOT a separator: "1500, 2000, 3000" is a list of prices, not a phone number.
+const SEPARATORS = "[\\s\\-.()/_+*#]*";
 const SEQUENCE = new RegExp(`(?:${UNIT})(?:${SEPARATORS}(?:${UNIT}))*`, "g");
 const UNIT_RE = new RegExp(UNIT, "g");
 
@@ -40,8 +41,9 @@ export function containsPhoneNumber(text: string): boolean {
   for (const match of normalised.matchAll(SEQUENCE)) {
     const digits = (match[0].match(UNIT_RE) ?? []).map((u) => DIGIT_WORDS[u] ?? u).join("");
     if (digits.length < 10) continue;
-    // A mobile starts with 6-9 and has 10 digits (with or without 91 / 0 in front); a landline is 0 + STD + number.
-    if (/[6-9]\d{9}/.test(digits) || /0\d{9,10}/.test(digits)) return true;
+    // A mobile starts with 6-9 and has 10 digits (with or without 91 / 0 in front); a landline is 0 + STD + number
+    // and the 0 must open the run, so a price list that happens to contain a zero does not count.
+    if (/[6-9]\d{9}/.test(digits) || /^0\d{9,10}/.test(digits)) return true;
   }
   return false;
 }
