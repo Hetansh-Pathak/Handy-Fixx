@@ -5,6 +5,13 @@ describe("resolveListedPrice", () => {
   it("a chosen sub-item's catalogue price wins for every pro", () => {
     expect(resolveListedPrice({ subItemPrice: 199, customPrice: 349, basePrice: 299 })).toBe(199);
   });
+  it("the pro's own rate for the chosen job beats its catalogue price", () => {
+    expect(resolveListedPrice({ proSubItemPrice: 249, subItemPrice: 199, customPrice: 349, basePrice: 299 })).toBe(249);
+    expect(resolveListedPrice({ proSubItemPrice: null, subItemPrice: 199 })).toBe(199);
+  });
+  it("a job rate without a chosen job is ignored", () => {
+    expect(resolveListedPrice({ proSubItemPrice: 249, basePrice: 299 })).toBe(299);
+  });
   it("otherwise the pro's own rate, then the service's starting price", () => {
     expect(resolveListedPrice({ customPrice: 349, basePrice: 299 })).toBe(349);
     expect(resolveListedPrice({ customPrice: null, basePrice: 299 })).toBe(299);

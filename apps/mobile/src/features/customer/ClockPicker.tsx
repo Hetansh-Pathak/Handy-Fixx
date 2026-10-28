@@ -40,7 +40,7 @@ export function ClockPicker({ options, value, onChange }: {
         <Text accessibilityLiveRegion="polite" className="text-4xl font-extrabold text-fg">
           {value ? formatSlot(value).replace(/ (AM|PM)$/, "") : "--:--"}
         </Text>
-        <View className="overflow-hidden rounded-xl border border-line">
+        <View className="overflow-hidden rounded-tile border border-line">
           {([false, true] as const).map((pm) => {
             const selected = current.pm === pm;
             const disabled = !sideOpen(pm);
@@ -48,7 +48,7 @@ export function ClockPicker({ options, value, onChange }: {
               <Pressable key={String(pm)} accessibilityRole="button" accessibilityState={{ selected, disabled }} disabled={disabled}
                 onPress={() => pick({ ...current, pm })}
                 className={`min-h-[32px] min-w-[52px] items-center justify-center px-3 ${selected ? "bg-brand" : "bg-card"} ${disabled ? "opacity-30" : ""}`}>
-                <Text className={`text-sm font-bold ${selected ? "text-white" : "text-fg"}`}>{pm ? "PM" : "AM"}</Text>
+                <Text className={`text-sm font-bold ${selected ? "text-onbrand" : "text-fg"}`}>{pm ? "PM" : "AM"}</Text>
               </Pressable>
             );
           })}
@@ -74,7 +74,7 @@ export function ClockPicker({ options, value, onChange }: {
                 top: CENTER - NUMBER_RADIUS * Math.cos(angle) - HOUR_BUTTON / 2,
               }}
               className={`items-center justify-center rounded-full ${selected ? "bg-brand" : ""} ${disabled ? "opacity-25" : "active:bg-brand/20"}`}>
-              <Text className={`text-base font-semibold ${selected ? "text-white" : "text-fg"}`}>{hour}</Text>
+              <Text className={`text-base font-semibold ${selected ? "text-onbrand" : "text-fg"}`}>{hour}</Text>
             </Pressable>
           );
         })}
@@ -88,8 +88,8 @@ export function ClockPicker({ options, value, onChange }: {
           return (
             <Pressable key={minute} accessibilityRole="button" accessibilityLabel={`${minute} minutes`} accessibilityState={{ selected, disabled }}
               disabled={disabled} onPress={() => onChange(fromClock({ ...current, minute }))}
-              className={`min-h-[44px] min-w-[60px] items-center justify-center rounded-xl border ${selected ? "border-brand bg-brand" : "border-line bg-card"} ${disabled ? "opacity-30" : ""}`}>
-              <Text className={`text-base font-semibold ${selected ? "text-white" : "text-fg"}`}>:{String(minute).padStart(2, "0")}</Text>
+              className={`min-h-[44px] min-w-[60px] items-center justify-center rounded-tile border ${selected ? "border-brand bg-brand" : "border-line bg-card"} ${disabled ? "opacity-30" : ""}`}>
+              <Text className={`text-base font-semibold ${selected ? "text-onbrand" : "text-fg"}`}>:{String(minute).padStart(2, "0")}</Text>
             </Pressable>
           );
         })}

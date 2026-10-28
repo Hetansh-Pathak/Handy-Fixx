@@ -8,7 +8,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { Linking, View } from "react-native";
 import { Text } from "@/components/text";
-import { Body, Button, Card, ErrorBanner, InfoBanner, Screen, ScreenHeader, TextField, Title, ListSkeleton } from "@/components/ui";
+import { Body, Button, Card, ErrorBanner, HeroCard, InfoBanner, Screen, ScreenHeader, TextField, Title, ListSkeleton } from "@/components/ui";
 import { AttachmentGallery } from "@/features/attachments/components";
 import { ChatButton } from "@/features/chat/components";
 import { useSession } from "@/features/auth/session-provider";
@@ -132,6 +132,7 @@ export default function JobScreen() {
     setCodeError(null);
     setError(null);
     const walletSnapshot = walletBefore.current;
+    const heldSnapshot = rt.held;
     try {
       const outcome = interpretCompletion(await completeWithCode(booking.id, code));
       if (outcome.kind === "error") {
@@ -141,7 +142,10 @@ export default function JobScreen() {
       }
       await stopJobTracking().catch(() => undefined);
       // A preview of the fee. The database settles the real one when it completes the job.
-      setSettlement(settleJob({ outcome: "completed", serviceBill, customerTotal: Number(booking.total_amount ?? price), wallet: walletSnapshot, launchActive: rt.launch.active }));
+      setSettlement(settleJob({
+        outcome: "completed", serviceBill, customerTotal: Number(booking.total_amount ?? price), wallet: walletSnapshot,
+        held: rt.launch.active ? 0 : Math.min(heldSnapshot, economics.fee), launchActive: rt.launch.active,
+      }));
       await reload();
       await refresh();
     } catch (e) {
@@ -154,7 +158,14 @@ export default function JobScreen() {
   return (
     <Screen>
       <ScreenHeader title={serviceNameOf(booking)} onBack={() => router.back()} />
-      {progress ? <Text className="text-sm font-semibold uppercase tracking-widest text-brand">Step {progress.current} of {progress.total}</Text> : null}
+      {progress ? (
+        <View className="gap-2">
+          <Text className="text-sm font-semibold uppercase tracking-widest text-brand">Step {progress.current} of {progress.total}</Text>
+          <View className="flex-row gap-1.5" accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+            {Array.from({ length: progress.total }, (_, i) => <View key={i} className={`h-1.5 flex-1 rounded-full ${i < progress.current ? "bg-brand" : "bg-line"}`} />)}
+          </View>
+        </View>
+      ) : null}
       <Title>{providerStatusLabel(status)}</Title>
       <ErrorBanner message={error} />
       <InfoBanner message={notice} />
@@ -162,12 +173,14 @@ export default function JobScreen() {
       <CustomerCard booking={booking} status={status} />
 
       {status !== "completed" && status !== "cancelled" && !settlement ? (
-        <Card>
-          <Line label="You earn" value={formatInr(economics.earning)} strong />
+        <HeroCard>
+          <Text className="text-sm font-semibold text-muted">You earn</Text>
+          <Text className="text-4xl font-extrabold text-price">{formatInr(economics.earning)}</Text>
+          <View className="my-1 h-px bg-line" />
           <Line label="HandyFix fee" value={economics.feeWaived ? `${formatInr(economics.fee)} waived` : formatInr(economics.fee)} />
           <Line label="You keep" value={formatInr(economics.youKeep)} />
-          <Text className="text-xs text-muted">The customer pays you directly by UPI or cash. The fee is taken from your wallet only after the job closes.</Text>
-        </Card>
+          <Text className="text-xs text-muted">The customer pays you directly by UPI or cash. The fee is reserved in your wallet when you accept and taken only when the job completes.</Text>
+        </HeroCard>
       ) : null}
 
       {status === "pending" && isRequestOpen({ status, bookingDate: booking.booking_date, bookingTime: booking.booking_time }, new Date()) ? (
@@ -175,6 +188,9 @@ export default function JobScreen() {
           <InfoBanner message="Review the problem, photos and voice note above, then decide. There is no timer: the customer is waiting for your answer." />
           <ErrorBanner message={blocked} />
           <Button label="Accept" loading={busy} disabled={!!blocked} onPress={() => void run("accept")} />
+          {!acceptCheck.ok ? (
+            <Button label={`Recharge ${formatInr(acceptCheck.suggestedTopUp)} to accept`} variant="secondary" onPress={() => router.push("/provider/wallet")} />
+          ) : null}
           {canDecline(status) ? <Button label="Decline" variant="secondary" disabled={busy} onPress={() => void decline()} /> : null}
         </>
       ) : status === "pending" ? (
@@ -217,11 +233,11 @@ export default function JobScreen() {
             </>
           ) : settlement ? (
             <>
-              <Line label="HandyFix fee" value={settlement.waived > 0 ? `${formatInr(settlement.slabFee)} waived` : formatInr(settlement.slabFee)} />
+              <Line label="HandyFix fee" value={settlement.waived > 0 ? `${formatInr(settlement.fee)} waived` : formatInr(settlement.deducted)} />
               <Line label="You keep" value={formatInr(settlement.providerNet)} strong />
             </>
           ) : null}
-          {settlement && settlement.addedToDue > 0 ? <Text className="text-sm text-danger">Your wallet was short, so {formatInr(settlement.addedToDue)} was added to your dues. Top up to accept new jobs.</Text> : null}
+          {settlement && settlement.addedToDue > 0 ? <Text className="text-sm text-danger">Your wallet was short, so you now owe {formatInr(settlement.addedToDue)}. Recharge to accept new jobs.</Text> : null}
           <Text className="text-xs text-muted">The customer can report a problem for 24 hours after completion (48 hours for repair quality). You can reply within 24 hours.</Text>
           <Button label={PROVIDER_ACTION_LABEL.done} onPress={() => router.replace("/provider/jobs")} />
         </Card>

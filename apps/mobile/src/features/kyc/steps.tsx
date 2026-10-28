@@ -11,7 +11,7 @@ import { Body, Card, Chip, ErrorBanner, TextField, TextLink } from "@/components
 import { fetchServices } from "@/features/customer/catalog-api";
 import { ServiceAreasField } from "@/features/provider/ServiceAreasField";
 import { loadErrorMessage } from "@/lib/load-error";
-import { colors } from "@/theme/colors";
+import { useThemeColors } from "@/theme/theme";
 import { DocField, StepFrame, TermsSheet } from "./components";
 import { useKycWizard } from "./wizard-context";
 
@@ -195,6 +195,7 @@ function Row({ label, value, onEdit }: { label: string; value: string; onEdit?: 
 }
 
 function ReviewStep({ onEdit, onTerms }: { onEdit: (step: number) => void; onTerms: () => void }) {
+  const colors = useThemeColors();
   const { draft, set, record, facts, hasDoc, problems } = useKycWizard();
   const services = useQuery({ queryKey: ["services"], queryFn: fetchServices });
   const typed = normalizeAadhaar(draft.aadhaarNumber);
@@ -206,7 +207,7 @@ function ReviewStep({ onEdit, onTerms }: { onEdit: (step: number) => void; onTer
   return (
     <>
       {open.length ? (
-        <View accessibilityRole="alert" className="gap-2 rounded-xl border border-danger bg-danger/10 p-3">
+        <View accessibilityRole="alert" className="gap-2 rounded-tile border border-danger bg-danger/10 p-3">
           <Text className="text-sm font-semibold text-danger">Fix these before you submit</Text>
           {open.map((p) => (
             <Pressable key={p.step} accessibilityRole="button" onPress={() => onEdit(p.step)} className="min-h-[44px] justify-center">
@@ -231,7 +232,7 @@ function ReviewStep({ onEdit, onTerms }: { onEdit: (step: number) => void; onTer
       <Pressable accessibilityRole="checkbox" accessibilityState={{ checked: draft.termsAccepted }}
         onPress={() => set("termsAccepted", !draft.termsAccepted)} className="min-h-[48px] flex-row items-start gap-3">
         <View className={`mt-0.5 h-7 w-7 items-center justify-center rounded-lg border-2 ${draft.termsAccepted ? "border-brand bg-brand" : "border-line bg-card"}`}>
-          {draft.termsAccepted ? <Check size={18} color={colors.white} /> : null}
+          {draft.termsAccepted ? <Check size={18} color={colors.onBrand} /> : null}
         </View>
         <Text className="flex-1 text-sm leading-5 text-fg">
           I confirm that everything I submitted is genuine and belongs to me, and I agree to the HandyFix Pro Partner Agreement.

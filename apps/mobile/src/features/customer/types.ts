@@ -21,6 +21,9 @@ export type SubItemRow = {
   duration_minutes: number | null;
   /** Section inside the service ("Fan", "Toilet" …); null until the sections proposal is applied. */
   section?: string | null;
+  /** Admin band a pro's own rate for this job must sit in (both null = no own rates). */
+  price_min?: number | string | null;
+  price_max?: number | string | null;
 };
 
 /** A pro as shown in the list: the shared ranking shape plus what the card displays. */

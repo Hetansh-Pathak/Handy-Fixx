@@ -79,11 +79,3 @@ export function earningsSummary(
   return s;
 }
 
-/** Quick top-up buttons: the smallest that covers the dues plus the next job fee, then round steps. */
-export function topUpChoices(dues: number): number[] {
-  const base = [100, 300, 500, 1000];
-  const need = Math.ceil(Math.max(0, dues) / 100) * 100;
-  const set = new Set(base.filter((v) => v >= need));
-  if (need > 0) set.add(need);
-  return [...set].sort((a, b) => a - b).slice(0, 4);
-}

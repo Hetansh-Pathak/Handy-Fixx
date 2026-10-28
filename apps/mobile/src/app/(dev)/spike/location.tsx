@@ -33,7 +33,7 @@ export default function LocationCheck() {
       foregroundService: {
         notificationTitle: "HandyFix: sharing your location",
         notificationBody: "The customer can see you are on the way.",
-        notificationColor: "#C16430",
+        notificationColor: "#1F5BFF",
       },
     });
     log("Updates started with a foreground service. Lock the phone and move around for 3+ minutes.", "ok");

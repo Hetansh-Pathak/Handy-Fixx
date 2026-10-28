@@ -159,6 +159,7 @@ To check one safely: open the Supabase dashboard, **SQL Editor**, paste the whol
 | 3 | `6_provider_location_DRYRUN.sql` | Lets customers sort by Nearest (pros share an area rounded to about 1 km). |
 | 4 | `9_late_cancel_DRYRUN.sql` | Makes the late-cancel rule impossible to dodge. |
 | 5 | `8_delete_account_DRYRUN.sql` | Account deletion (also needs the `delete-account` function in `supabase\proposals\functions\delete-account`, which I will deploy only when you say so). |
+| 6 | `10_provider_sub_items_DRYRUN.sql` | Pros pick the exact jobs they do and may set their own price per job (inside the range you set on the admin Price bands page). Customers only see pros who do the chosen job. |
 
 ## If something looks wrong
 

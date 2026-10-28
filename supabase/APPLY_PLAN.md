@@ -1,35 +1,39 @@
 # Applying the SQL proposals safely
 
-Nothing is applied. Owner decides; Claude only applies on an explicit "apply <name>".
+Owner decides; Claude only applies on an explicit "apply <name>". Every proposal has a dry run (`supabase/dryrun/N_*_DRYRUN.sql`,
+ends in ROLLBACK) and an apply file (`apply_N_*_COMMIT.sql`).
 
-Live facts (owner ran verify 04 and 05): `booking_status` is an enum WITHOUT `arrived`; 12% `enforce_booking_fee` trigger
-live; old `enforce_dues_before_accept` live; 4 pros have a completed job and no payment record; kyc_reviewed_at/total_jobs exist.
-Superseded: `20261002000003_server_side_fee_trigger` (do NOT apply; the pricing proposal replaces that trigger).
+## Already applied to the live project (2026-10-28, checked read-only 2026-10-29)
+`20261101` pricing (12% customer fee stopped, price bands, locked price) · `20261102000000` arrived status · `20261102000001`
+wallet fee (₹15/₹30/₹50 slabs, launch waiver, accept check, `booking_fees`) · `20261107` extra work, disputes, `get_booking_provider`.
+Never edit these files; `20261114000000` supersedes the fee part of `20261102000001`.
+Superseded, do NOT apply: `20261002000003_server_side_fee_trigger`.
 
 ## Rules for every step
 1. Take a backup first (Supabase → Database → Backups, or a branch via the dashboard). Apply in a Supabase **branch** if available.
 2. One proposal at a time, in a transaction, off-peak. Each file has a ROLLBACK note at the bottom.
-3. After each one: run its smoke test below, and `npm run test:e2e-web` is irrelevant (mock) so test on a phone/dev build.
+3. After each one: run its check below and test on a phone/dev build (`npm run test:e2e-web` uses a mock, it proves nothing about the database).
 4. Stop at the first surprise. Do not continue to the next.
 
-## Order and why
-| # | File | Risk | Safe to apply now? |
+## Waiting, in this order
+| # | Proposal (dry run) | Risk | Notes |
 |---|---|---|---|
-| 0 | `verify/06_guard_triggers_READONLY.sql` | none (read only) | Run first. The three guard triggers may block the new writes; their bodies decide whether 1 and 3 need edits |
-| A | `20261103000000_customer_booking_contact` | Lowest: adds one function, changes no table or trigger | Yes, any time |
-| B | `20261102000000_booking_status_arrived` | Low: adds an enum value (cannot be removed later). Needs the app flag after | Yes, but cannot run inside a transaction block with code that uses the value; run alone |
-| C | `20261101000000_pdf_pricing_model` | Medium: stops the 12% fee. **Until D exists HandyFix collects nothing** | Only together with D, same day |
-| D | `20261102000001_provider_wallet_fee` | Highest: replaces completion, accept rule and block reason | After 0 is reviewed, and right after C |
+| 1 | `20261108` reviews fix (`5_`) | Low | Customers cannot rate today. Most urgent |
+| 2 | `20261110` chat hardening (`7_`) | Low | Closes "anyone can post in any chat" |
+| 3 | `20261113000001` Labour & Shifting service (`11_`) | Lowest: data only | New service + 10 jobs, owner's prices |
+| 4 | `20261113000000` pros pick jobs + own rate (`10_`) | Medium: replaces `enforce_booking_price` | Then set price bands for jobs in admin |
+| 5 | `20261114000000` 3% fee, holds, auto-close (`12_`) | **Highest**: replaces accept, completion fee, wallet summary, payouts; adds a cron job | Same day as the app build with packs. Then run `verify/09_wallet_holds_READONLY.sql` |
+| 6 | `20261109` pro area for Nearest (`6_`), `20261112` late-cancel limit (`9_`), `20261111` delete account (`8_`, + function) | Low | Any time |
+| – | Edge Function proposals in `proposals/functions/` (`create-wallet-topup-order`, `razorpay-webhook`, `verify-wallet-payment`) | Payments | Deploy with or right after 5; see `docs/PAYMENTS_SETUP.md` |
 
-Minimum to run the NEW app end to end in production: C + D (+ B if you want "I've arrived").
-If you want zero revenue gap and zero lockout risk: apply D first (it works under the old 12% model too, but the old
-12% fee would then be charged to customers while pros also pay a flat fee, so do not leave that state for long), then C.
+Not yet reviewed whether still needed: `20261103` contact, `20261104` avatars, `20261105` attachment read fix, `20261106` catalogue.
 
-## Smoke tests after each
-- A: as a customer with a confirmed booking: `select get_booking_provider_phone('<booking id>')` returns a number; as another user it errors/returns null.
-- B: `select unnest(enum_range(null::booking_status))` lists `arrived`.
-- C: create a booking from the app; stored `platform_fee = 0`, `total_amount = provider_amount`; the app shows no red price warning.
-- D: a test pro completes a job with the code; a `booking_fees` row and one `cash_fee` ledger entry `fee:<booking>` exist; a pro with 0 balance outside launch cannot accept.
+## Checks after each
+- 1: a customer rates a completed job once; a second rating is refused.
+- 3: `select count(*) from service_sub_items i join services s on s.id = i.service_id where s.slug = 'labour-shifting'` = 10.
+- 4: a pro unticks a job on My services; booking that job with that pro is refused ("This pro does not do this job").
+- 5: `verify/09` all ok; a test pro with ₹0 (launch over) cannot accept ("Recharge ₹49 to accept…"); after a ₹49 test top-up
+  accept works, Wallet shows "₹12 reserved"; completing with the code charges ₹12 (`booking_fees`, one `fee:<booking>` entry).
 
 ## After applying
-Set `EXPO_PUBLIC_PDF_PRICING_LIVE=1` (after C) and `EXPO_PUBLIC_ARRIVED_STATUS=1` (after B) in the build env, rebuild.
+`EXPO_PUBLIC_PDF_PRICING_LIVE=1` and `EXPO_PUBLIC_ARRIVED_STATUS=1` in the build env (both migrations are live), rebuild.

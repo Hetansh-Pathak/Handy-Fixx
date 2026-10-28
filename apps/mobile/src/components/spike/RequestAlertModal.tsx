@@ -62,16 +62,16 @@ export function RequestAlertModal({
           </View>
           <Text className="mt-2 text-2xl font-semibold text-fg">Plumbing · Leak repair</Text>
           <Text className="text-sm text-muted">Today · 5:00 PM · 2.4 km away · {REQUEST_TIMEOUT_SECONDS}s to accept</Text>
-          <View className="mt-4 w-full gap-2 rounded-2xl border border-line bg-card p-4">
+          <View className="mt-4 w-full gap-2 rounded-tile border border-line bg-card p-4">
             <Row label="You earn" value={formatInr(RATE)} strong />
             <Row label="HandyFix fee" value={launchActive ? `${formatInr(fee)} waived` : formatInr(fee)} />
           </View>
         </View>
         <View className="gap-3">
           {accept.ok ? null : (
-            <Text className="text-center text-sm text-danger">Wallet too low. Top up {formatInr(accept.suggestedTopUp)} to accept.</Text>
+            <Text className="text-center text-sm text-danger">Wallet too low. Recharge {formatInr(accept.suggestedTopUp)} to accept.</Text>
           )}
-          <Button label={accept.ok ? "Accept" : `Top up ${formatInr(accept.suggestedTopUp)} to accept`} onPress={onAccept} disabled={!accept.ok} />
+          <Button label={accept.ok ? "Accept" : `Recharge ${formatInr(accept.suggestedTopUp)} to accept`} onPress={onAccept} disabled={!accept.ok} />
           <Button label="Decline" variant="secondary" onPress={onDecline} />
         </View>
       </View>

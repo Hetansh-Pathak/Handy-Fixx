@@ -10,7 +10,7 @@ import { Text } from "@/components/text";
 import { Body, Button, Card, Chip, ErrorBanner, InfoBanner, Screen, ScreenHeader, ListSkeleton } from "@/components/ui";
 import { useSession } from "@/features/auth/session-provider";
 import { addWindow, availabilityKey, deleteWindow, fetchAvailability, replaceDays, updateWindow, type ScheduleRow } from "@/features/schedule/api";
-import { colors } from "@/theme/colors";
+import { useThemeColors } from "@/theme/theme";
 
 const ORDER: DayName[] = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
 const LABEL: Record<DayName, string> = {
@@ -30,6 +30,7 @@ export default function Schedule() {
 }
 
 function ScheduleScreen({ providerId, approved }: { providerId: string; approved: boolean }) {
+  const colors = useThemeColors();
   const router = useRouter();
   const queryClient = useQueryClient();
   const rows = useQuery({ queryKey: availabilityKey(providerId), queryFn: () => fetchAvailability(providerId) });
@@ -101,7 +102,7 @@ function ScheduleScreen({ providerId, approved }: { providerId: string; approved
             {dayRows.map((r) => (
               <View key={r.id} className="flex-row items-center gap-2 border-t border-line pt-2">
                 <Switch accessibilityLabel={`${LABEL[day]} ${formatSlot(normalizeClock(r.start_time) ?? "09:00")} on or off`}
-                  value={r.is_available === true} disabled={busy} trackColor={{ false: "#D9D2C4", true: colors.brand }} thumbColor="#FFFFFF"
+                  value={r.is_available === true} disabled={busy} trackColor={{ false: colors.switchOff, true: colors.brand }} thumbColor={colors.white}
                   onValueChange={(v) => void run(() => updateWindow(r.id, { is_available: v }))} />
                 <Text className={`flex-1 text-base ${r.is_available ? "text-fg" : "text-muted line-through"}`}>
                   {formatSlot(normalizeClock(r.start_time) ?? "09:00")} – {formatSlot(normalizeClock(r.end_time) ?? "17:00")}
@@ -117,7 +118,7 @@ function ScheduleScreen({ providerId, approved }: { providerId: string; approved
             {dayRows.length === 0 && data.length > 0 ? <Text className="text-sm text-muted">Day off. Add hours to work this day.</Text> : null}
 
             {editing?.day === day ? (
-              <View className="gap-3 rounded-2xl bg-field p-3">
+              <View className="gap-3 rounded-tile bg-field p-3">
                 <Text className="text-sm font-semibold text-fg">{editing.id ? "Change hours" : "New hours"}</Text>
                 <TimeRow label="From" value={start} onChange={(t) => { setStart(t); setFormError(null); }} />
                 <TimeRow label="To" value={end} onChange={(t) => { setEnd(t); setFormError(null); }} />
@@ -129,12 +130,12 @@ function ScheduleScreen({ providerId, approved }: { providerId: string; approved
             ) : (
               <View className="flex-row flex-wrap gap-2 pt-1">
                 <Pressable accessibilityRole="button" onPress={() => openAdd(day)} disabled={busy}
-                  className="min-h-[44px] flex-row items-center gap-1.5 rounded-xl border border-line bg-card px-3 active:opacity-80">
+                  className="min-h-[44px] flex-row items-center gap-1.5 rounded-tile border border-line bg-card px-3 active:opacity-80">
                   <Plus size={16} color={colors.brand} /><Text className="text-sm font-semibold text-fg">Add hours</Text>
                 </Pressable>
                 {dayRows.length > 0 ? (
                   <Pressable accessibilityRole="button" onPress={() => copyToWeekdays(day)} disabled={busy}
-                    className="min-h-[44px] flex-row items-center gap-1.5 rounded-xl border border-line bg-card px-3 active:opacity-80">
+                    className="min-h-[44px] flex-row items-center gap-1.5 rounded-tile border border-line bg-card px-3 active:opacity-80">
                     <Copy size={16} color={colors.brand} /><Text className="text-sm font-semibold text-fg">Copy to weekdays</Text>
                   </Pressable>
                 ) : null}

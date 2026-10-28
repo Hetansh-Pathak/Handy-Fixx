@@ -6,7 +6,7 @@ import { MenuGroup, MenuRow } from "@/components/menu";
 import { Text } from "@/components/text";
 import { Body, Screen, ScreenHeader } from "@/components/ui";
 import { env } from "@/lib/env";
-import { colors } from "@/theme/colors";
+import { useThemeColors } from "@/theme/theme";
 
 // Answers follow the business model: ₹0 customer fee, pay the pro directly, price locked at booking.
 const FAQ = [
@@ -20,6 +20,7 @@ const FAQ = [
 ];
 
 export default function Help() {
+  const colors = useThemeColors();
   const router = useRouter();
   const [open, setOpen] = useState<number | null>(0);
   const mail = () => void Linking.openURL(`mailto:${env.supportEmail}?subject=${encodeURIComponent("HandyFix help")}`);
@@ -28,7 +29,7 @@ export default function Help() {
     <Screen>
       <ScreenHeader title="Help & support" onBack={() => router.back()} />
       <Text className="text-lg font-semibold text-fg">Common questions</Text>
-      <View className="overflow-hidden rounded-3xl border border-line bg-card">
+      <View className="overflow-hidden rounded-panel border border-line bg-card">
         {FAQ.map((f, i) => (
           <View key={f.q}>
             {i > 0 ? <View className="h-px bg-line" /> : null}

@@ -12,7 +12,9 @@ import { EmailVerificationCard } from "@/features/auth/EmailVerificationCard";
 import { useSession } from "@/features/auth/session-provider";
 import { fetchCustomerBookings } from "@/features/customer/booking-api";
 import { env } from "@/lib/env";
-import { colors } from "@/theme/colors";
+import { useThemeColors } from "@/theme/theme";
+import { ScreenBackground } from "@/components/screen-background";
+import { AppearancePicker } from "@/components/appearance-picker";
 
 const initials = (name: string) =>
   name.trim().split(/\s+/).slice(0, 2).map((w) => w.charAt(0).toUpperCase()).join("") || "?";
@@ -24,6 +26,7 @@ export default function CustomerProfile() {
 }
 
 function ProfileMenu({ userId }: { userId: string }) {
+  const colors = useThemeColors();
   const router = useRouter();
   const { email, fullName, signOut } = useSession();
   const profile = useQuery({ queryKey: ["customer-profile", userId], queryFn: () => loadCustomerProfile(userId) });
@@ -38,16 +41,16 @@ function ProfileMenu({ userId }: { userId: string }) {
   const editProfile = () => router.push("/customer/edit-profile");
 
   return (
-    <SafeAreaView className="flex-1 bg-canvas" edges={["top"]}>
+    <ScreenBackground><SafeAreaView className="flex-1" edges={["top"]}>
       <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 32, gap: 16 }}>
         <Title>Profile</Title>
 
         {/* Who you are: tap to edit */}
-        <View className="overflow-hidden rounded-3xl border border-line bg-card">
+        <View className="overflow-hidden rounded-panel border border-line bg-card">
           <Pressable accessibilityRole="button" accessibilityLabel={`${name}, edit profile`} onPress={editProfile}
             className="flex-row items-center gap-4 p-4 active:bg-field">
             <View className="h-16 w-16 items-center justify-center rounded-full bg-brand">
-              <Text className="text-2xl font-bold text-white">{initials(name)}</Text>
+              <Text className="text-2xl font-bold text-onbrand">{initials(name)}</Text>
             </View>
             <View className="flex-1 gap-0.5">
               <Text className="text-lg font-bold text-fg" numberOfLines={1}>{name}</Text>
@@ -78,6 +81,8 @@ function ProfileMenu({ userId }: { userId: string }) {
           </MenuGroup>
         ) : null}
 
+        <AppearancePicker />
+
         <MenuGroup>
           <MenuRow icon={LogOut} label="Sign out" danger onPress={() => void signOut()} />
           <MenuRow icon={Trash2} label="Delete account" danger onPress={() => router.push("/customer/delete-account")} />
@@ -85,11 +90,12 @@ function ProfileMenu({ userId }: { userId: string }) {
 
         <Text className="text-center text-xs text-muted">HandyFix {Constants.expoConfig?.version ?? ""}</Text>
       </ScrollView>
-    </SafeAreaView>
+    </SafeAreaView></ScreenBackground>
   );
 }
 
 function Stat({ icon: Icon, label, onPress }: { icon: LucideIcon; label: string; onPress: () => void }) {
+  const colors = useThemeColors();
   return (
     <Pressable accessibilityRole="button" onPress={onPress} className="min-h-[52px] flex-row items-center gap-3 px-4 active:bg-field">
       <Icon size={20} color={colors.brand} />

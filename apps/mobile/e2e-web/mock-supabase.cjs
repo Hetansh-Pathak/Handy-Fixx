@@ -26,8 +26,15 @@ db.services = [
 ];
 db.subItems = [
   { id: "si-tap", service_id: "s-plumb", name: "Tap repair", description: "Leaking or broken tap", icon: "🚰", base_price: 199, duration_minutes: 45 },
-  { id: "si-leak", service_id: "s-plumb", name: "Pipe leak", description: "Leak in a pipe or joint", icon: "💧", base_price: 349, duration_minutes: 60 },
+  { id: "si-leak", service_id: "s-plumb", name: "Pipe leak", description: "Leak in a pipe or joint", icon: "💧", base_price: 349, duration_minutes: 60, price_min: 249, price_max: 449 },
 ];
+// Pros' ticked jobs (proposal 20261113). Empty = every pro does every job at the catalogue price.
+db.providerSubItems = [];
+// mirrors fee_for_service_bill / recharge_pack_for in proposal 20261114 (3%, min 5, max 50; packs 49/99/199)
+const fee3 = (amount) => (amount > 0 ? Math.min(50, Math.max(5, Math.floor((Math.round(amount * 100) * 3 + 5000) / 10000))) : 0);
+const packFor = (need) => (need <= 49 ? 49 : need <= 99 ? 99 : 199);
+db.holds = {};
+db.wallet.held = 0;
 const minsAgo = (m) => new Date(Date.now() - m * 60000).toISOString();
 // presence is evaluated against "now" at request time, so a fresh heartbeat is always "just now"
 db.publicProviders = () => [
@@ -53,6 +60,7 @@ async function installMock(page) {
     const m = req.method();
     if (m === "OPTIONS") return route.fulfill({ status: 204, headers: CORS });
     db.calls.push(`${m} ${p}${url.search.slice(0, 60)}`);
+    db.wallet.held = db.wallet.held || 0; // suites replace db.wallet without it
     const body = () => { try { return JSON.parse(req.postData() || "{}"); } catch { return {}; } };
 
     if (p === "/auth/v1/signup") {
@@ -120,12 +128,19 @@ async function installMock(page) {
         const row = db.storedBookings.find((r) => r.id === id && (!pid || r.provider_id === pid));
         const patch = body();
         if (row && patch.status === "confirmed" && row.status === "pending" && db.serverWalletRule && !db.launchActive) {
-          // mirrors the proposed enforce_wallet_before_accept trigger
-          const amount = Number(row.provider_amount);
-          const fee = amount <= 0 ? 0 : amount < 500 ? 15 : amount <= 1500 ? 30 : 50;
-          if (db.wallet.available < fee || db.wallet.dues > 0) {
-            return json(route, 400, { code: "P0001", message: "Wallet below the fee. Top up Rs 100 to accept." });
+          // mirrors enforce_wallet_before_accept in proposal 20261114: no dues, the fee must be held from the spendable balance
+          const fee = fee3(Number(row.provider_amount) - Number(row.parts_amount || 0));
+          if (db.wallet.dues > 0) {
+            return json(route, 400, { code: "P0001", message: `Recharge ₹${packFor(fee + db.wallet.dues)} to clear ₹${db.wallet.dues} you owe and accept new jobs.` });
           }
+          if (db.wallet.available < fee) {
+            return json(route, 400, { code: "P0001", message: `Recharge ₹${packFor(fee - db.wallet.available)} to accept. Your wallet is below the ₹${fee} fee.` });
+          }
+          if (fee > 0) { db.wallet.available -= fee; db.wallet.held += fee; db.holds[row.id] = fee; }
+        }
+        if (row && patch.status === "cancelled" && db.holds[row.id]) {
+          // release_wallet_hold: cancel/decline gives the held fee back
+          db.wallet.available += db.holds[row.id]; db.wallet.held -= db.holds[row.id]; delete db.holds[row.id];
         }
         if (row) { db.patches = (db.patches || []).concat([{ id, patch }]); Object.assign(row, patch); }
         return route.fulfill({ status: 204, headers: CORS });
@@ -147,7 +162,7 @@ async function installMock(page) {
     }
     if (p === "/rest/v1/service_sub_items") {
       const sid = (url.searchParams.get("service_id") || "").replace("eq.", "");
-      return json(route, 200, db.subItems.filter((s) => s.service_id === sid));
+      return json(route, 200, db.subItems.filter((s) => !sid || s.service_id === sid));
     }
     if (p === "/rest/v1/public_providers") {
       const raw = url.searchParams.get("id") || "";
@@ -176,6 +191,31 @@ async function installMock(page) {
       const ok = row && u && row.customer_id === u.id && ["confirmed", "on_the_way", "arrived", "in_progress"].includes(row.status);
       return json(route, 200, ok ? "9876500099" : null);
     }
+    if (p === "/rest/v1/provider_sub_items") {
+      const q = url.searchParams;
+      const sid = (q.get("service_id") || "").replace("eq.", "");
+      const pid = (q.get("provider_id") || "").replace("eq.", "");
+      if (db.subItemsTableMissing) return json(route, 404, { code: "PGRST205", message: "Could not find the table 'public.provider_sub_items'" });
+      if (m === "POST") {
+        // mirrors check_provider_sub_item: fills service_id, own rate must sit inside the job's band
+        for (const r of [].concat(body())) {
+          const job = db.subItems.find((s) => s.id === r.sub_item_id);
+          if (r.custom_price != null && !(job && job.price_min && r.custom_price >= job.price_min && r.custom_price <= job.price_max)) {
+            return json(route, 400, { code: "22023", message: "Set a price between ₹249 and ₹449." });
+          }
+          db.providerSubItems = db.providerSubItems.filter((x) => !(x.provider_id === r.provider_id && x.sub_item_id === r.sub_item_id));
+          db.providerSubItems.push({ ...r, service_id: job.service_id });
+        }
+        return route.fulfill({ status: 201, headers: CORS });
+      }
+      if (m === "DELETE") {
+        const keep = (q.get("sub_item_id") || "").match(/^not\.in\.\((.*)\)$/);
+        const kept = keep ? keep[1].split(",") : [];
+        db.providerSubItems = db.providerSubItems.filter((r) => r.provider_id !== pid || kept.includes(r.sub_item_id));
+        return route.fulfill({ status: 204, headers: CORS });
+      }
+      return json(route, 200, db.providerSubItems.filter((r) => (!sid || r.service_id === sid) && (!pid || r.provider_id === pid)));
+    }
     if (p === "/rest/v1/provider_services") {
       const sid = (url.searchParams.get("service_id") || "").replace("eq.", "");
       return json(route, 200, db.providerServices.filter((r) => !sid || r.service_id === sid));
@@ -196,8 +236,8 @@ async function installMock(page) {
     }
     if (p === "/functions/v1/send-welcome-email") return json(route, 200, { ok: true });
     if (p === "/rest/v1/rpc/get_wallet_summary") {
-      const { available, dues } = db.wallet;
-      return json(route, 200, { ok: true, provider_id: "x", balance: available - dues, available, dues, blocked: false });
+      const { available, dues, held } = db.wallet;
+      return json(route, 200, { ok: true, provider_id: "x", balance: available + held - dues, available, held, dues, blocked: false });
     }
     if (p === "/rest/v1/wallet_transactions") return json(route, 200, db.ledger);
     if (p === "/rest/v1/payout_requests") return json(route, 200, db.payouts);
@@ -205,8 +245,8 @@ async function installMock(page) {
     if (p === "/functions/v1/create-wallet-topup-order") {
       const b = body();
       db.calls.push({ fn: "create-wallet-topup-order", body: b });
-      if (!Number.isInteger(b.amount) || b.amount < 1 || b.amount > 50000) return json(route, 400, { error: "Enter a whole amount between ₹1 and ₹50,000" });
-      return json(route, 200, { order_id: "order_test1", amount_paise: b.amount * 100, key_id: "rzp_test_x", prefill: {} });
+      if (![49, 99, 199].includes(b.pack)) return json(route, 400, { error: "Pick a recharge pack: ₹49, ₹99, ₹199." });
+      return json(route, 200, { order_id: "order_test1", amount_paise: b.pack * 100, key_id: "rzp_test_x", prefill: {} });
     }
     if (p === "/rest/v1/rpc/request_payout") {
       const b = body();
@@ -233,11 +273,26 @@ async function installMock(page) {
         return json(route, 200, { ok: false, reason: "wrong_code", attempts_left: Math.max(0, 5 - row.failed_attempts), locked, locked_until: locked ? row.locked_until : null });
       }
       row.status = "completed"; row.completed_at = new Date().toISOString();
-      // the proposed settle_booking_fee: flat slab from the wallet, unless the launch period waives it
-      const amount = Number(row.provider_amount);
-      const fee = amount <= 0 ? 0 : amount < 500 ? 15 : amount <= 1500 ? 30 : 50;
-      if (!db.launchActive && fee > 0) { db.wallet.available -= fee; if (db.wallet.available < 0) { db.wallet.dues += -db.wallet.available; db.wallet.available = 0; } }
-      db.completedFees = (db.completedFees || []).concat([{ id: row.id, fee, waived: db.launchActive }]);
+      // settle_booking_fee in proposal 20261114: final fee from the hold first, then the spendable balance; never a due with a hold
+      const fee = fee3(Number(row.provider_amount) - Number(row.parts_amount || 0));
+      const hold = db.holds[row.id] || 0;
+      let charged = 0;
+      if (!db.launchActive && fee > 0) {
+        if (hold > 0) {
+          const fromHold = Math.min(fee, hold);
+          const fromBal = Math.min(fee - fromHold, db.wallet.available);
+          charged = fromHold + fromBal;
+          db.wallet.available += hold - fromHold - fromBal;
+        } else {
+          charged = fee;
+          db.wallet.available -= fee;
+          if (db.wallet.available < 0) { db.wallet.dues += -db.wallet.available; db.wallet.available = 0; }
+        }
+      } else {
+        db.wallet.available += hold;
+      }
+      db.wallet.held -= hold; delete db.holds[row.id];
+      db.completedFees = (db.completedFees || []).concat([{ id: row.id, fee, charged, waived: db.launchActive }]);
       return json(route, 200, { ok: true });
     }
     if (p === "/rest/v1/provider_locations" && m === "GET") {

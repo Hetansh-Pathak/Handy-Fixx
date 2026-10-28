@@ -4,7 +4,7 @@ Living status file. Claude: read this at the start of a session and **remind the
 marked QUEUED or BLOCKED** at the end of each report until it is done.
 
 Decisions locked: React Native + Expo, one app with two roles (one role per account), PDF business model
-(customer pays the pro's own rate, ₹0 customer fee; provider pays a flat ₹15/30/50 from a prepaid wallet only on
+(customer pays the pro's own rate, ₹0 customer fee; provider pays 3% (min ₹5, max ₹50; was a flat ₹15/30/50 until 2026-10-29) from a prepaid wallet only on
 completed jobs; fee-free first 3 months or 10 jobs; customer pays the pro directly by UPI or cash), Android first.
 Package name: `in.handyfix.app`.
 
@@ -21,6 +21,9 @@ Package name: `in.handyfix.app`.
 | 4 / slice 3 | Customer booking status: list, live status over Realtime, ETA/distance/live position with a map (key needed), code card, call (needs SQL function), next-best-pros rebook after a timeout or decline, cancel. 24 end-to-end checks against a mock backend. |
 | UI | Old HandyFix look ported (cream/terracotta, Plus Jakarta Sans, legacy-style home and auth, dashboard stats) and **two store apps from one codebase** (customer / provider variants, own package, scheme and permissions) |
 | 5a | Provider wallet screen: balance/dues, history, earnings, Razorpay top-up (uses the existing `create-wallet-topup-order` + webhook), withdrawal via `request_payout`. 17 checks on a mock; **Razorpay checkout itself untested (needs a dev build + keys)** |
+| A1 (2026-10-29) | Pros pick jobs inside each service and set an own rate inside the admin band (My services). Proposal `20261113000000`, NOT applied. Built in a non-git copy |
+| L (2026-10-29) | "Labour & Shifting" service (10 jobs: helpers by hour/day, heavy items, loading, site helper). Data proposal `20261113000001`, NOT applied |
+| F (2026-10-29) | **New pro pricing**: 3% fee (min ₹5, max ₹50), recharge packs ₹49/₹99/₹199, fee held at accept, no new dues, 24 h auto-close (pg_cron). Shared rules + tests, proposal `20261114000000` (supersedes the fee part of the applied `20261102000001`), Edge Function proposals (packs only, webhook note check, `verify-wallet-payment`), `docs/PAYMENTS_SETUP.md`, Pro app wallet/request/job/home screens. **Real Razorpay payments and real phones untested.** |
 | 4 / slice 4 | Provider: online switch with heartbeat, full-screen request alert (Realtime + polling), accept/decline with wallet check, job steps, live trip location, completion code, flat-fee preview. Tested end to end (26 checks) against a mock backend only. |
 
 ## QUEUE (in order)

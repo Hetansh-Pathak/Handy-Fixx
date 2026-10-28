@@ -8,24 +8,25 @@ import { useState } from "react";
 import { Pressable, View } from "react-native";
 import { Text } from "@/components/text";
 import { Body, Button, ErrorBanner, Screen, ScreenHeader, TextLink, ListSkeleton } from "@/components/ui";
-import { colors } from "@/theme/colors";
+import { useThemeColors } from "@/theme/theme";
 import { markAllNotificationsRead, markNotificationRead, notificationsKey, type NotifRole } from "./api";
 import { useNotifications } from "./use-notifications";
 
-const ICON: Record<NotificationKind, { icon: LucideIcon; color: string }> = {
-  booking: { icon: CalendarCheck, color: colors.brand },
-  done: { icon: CircleCheck, color: colors.ok },
-  cancelled: { icon: XCircle, color: colors.danger },
-  message: { icon: MessageCircle, color: colors.brand },
-  review: { icon: Star, color: colors.sun },
-  identity: { icon: ShieldCheck, color: colors.brand },
-  money: { icon: IndianRupee, color: colors.ok },
-  dispute: { icon: CircleAlert, color: colors.danger },
-  info: { icon: Bell, color: colors.muted },
+const ICON: Record<NotificationKind, { icon: LucideIcon; tone: "brand" | "ok" | "danger" | "accent" | "muted" }> = {
+  booking: { icon: CalendarCheck, tone: "brand" },
+  done: { icon: CircleCheck, tone: "ok" },
+  cancelled: { icon: XCircle, tone: "danger" },
+  message: { icon: MessageCircle, tone: "brand" },
+  review: { icon: Star, tone: "accent" },
+  identity: { icon: ShieldCheck, tone: "brand" },
+  money: { icon: IndianRupee, tone: "ok" },
+  dispute: { icon: CircleAlert, tone: "danger" },
+  info: { icon: Bell, tone: "muted" },
 };
 
 /** The bell on the home screens. A dot with a number when something is unread. */
 export function NotificationBell({ role }: { role: NotifRole }) {
+  const colors = useThemeColors();
   const router = useRouter();
   const { unread } = useNotifications(role);
   return (
@@ -34,7 +35,7 @@ export function NotificationBell({ role }: { role: NotifRole }) {
       <Bell size={24} color={colors.fg} />
       {unread > 0 ? (
         <View className="absolute right-0 top-1 min-w-[18px] items-center rounded-full bg-brand px-1">
-          <Text className="text-[11px] font-bold text-white">{unread > 9 ? "9+" : unread}</Text>
+          <Text className="text-xs font-bold text-onbrand">{unread > 9 ? "9+" : unread}</Text>
         </View>
       ) : null}
     </Pressable>
@@ -42,6 +43,7 @@ export function NotificationBell({ role }: { role: NotifRole }) {
 }
 
 export function NotificationsScreen({ role }: { role: NotifRole }) {
+  const colors = useThemeColors();
   const router = useRouter();
   const queryClient = useQueryClient();
   const list = useNotifications(role);
@@ -82,11 +84,12 @@ export function NotificationsScreen({ role }: { role: NotifRole }) {
       {list.unread > 0 ? <TextLink label={busy ? "Marking…" : `Mark all ${list.unread} as read`} onPress={() => void readAll()} /> : null}
       <View className="gap-2">
         {(list.data ?? []).map((n) => {
-          const { icon: Icon, color } = ICON[notificationKind(n.type)];
+          const { icon: Icon, tone } = ICON[notificationKind(n.type)];
+          const color = colors[tone];
           return (
             <Pressable key={n.id} accessibilityRole="button" accessibilityLabel={`${n.is_read ? "" : "Unread. "}${n.title}. ${n.message}`}
               onPress={() => void open(n)}
-              className={`flex-row items-start gap-3 rounded-2xl border p-4 active:opacity-80 ${n.is_read ? "border-line bg-card" : "border-brand/40 bg-brand-soft"}`}>
+              className={`flex-row items-start gap-3 rounded-tile border p-4 active:opacity-80 ${n.is_read ? "border-line bg-card" : "border-brand/40 bg-brand-soft"}`}>
               <View className="mt-0.5"><Icon size={22} color={color} /></View>
               <View className="flex-1 gap-0.5">
                 <Text className="text-base font-semibold text-fg">{n.title}</Text>

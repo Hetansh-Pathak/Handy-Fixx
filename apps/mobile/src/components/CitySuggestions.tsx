@@ -2,7 +2,7 @@ import { suggestCities } from "@handyfix/shared";
 import { MapPin } from "lucide-react-native";
 import { Pressable, View } from "react-native";
 import { Text } from "@/components/text";
-import { colors } from "@/theme/colors";
+import { useThemeColors } from "@/theme/theme";
 
 /**
  * Gujarat cities that start with what was typed ("jam" → Jamnagar, Jamjodhpur, Jam Khambhalia).
@@ -11,6 +11,7 @@ import { colors } from "@/theme/colors";
 export function CitySuggestions({ query, onPick, exclude = [], limit = 6 }: {
   query: string; onPick: (city: string) => void; exclude?: readonly string[]; limit?: number;
 }) {
+  const colors = useThemeColors();
   const typed = query.trim().toLowerCase();
   const cities = suggestCities(query, exclude, limit).filter((c) => c.toLowerCase() !== typed);
   if (!cities.length) return null;

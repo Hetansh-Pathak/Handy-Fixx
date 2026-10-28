@@ -8,9 +8,10 @@ import { Body, Button, Card, ErrorBanner, Screen, ScreenHeader, ListSkeleton } f
 import { useSession } from "@/features/auth/session-provider";
 import { fetchProviderReviews, providerReviewsKey } from "@/features/reviews/api";
 import { Stars } from "@/features/reviews/components";
-import { colors } from "@/theme/colors";
+import { useThemeColors } from "@/theme/theme";
 
 export default function ProviderReviews() {
+  const colors = useThemeColors();
   const router = useRouter();
   const { provider } = useSession();
   const providerId = provider?.id ?? "";

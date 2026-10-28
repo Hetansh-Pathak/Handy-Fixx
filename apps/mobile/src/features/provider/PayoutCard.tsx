@@ -5,7 +5,7 @@ import { useState } from "react";
 import { View } from "react-native";
 import { Text } from "@/components/text";
 import { Body, Button, Card, ErrorBanner, TextField } from "@/components/ui";
-import { colors } from "@/theme/colors";
+import { useThemeColors } from "@/theme/theme";
 import { fetchProviderProfile, providerProfileKey, savePayoutDetails } from "./profile-api";
 
 const EMPTY: PayoutDetailsInput = { upiId: "", bankAccountName: "", bankAccountNumber: "", bankIfsc: "" };
@@ -106,6 +106,7 @@ export function PayoutCard({ providerId }: { providerId: string }) {
 }
 
 function Detail({ icon, label, value }: { icon: "upi" | "bank"; label: string; value: string }) {
+  const colors = useThemeColors();
   const Icon = icon === "upi" ? Smartphone : Landmark;
   return (
     <View className="flex-row items-center gap-3">

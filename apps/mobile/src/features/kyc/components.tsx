@@ -6,9 +6,10 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Text } from "@/components/text";
 import { Button, ErrorBanner, Screen, ScreenHeader, TextLink } from "@/components/ui";
 import { IconTile } from "@/components/brand";
-import { colors } from "@/theme/colors";
+import { useThemeColors } from "@/theme/theme";
 import { isPermissionDenied, pickKycImage } from "./images";
 import { useKycWizard } from "./wizard-context";
+import { ScreenBackground } from "@/components/screen-background";
 
 /** The frame every step shares: header, progress, the rejection reason, one primary button. */
 export function StepFrame({ step, icon: Icon, title, hint, onBack, onNext, nextLabel, busy, error, children }: {
@@ -23,6 +24,7 @@ export function StepFrame({ step, icon: Icon, title, hint, onBack, onNext, nextL
   error: string | null;
   children: ReactNode;
 }) {
+  const colors = useThemeColors();
   const { record } = useKycWizard();
   const percent = Math.round((step / KYC_TOTAL_STEPS) * 100);
   const last = step === KYC_TOTAL_STEPS;
@@ -40,7 +42,7 @@ export function StepFrame({ step, icon: Icon, title, hint, onBack, onNext, nextL
       </View>
 
       {record.kycStatus === "rejected" ? (
-        <View accessibilityRole="alert" className="gap-1 rounded-xl border border-danger bg-danger/10 p-3">
+        <View accessibilityRole="alert" className="gap-1 rounded-tile border border-danger bg-danger/10 p-3">
           <Text className="text-sm font-semibold text-danger">Fix what the reviewer asked for</Text>
           <Text className="text-sm text-danger">{record.rejectionReason?.trim() || "Please correct your details and upload clear photos."}</Text>
         </View>
@@ -74,6 +76,7 @@ export function DocField({ docKey, label, hint, required = true, selfie = false 
   /** Opens the front camera first; the gallery stays available as a smaller option. */
   selfie?: boolean;
 }) {
+  const colors = useThemeColors();
   const { localDoc, hasDoc, setDoc } = useKycWizard();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -102,12 +105,12 @@ export function DocField({ docKey, label, hint, required = true, selfie = false 
       {hint ? <Text className="text-sm text-muted">{hint}</Text> : null}
 
       {present ? (
-        <View className="gap-3 rounded-2xl border border-ok/50 bg-ok/5 p-3">
+        <View className="gap-3 rounded-tile border border-ok/50 bg-ok/5 p-3">
           <View className="flex-row items-center gap-3">
             {local ? (
               <Image source={{ uri: local.uri }} accessibilityLabel={`${label} preview`} style={{ width: 72, height: 72, borderRadius: 12 }} />
             ) : (
-              <View className="h-[72px] w-[72px] items-center justify-center rounded-xl bg-ok/10"><CircleCheck size={32} color={colors.ok} /></View>
+              <View className="h-[72px] w-[72px] items-center justify-center rounded-tile bg-ok/10"><CircleCheck size={32} color={colors.ok} /></View>
             )}
             <View className="flex-1">
               <Text className="text-base font-semibold text-ok">{local ? "Photo ready" : "Uploaded"}</Text>
@@ -121,7 +124,7 @@ export function DocField({ docKey, label, hint, required = true, selfie = false 
           </View>
         </View>
       ) : (
-        <View className="gap-2 rounded-2xl border-2 border-dashed border-line bg-card p-4">
+        <View className="gap-2 rounded-tile border-2 border-dashed border-line bg-card p-4">
           {busy ? <ActivityIndicator color={colors.brand} /> : null}
           <Button label={selfie ? "Take a selfie" : "Take a photo"} variant="primary" disabled={busy} onPress={() => void pick("camera")} />
           <Button label="Choose from gallery" variant="secondary" disabled={busy} onPress={() => void pick("gallery")} />
@@ -138,9 +141,10 @@ export function DocField({ docKey, label, hint, required = true, selfie = false 
 function SmallAction({ icon: Icon, label, onPress, disabled, danger = false }: {
   icon: LucideIcon; label: string; onPress: () => void; disabled: boolean; danger?: boolean;
 }) {
+  const colors = useThemeColors();
   return (
     <Pressable accessibilityRole="button" disabled={disabled} onPress={onPress}
-      className={`min-h-[44px] flex-row items-center gap-2 rounded-xl border border-line bg-card px-3 ${disabled ? "opacity-40" : "active:opacity-80"}`}>
+      className={`min-h-[44px] flex-row items-center gap-2 rounded-tile border border-line bg-card px-3 ${disabled ? "opacity-40" : "active:opacity-80"}`}>
       <Icon size={16} color={danger ? colors.danger : colors.brand} />
       <Text className={`text-sm font-semibold ${danger ? "text-danger" : "text-fg"}`}>{label}</Text>
     </Pressable>
@@ -149,9 +153,10 @@ function SmallAction({ icon: Icon, label, onPress, disabled, danger = false }: {
 
 /** The full Partner Agreement in a sheet. Reused by the Help screens. */
 export function TermsSheet({ visible, onClose }: { visible: boolean; onClose: () => void }) {
+  const colors = useThemeColors();
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
-      <SafeAreaView className="flex-1 bg-canvas" edges={["top", "bottom"]}>
+      <ScreenBackground><SafeAreaView className="flex-1" edges={["top", "bottom"]}>
         <View className="flex-row items-center justify-between border-b border-line px-5 py-3">
           <View className="flex-1 pr-3">
             <Text className="text-lg font-bold text-fg" numberOfLines={2}>{PARTNER_TERMS_TITLE}</Text>
@@ -169,7 +174,7 @@ export function TermsSheet({ visible, onClose }: { visible: boolean; onClose: ()
           ))}
           <Button label="Close" variant="secondary" onPress={onClose} />
         </ScrollView>
-      </SafeAreaView>
+      </SafeAreaView></ScreenBackground>
     </Modal>
   );
 }

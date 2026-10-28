@@ -33,7 +33,7 @@ const check = (name, ok, extra = "") => {
   const waitBody = (text, timeout = 12000) =>
     page.waitForFunction((t) => document.body.innerText.replace(/\s+/g, " ").toLowerCase().includes(t), norm(text), { timeout });
   const shot = (n) => page.screenshot({ path: path.join(OUT, n + ".png"), fullPage: true });
-  const openWallet = async () => { await page.goto(`${BASE}/provider/wallet`, { waitUntil: "networkidle" }); await waitBody("Add money"); };
+  const openWallet = async () => { await page.goto(`${BASE}/provider/wallet`, { waitUntil: "networkidle" }); await waitBody("Recharge"); };
   const amountField = (i) => page.locator('[aria-label="Amount (₹)"]:visible').nth(i);
 
   // ── sign up as an approved pro ───────────────────────────────────────────────
@@ -69,52 +69,55 @@ const check = (name, ok, extra = "") => {
   await page.goto(`${BASE}/provider`, { waitUntil: "networkidle" });
   await see("Open wallet");
   await T("Open wallet").click();
-  await waitBody("Add money");
-  await waitBody("Wallet topped", 1).catch(() => undefined);
+  await waitBody("Recharge");
   await waitBody("HandyFix fee");
   const w = await body();
-  check("the wallet shows the balance and no dues when there are none", (await L("Wallet balance").innerText()) === "₹250" && !w.includes("Dues"));
+  check("the headline is how many jobs the balance covers (₹250 / ₹12 fee on a ₹400 job = 20)", (await L("Jobs covered").innerText()) === "Covers about 20 more jobs");
+  check("the rupee balance is shown under it, with no dues when there are none", (await L("Wallet balance").innerText()) === "₹250 available" && !w.includes("You owe"));
   check("the history lists the fee as a red minus and the top-up as a plus", w.includes("-₹15") && w.includes("+₹500") && w.includes("Wallet top-up"));
   check("earnings count completed jobs only", w.includes("₹500 · 2 jobs") && !w.includes("₹1,499") && w.includes("Today ₹500"));
-  check("with the launch over, the flat fee rule is explained", w.includes("flat ₹15 / ₹30 / ₹50"));
+  check("with the launch over, the 3% fee rule is explained", w.includes("3% per job, min ₹5, max ₹50"));
+  check("nothing is shown as reserved when no job holds a fee", !w.includes("reserved for jobs"));
   await shot("50-wallet");
 
-  // ── 2. top-up: validation, then the order ────────────────────────────────────
-  await amountField(0).fill("50");
-  await T("Pay with Razorpay").click();
-  await waitBody("Minimum top-up is ₹100");
-  check("a top-up below ₹100 is refused before anything is sent", !db.calls.some((c) => c.fn === "create-wallet-topup-order"));
-  await amountField(0).fill("150");
-  await T("Pay with Razorpay").click();
+  // ── 2. recharge packs ────────────────────────────────────────────────────────
+  const packs = await body();
+  check("three packs are offered, ₹99 marked most popular, with no free amount field",
+    packs.includes("₹49") && packs.includes("₹99") && packs.includes("₹199") && /most popular/i.test(packs) && !packs.includes("Pay with Razorpay") && !packs.includes("₹100 to ₹50,000"));
+  check("each pack says roughly how many jobs it covers", packs.includes("about 4 jobs") && packs.includes("about 8 jobs") && packs.includes("about 16 jobs"));
+  await L("Recharge ₹99").click();
   await waitBody("phone app");
-  check("a valid top-up asks the server for an order of that amount", db.calls.some((c) => c.fn === "create-wallet-topup-order" && c.body.amount === 150));
+  check("tapping a pack asks the server for an order for exactly that pack", db.calls.some((c) => c.fn === "create-wallet-topup-order" && c.body.pack === 99 && c.body.amount === undefined));
   check("on web the native checkout is explained instead of crashing", await has("Top-up works in the HandyFix phone app"));
-  await page.getByRole("button", { name: "₹500", exact: true }).click();
-  await page.waitForFunction(() => document.querySelector('[aria-label="Amount (₹)"]')?.value === "500", null, { timeout: 4000 }).catch(() => undefined);
-  check("a quick-pick chip fills the amount", (await amountField(0).inputValue()) === "500", await amountField(0).inputValue());
+
+  db.wallet = { available: 238, dues: 0, held: 12 };
+  await openWallet();
+  check("money held for an accepted job is shown and not counted as available",
+    (await has("₹12 reserved for jobs you accepted")) && (await L("Wallet balance").innerText()) === "₹238 available",
+    `${await L("Wallet balance").innerText()} | ${(await body()).slice(0, 300)}`);
 
   // ── 3. withdrawal ────────────────────────────────────────────────────────────
   db.wallet = { available: 500, dues: 0 };
   await openWallet();
-  await amountField(1).fill("100");
+  await amountField(0).fill("100");
   await T("Request withdrawal").click();
   await waitBody("The minimum withdrawal is ₹200");
   check("a withdrawal under the minimum shows the minimum", true);
-  await amountField(1).fill("9000");
+  await amountField(0).fill("9000");
   await T("Request withdrawal").click();
   await waitBody("more than your wallet balance");
   check("a withdrawal above the balance is refused", true);
-  await amountField(1).fill("300");
+  await amountField(0).fill("300");
   await T("Request withdrawal").click();
   await waitBody("Withdrawal of ₹300 requested");
   await waitBody("pending");
-  check("a valid withdrawal reduces the balance and is listed as pending", (await L("Wallet balance").innerText()) === "₹200" && (await has("₹300 · pending")));
+  check("a valid withdrawal reduces the balance and is listed as pending", (await L("Wallet balance").innerText()) === "₹200 available" && (await has("₹300 · pending")));
   await waitBody("Withdrawal");
   check("the history shows the withdrawal as money out", (await has("-₹300")));
   await shot("51-withdraw");
 
   db.payoutDetails = false;
-  await amountField(1).fill("200");
+  await amountField(0).fill("200");
   await T("Request withdrawal").click();
   await waitBody("Add your UPI id or bank account first");
   check("without payout details the pro is told what to add", true);
@@ -124,9 +127,9 @@ const check = (name, ok, extra = "") => {
   db.wallet = { available: 0, dues: 250 };
   await openWallet();
   const d = await body();
-  check("dues are shown in red and top-ups clear them first", (await L("Wallet dues").innerText()) === "₹250" && d.includes("Top-ups clear your dues first"));
-  check("quick picks start above the dues", d.includes("₹300") && d.includes("₹500") && d.includes("₹1,000") && !/(^|\s)₹100(\s|$)/.test(d.split("Add money")[1].split("Amount")[0]));
-  check("withdrawing is closed until the dues are cleared", d.includes("Clear your dues first") && !(await has("Request withdrawal")));
+  check("old dues are shown in red and a recharge clears them first", (await L("Wallet dues").innerText()) === "You owe ₹250. A recharge clears it first.");
+  check("the headline asks for a recharge", (await L("Jobs covered").innerText()) === "Recharge to accept new jobs");
+  check("withdrawing is closed until the dues are cleared", d.includes("Recharge to clear what you owe first") && !(await has("Request withdrawal")));
   await shot("52-dues");
 
   check("no uncaught page errors", errors.length === 0, errors.slice(0, 3).join(" | "));

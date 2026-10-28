@@ -1,5 +1,5 @@
 import {
-  formatBookingWhen, openRequests, providerLaunchStatus, requestEconomics, walletStateFromSummary, type LaunchStatus, type WalletState,
+  formatBookingWhen, heldFromSummary, openRequests, providerLaunchStatus, requestEconomics, walletStateFromSummary, type LaunchStatus, type WalletState,
 } from "@handyfix/shared";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
@@ -26,7 +26,10 @@ type Runtime = {
   notice: string | null;
   error: string | null;
   toggleOnline: () => Promise<void>;
+  /** Spendable money: fees held for accepted jobs are already taken out. */
   wallet: WalletState;
+  /** Fees reserved for accepted jobs (0 until proposal 20261114 is applied). */
+  held: number;
   walletReady: boolean;
   launch: LaunchStatus;
   refreshWallet: () => Promise<void>;
@@ -71,6 +74,7 @@ export function ProviderRuntime({ children }: { children: ReactNode }) {
     queryFn: fetchWalletSummary,
   });
   const wallet = useMemo(() => walletStateFromSummary(walletQuery.data), [walletQuery.data]);
+  const held = heldFromSummary(walletQuery.data);
   const launch = useMemo(
     () => providerLaunchStatus({ kycReviewedAt: provider?.kyc_reviewed_at, totalJobs: provider?.total_jobs }, new Date()),
     [provider?.kyc_reviewed_at, provider?.total_jobs, now.getMinutes()], // eslint-disable-line react-hooks/exhaustive-deps
@@ -181,10 +185,10 @@ export function ProviderRuntime({ children }: { children: ReactNode }) {
 
   const value = useMemo<Runtime>(
     () => ({
-      online, canGoOnline, switchBlockedReason, toggling, notice, error, toggleOnline, wallet, walletReady: walletQuery.isSuccess, launch, refreshWallet,
+      online, canGoOnline, switchBlockedReason, toggling, notice, error, toggleOnline, wallet, held, walletReady: walletQuery.isSuccess, launch, refreshWallet,
       openRequests: open, markRequestSeen,
     }),
-    [online, canGoOnline, switchBlockedReason, toggling, notice, error, toggleOnline, wallet, walletQuery.isSuccess, launch, refreshWallet, open, markRequestSeen],
+    [online, canGoOnline, switchBlockedReason, toggling, notice, error, toggleOnline, wallet, held, walletQuery.isSuccess, launch, refreshWallet, open, markRequestSeen],
   );
 
   void userId;
