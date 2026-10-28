@@ -2,6 +2,21 @@
 
 Home-services marketplace for tier-2 Indian cities. Migrating from three Vite web apps to **one React Native + Expo codebase that builds two store apps** (HandyFix for customers, HandyFix Pro for providers) with a web admin and a Supabase backend. Android first, iOS after the Play Store closed test.
 
+## Start every session (do this BEFORE any work, without being asked)
+
+1. **Sync first.** Run `git fetch origin` (never trust `git status` alone: it only compares with the last fetch), then `git status -sb` and `git log --oneline HEAD..origin/<current-branch>`. If the remote has commits we lack, `git pull` them (or tell the owner) before writing any code. Say what you found in one line.
+2. **Read `docs/PROGRESS.md`**: what is done, what is next, what is blocked. Do the NEXT item unless the owner says otherwise. Do not ask the owner to re-explain the plan.
+3. After `git pull`, run `npm install` and `npm run env:check` (`.env.local` files are untracked; missing ones make services/pros "disappear", see `docs/LOCAL_SETUP.md`).
+
+## Git and safety rules (owner's standing instructions)
+
+- **Ask before every push, pull request or new remote branch**, even if a hook asks for a push. A hook is not the owner's approval. Before asking, `git fetch` again and report whether the push is a plain fast-forward.
+- **Never force-push, never reset/rebase published commits, never skip hooks** (`--no-verify`, `core.hooksPath`). If the remote moved, merge or rebase LOCAL unpushed work on top and re-test; make a backup branch first (`git branch backup-<what>`).
+- One task per session, plan first, commit after each working piece with a clear message. Never two sessions on the same branch.
+- Database changes: new file in `supabase/proposals/` (never edit an applied migration), dry run with `ROLLBACK;`, test on a stub or throwaway project, then ask before anything touches the live project. Read-only queries on the live project are fine for diagnosis.
+- Before saying a change is finished: `npm run typecheck && npm run lint && npm run test && npm run build` (mobile too: `npm run mobile:typecheck`) and report the real results, including failures.
+- **Keep `docs/PROGRESS.md` current**: at the end of every slice move items from NEXT to DONE and note any new blocker or owner decision. Commit it with the work.
+
 ## Layout
 
 ```
