@@ -1,11 +1,40 @@
-/** Time slots a customer can book (local time). */
-export const BOOKING_SLOTS = ["08:00", "10:00", "12:00", "14:00", "16:00", "18:00"] as const;
-export type BookingSlot = (typeof BOOKING_SLOTS)[number];
+const pad = (n: number) => String(n).padStart(2, "0");
+
+/**
+ * A customer picks any start time on a clock, inside working hours, in 15-minute steps (local time, "HH:MM").
+ * The database stores it as a plain `time`, so no slot list is needed there.
+ */
+export const BOOKING_OPENS_AT = "08:00";
+/** Latest start time a customer can pick. */
+export const BOOKING_LAST_START = "20:00";
+export const BOOKING_MINUTE_STEP = 15;
+/** How far ahead a booking must start, so the pro has time to review the request and travel. */
+export const BOOKING_LEAD_MINUTES = 60;
+
+/** A start time as "HH:MM" (24-hour). */
+export type BookingSlot = string;
+
+const minutesOf = (time: string): number | null => {
+  const m = /^(\d{2}):(\d{2})$/.exec(time);
+  if (!m) return null;
+  const h = Number(m[1]);
+  const min = Number(m[2]);
+  return h < 24 && min < 60 ? h * 60 + min : null;
+};
+
+const fromMinutes = (total: number): string => `${pad(Math.floor(total / 60))}:${pad(total % 60)}`;
+
+/** Inside working hours and on a 15-minute step. */
+export function isBookingTime(time: string): boolean {
+  const t = minutesOf(time);
+  const open = minutesOf(BOOKING_OPENS_AT)!;
+  const last = minutesOf(BOOKING_LAST_START)!;
+  return t !== null && t >= open && t <= last && t % BOOKING_MINUTE_STEP === 0;
+}
 
 /** Today plus this many days ahead can be booked. */
 export const BOOKING_WINDOW_DAYS = 7;
 
-const pad = (n: number) => String(n).padStart(2, "0");
 
 /** Local calendar date as `yyyy-MM-dd` (what the database stores). */
 export const toDateString = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
@@ -34,12 +63,50 @@ export function slotDateTime(date: Date, slot: BookingSlot): Date {
 }
 
 export function isSlotAvailable(date: Date, slot: BookingSlot, now: Date, leadMinutes = 0): boolean {
-  if (!isBookableDate(date, now)) return false;
+  if (!isBookingTime(slot) || !isBookableDate(date, now)) return false;
   return slotDateTime(date, slot).getTime() - now.getTime() >= leadMinutes * 60_000;
 }
 
-export function slotsForDate(date: Date, now: Date, leadMinutes = 0): { slot: BookingSlot; available: boolean }[] {
-  return BOOKING_SLOTS.map((slot) => ({ slot, available: isSlotAvailable(date, slot, now, leadMinutes) }));
+/** Every start time a customer could pick on that day, earliest first (past or too-soon times left out). */
+export function availableTimes(date: Date, now: Date, leadMinutes = BOOKING_LEAD_MINUTES): BookingSlot[] {
+  const out: BookingSlot[] = [];
+  for (let t = minutesOf(BOOKING_OPENS_AT)!; t <= minutesOf(BOOKING_LAST_START)!; t += BOOKING_MINUTE_STEP) {
+    const time = fromMinutes(t);
+    if (isSlotAvailable(date, time, now, leadMinutes)) out.push(time);
+  }
+  return out;
+}
+
+export const firstAvailableTime = (date: Date, now: Date, leadMinutes = BOOKING_LEAD_MINUTES): BookingSlot | null =>
+  availableTimes(date, now, leadMinutes)[0] ?? null;
+
+// ── clock face ──────────────────────────────────────────────────────────────────────────────
+
+export const CLOCK_MINUTES = [0, 15, 30, 45] as const;
+export type ClockTime = { hour: number; minute: number; pm: boolean };
+
+/** "14:30" → { hour: 2, minute: 30, pm: true }. */
+export function toClock(time: BookingSlot): ClockTime | null {
+  const t = minutesOf(time);
+  if (t === null) return null;
+  const h = Math.floor(t / 60);
+  return { hour: h % 12 === 0 ? 12 : h % 12, minute: t % 60, pm: h >= 12 };
+}
+
+/** { hour: 12, minute: 0, pm: false } → "00:00"; { hour: 12, pm: true } → "12:00". */
+export function fromClock(c: ClockTime): BookingSlot {
+  const h = (c.hour % 12) + (c.pm ? 12 : 0);
+  return fromMinutes(h * 60 + c.minute);
+}
+
+/**
+ * The bookable time nearest to what the clock shows: same hour if possible, otherwise the first free time.
+ * Used when the customer taps an hour or flips AM/PM, so the picker never sits on an impossible time.
+ */
+export function snapToAvailable(wanted: BookingSlot, options: readonly BookingSlot[]): BookingSlot | null {
+  if (options.includes(wanted)) return wanted;
+  const hour = wanted.slice(0, 2);
+  return options.find((o) => o.startsWith(hour)) ?? options.find((o) => o > wanted) ?? options[options.length - 1] ?? null;
 }
 
 /** Dates to show in the picker, today first. */
@@ -79,4 +146,12 @@ export function formatBookingWhen(dateString: string | null | undefined, time: s
   const date = dateString ? parseDateString(dateString) : null;
   const parts = [date ? formatDateChip(date) : null, time ? formatSlot(time) : null].filter(Boolean);
   return parts.join(" · ");
+}
+
+/** When a stored booking starts (`"2026-11-10"`, `"14:30:00"`), local time. Null if either part is missing or invalid. */
+export function bookingStartsAt(dateString: string | null | undefined, time: string | null | undefined): Date | null {
+  const date = dateString ? parseDateString(dateString) : null;
+  const hhmm = (time ?? "").slice(0, 5);
+  if (!date || minutesOf(hhmm) === null) return null;
+  return slotDateTime(date, hhmm);
 }

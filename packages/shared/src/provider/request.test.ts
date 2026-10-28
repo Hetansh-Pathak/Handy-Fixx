@@ -1,39 +1,36 @@
 import { describe, expect, it } from "vitest";
-import { isRequestOpen, pickCurrentRequest, requestEconomics } from "./request";
+import { isRequestOpen, openRequests, requestEconomics } from "./request";
 
-const now = new Date("2026-11-10T10:00:00Z");
-const ago = (s: number) => new Date(now.getTime() - s * 1000).toISOString();
+const now = new Date(2026, 10, 10, 11, 30);
 
 describe("isRequestOpen", () => {
-  it("is open while pending and under 30 seconds old", () => {
-    expect(isRequestOpen({ status: "pending", createdAt: ago(0) }, now)).toBe(true);
-    expect(isRequestOpen({ status: "pending", createdAt: ago(29) }, now)).toBe(true);
-    expect(isRequestOpen({ status: "pending", createdAt: ago(30) }, now)).toBe(false);
-    expect(isRequestOpen({ status: "pending", createdAt: ago(300) }, now)).toBe(false);
+  it("stays open with no countdown while pending and before the booked time", () => {
+    expect(isRequestOpen({ status: "pending", bookingDate: "2026-11-10", bookingTime: "14:00:00" }, now)).toBe(true);
+    expect(isRequestOpen({ status: "pending", bookingDate: "2026-11-12", bookingTime: "09:00:00" }, now)).toBe(true);
   });
-  it("tolerates a device clock behind the server", () => {
-    expect(isRequestOpen({ status: "pending", createdAt: ago(-5) }, now)).toBe(true);
+  it("closes once the booked time has started", () => {
+    expect(isRequestOpen({ status: "pending", bookingDate: "2026-11-10", bookingTime: "11:30:00" }, now)).toBe(false);
+    expect(isRequestOpen({ status: "pending", bookingDate: "2026-11-09", bookingTime: "18:00:00" }, now)).toBe(false);
   });
-  it("is never open once answered, or with a missing or bad timestamp", () => {
-    for (const status of ["confirmed", "cancelled", "completed", "in_progress"]) expect(isRequestOpen({ status, createdAt: ago(1) }, now)).toBe(false);
-    for (const bad of [null, undefined, "", "nope"]) expect(isRequestOpen({ status: "pending", createdAt: bad }, now)).toBe(false);
+  it("is open if the time is unknown, never once answered", () => {
+    expect(isRequestOpen({ status: "pending", bookingDate: null, bookingTime: null }, now)).toBe(true);
+    for (const status of ["confirmed", "cancelled", "completed", "in_progress"]) {
+      expect(isRequestOpen({ status, bookingDate: "2026-11-11", bookingTime: "10:00:00" }, now)).toBe(false);
+    }
   });
 });
 
-describe("pickCurrentRequest", () => {
-  it("returns the oldest open request and skips stale and answered ones", () => {
+describe("openRequests", () => {
+  it("returns open requests oldest first and skips past and answered ones", () => {
     const rows = [
-      { id: "new", status: "pending", created_at: ago(2) },
-      { id: "old", status: "pending", created_at: ago(20) },
-      { id: "stale", status: "pending", created_at: ago(90) },
-      { id: "done", status: "confirmed", created_at: ago(5) },
+      { id: "new", status: "pending", created_at: "2026-11-10T06:00:00Z", booking_date: "2026-11-11", booking_time: "10:00:00" },
+      { id: "old", status: "pending", created_at: "2026-11-10T05:00:00Z", booking_date: "2026-11-12", booking_time: "10:00:00" },
+      { id: "past", status: "pending", created_at: "2026-11-09T05:00:00Z", booking_date: "2026-11-09", booking_time: "10:00:00" },
+      { id: "done", status: "confirmed", created_at: "2026-11-10T04:00:00Z", booking_date: "2026-11-11", booking_time: "10:00:00" },
     ];
-    expect(pickCurrentRequest(rows, now)?.id).toBe("old");
+    expect(openRequests(rows, now).map((r) => r.id)).toEqual(["old", "new"]);
   });
-  it("returns null when nothing is open", () => {
-    expect(pickCurrentRequest([], now)).toBeNull();
-    expect(pickCurrentRequest([{ id: "x", status: "pending", created_at: ago(99) }], now)).toBeNull();
-  });
+  it("returns nothing when nothing is open", () => expect(openRequests([], now)).toEqual([]));
 });
 
 describe("requestEconomics (PDF p.7: earning and fee shown before deciding)", () => {

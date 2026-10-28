@@ -14,6 +14,7 @@ export default function GoogleCheck() {
     try {
       const result = await signInWithGoogle();
       if (result.status === "cancelled") { log("Cancelled by the user."); return; }
+      if (result.status === "redirecting") { log("Redirecting to Google (web)."); return; }
       setEmail(result.email ?? "(no email)");
       log(`Supabase session created for ${result.email}`, "ok");
     } catch (e) {

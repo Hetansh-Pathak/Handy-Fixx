@@ -31,12 +31,16 @@ export function offersService(serviceIds: readonly string[] | null | undefined, 
   return serviceIds.includes(serviceId);
 }
 
+/** "  Jamnagar, Gujarat " → "jamnagar": the place before any comma, single-spaced, lower case. */
+const areaKey = (v: string): string => (v.split(",")[0] ?? "").trim().replace(/\s+/g, " ").toLowerCase();
+
 /**
  * `area` is what the customer typed (a city or a 6-digit pincode). Pros list the cities/pincodes they
- * cover in `pincodes`. Matching is exact and case-insensitive; a blank area matches everyone.
+ * cover in `pincodes`. Matching is exact and case-insensitive, ignoring extra spaces and anything after a
+ * comma ("Jamnagar, Gujarat"); a blank area matches everyone.
  */
 export function servesArea(coverage: readonly string[] | null | undefined, area: string): boolean {
-  const wanted = area.trim().toLowerCase();
+  const wanted = areaKey(area);
   if (!wanted) return true;
-  return (coverage ?? []).some((c) => c.trim().toLowerCase() === wanted);
+  return (coverage ?? []).some((c) => areaKey(c) === wanted);
 }

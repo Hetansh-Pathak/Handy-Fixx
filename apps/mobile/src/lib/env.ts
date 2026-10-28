@@ -7,6 +7,8 @@ export const env = {
   /** Where the customer app sends people who want to become pros (the Pro app's store page). */
   proAppUrl: process.env.EXPO_PUBLIC_PRO_APP_URL ?? "",
   customerAppUrl: process.env.EXPO_PUBLIC_CUSTOMER_APP_URL ?? "",
+  /** Shown on Help & support. Defaults to the address on the old HandyFix contact page. */
+  supportEmail: process.env.EXPO_PUBLIC_SUPPORT_EMAIL || "support@handyfix.in",
   supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL,
   supabaseAnonKey: process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
   googleWebClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,

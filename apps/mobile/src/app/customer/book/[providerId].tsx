@@ -1,6 +1,6 @@
 import {
-  bookableDates, bookingAddressSchema, bookingScheduleSchema, fieldErrors, formatBookingWhen, formatDateChip, formatDuration,
-  formatInr, formatSlot, isValidPincode, newBookingInputSchema, quoteBooking, slotsForDate, toDateString, toDbTime,
+  availableTimes, bookableDates, bookingAddressSchema, bookingScheduleSchema, fieldErrors, formatBookingWhen, formatDateChip, formatDuration,
+  formatInr, isValidPincode, newBookingInputSchema, quoteBooking, snapToAvailable, toDateString, toDbTime,
   type BookingSlot,
 } from "@handyfix/shared";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -8,11 +8,15 @@ import * as Location from "expo-location";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { View } from "react-native";
+import { CitySuggestions } from "@/components/CitySuggestions";
 import { Text } from "@/components/text";
 import { Body, Button, Card, Chip, ErrorBanner, InfoBanner, Screen, ScreenHeader, TextField, Title } from "@/components/ui";
 import { loadCustomerProfile, loadEmailVerified } from "@/features/auth/api";
 import { EmailVerificationCard } from "@/features/auth/EmailVerificationCard";
 import { useSession } from "@/features/auth/session-provider";
+import { uploadBookingAttachments, type LocalAttachment, type UploadResult } from "@/features/attachments/api";
+import { AttachmentPicker } from "@/features/attachments/components";
+import { ClockPicker } from "@/features/customer/ClockPicker";
 import { createBooking, EmailNotVerifiedError } from "@/features/customer/booking-api";
 import { fetchBookingContext } from "@/features/customer/catalog-api";
 import { env } from "@/lib/env";
@@ -43,6 +47,8 @@ export default function BookScreen() {
   const [pincode, setPincode] = useState("");
   const [coords, setCoords] = useState<{ latitude: number; longitude: number } | null>(null);
   const [notes, setNotes] = useState("");
+  const [attachments, setAttachments] = useState<LocalAttachment[]>([]);
+  const [uploading, setUploading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
   const [locating, setLocating] = useState(false);
@@ -52,7 +58,7 @@ export default function BookScreen() {
   // Start on the first day that still has a free slot, and prefill the address from the profile once.
   useEffect(() => {
     if (date) return;
-    const first = dates.find((d) => slotsForDate(d, new Date()).some((s) => s.available));
+    const first = dates.find((d) => availableTimes(d, new Date()).length > 0);
     if (first) setDate(first);
   }, [date, dates]);
 
@@ -66,13 +72,22 @@ export default function BookScreen() {
 
   const ctx = context.data;
   const quote = ctx ? quoteBooking(ctx.provider.price) : null;
-  const slots = date ? slotsForDate(date, now) : [];
+  const times = date ? availableTimes(date, now) : [];
+
+  // Keep the clock on a time that is still bookable (a new date, or the clock passing a time while the screen is open).
+  useEffect(() => {
+    if (!date) return;
+    const options = availableTimes(date, new Date());
+    const next = snapToAvailable(slot ?? options[0] ?? "", options);
+    if (next !== slot) setSlot(next);
+  }, [date, slot]);
 
   const back = () => (step > 1 ? setStep((step - 1) as Step) : router.back());
 
   const next1 = () => {
     const r = bookingScheduleSchema.safeParse({ date: date ? toDateString(date) : "", time: slot ?? "" });
     if (!r.success) return setErrors(fieldErrors(r.error));
+    if (!slot || !times.includes(slot)) return setErrors({ time: "That time is no longer available. Pick another." });
     setErrors({});
     setStep(2);
   };
@@ -131,7 +146,20 @@ export default function BookScreen() {
         input: parsed.data,
         quote,
       });
-      router.replace({ pathname: "/customer/booking/[id]", params: { id: created.id, expected: String(quote.total) } });
+      // The booking is saved first; files are best effort so a slow upload never loses the booking.
+      let upload: UploadResult | null = null;
+      if (attachments.length) {
+        setUploading(true);
+        upload = await uploadBookingAttachments(userId, created.id, attachments);
+      }
+      router.replace({
+        pathname: "/customer/booking/[id]",
+        params: {
+          id: created.id,
+          expected: String(quote.total),
+          ...(upload?.failed ? { attachFailed: String(upload.failed), attachError: upload.firstError ?? "" } : {}),
+        },
+      });
     } catch (e) {
       if (e instanceof EmailNotVerifiedError) {
         await queryClient.invalidateQueries({ queryKey: ["email-verified", userId] });
@@ -141,6 +169,7 @@ export default function BookScreen() {
       }
     } finally {
       setBusy(false);
+      setUploading(false);
     }
   };
 
@@ -169,16 +198,12 @@ export default function BookScreen() {
           <View className="flex-row flex-wrap gap-2">
             {dates.map((d) => (
               <Chip key={toDateString(d)} label={formatDateChip(d)} selected={!!date && toDateString(d) === toDateString(date)}
-                disabled={!slotsForDate(d, now).some((s) => s.available)}
-                onPress={() => { setDate(d); setSlot(null); setErrors({}); }} />
+                disabled={availableTimes(d, now).length === 0}
+                onPress={() => { setDate(d); setErrors({}); }} />
             ))}
           </View>
           <Text className="text-base font-semibold text-fg">Time</Text>
-          <View className="flex-row flex-wrap gap-2">
-            {slots.map((s) => (
-              <Chip key={s.slot} label={formatSlot(s.slot)} selected={slot === s.slot} disabled={!s.available} onPress={() => { setSlot(s.slot); setErrors({}); }} />
-            ))}
-          </View>
+          <ClockPicker options={times} value={slot} onChange={(t) => { setSlot(t); setErrors({}); }} />
           {errors.time || errors.date ? <Text className="text-sm text-danger">{errors.time ?? errors.date}</Text> : null}
           <Button label="Continue" onPress={next1} />
         </>
@@ -191,6 +216,7 @@ export default function BookScreen() {
           {coords ? <InfoBanner message="Location pinned. Your pro sees it only after accepting." /> : null}
           <TextField label="Address" value={address} onChangeText={(v) => { setAddress(v); setErrors((e) => ({ ...e, address: "" })); }} error={errors.address || undefined} multiline autoComplete="street-address" />
           <TextField label="City" value={city} onChangeText={(v) => { setCity(v); setErrors((e) => ({ ...e, city: "" })); }} error={errors.city || undefined} autoCapitalize="words" />
+          <CitySuggestions query={city} onPick={(c) => { setCity(c); setErrors((e) => ({ ...e, city: "" })); }} />
           <TextField label="Pincode" value={pincode} onChangeText={(v) => { setPincode(v.replace(/\D/g, "")); setErrors((e) => ({ ...e, pincode: "" })); }} error={errors.pincode || undefined} keyboardType="number-pad" maxLength={6} />
           <Button label="Continue" onPress={next2} />
         </>
@@ -213,9 +239,12 @@ export default function BookScreen() {
             <Row label="Total" value={formatInr(quote.total)} strong />
           </Card>
           <InfoBanner message={`Price is locked. Pay ${ctx.provider.fullName.split(" ")[0]} directly by UPI or cash after the service.`} />
-          <TextField label="Notes for your pro (optional)" value={notes} onChangeText={setNotes} multiline maxLength={1000} placeholder="Describe the problem" />
+          <TextField label="Describe the problem (optional)" value={notes} onChangeText={setNotes} multiline maxLength={1000}
+            placeholder="e.g. Kitchen tap leaking since yesterday, water under the sink" />
+          <AttachmentPicker value={attachments} onChange={setAttachments} />
           {verified.isSuccess && !verified.data && userId ? <EmailVerificationCard userId={userId} email={null} /> : null}
           {!env.bookingEnabled ? <InfoBanner message="Booking opens soon. We are finishing our new pricing." /> : null}
+          {uploading ? <InfoBanner message="Booking saved. Uploading your photos and voice note…" /> : null}
           <Button label={`Confirm · ${formatInr(quote.total)}`} loading={busy}
             disabled={!env.bookingEnabled || verified.isPending || verified.data === false} onPress={() => void confirm()} />
         </>

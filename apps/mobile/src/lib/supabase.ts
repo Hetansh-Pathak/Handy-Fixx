@@ -22,7 +22,8 @@ export function getSupabase(): SupabaseClient {
     url: env.supabaseUrl,
     anonKey: env.supabaseAnonKey,
     storage: Platform.OS === "web" ? webStorage : new LargeSecureStore(),
-    detectSessionInUrl: false,
+    // Web Google sign-in returns with the session in the URL hash; native apps never do.
+    detectSessionInUrl: Platform.OS === "web",
   });
   return client;
 }

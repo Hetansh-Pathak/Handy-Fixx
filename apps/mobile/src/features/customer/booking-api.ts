@@ -1,7 +1,8 @@
 import {
-  BOOKING_SLOTS, isSlotAvailable, nextBestPros, parseDateString, quoteBooking, reconcileQuote, toDateString, toDbTime,
+  isBookingTime, isSlotAvailable, nextBestPros, parseDateString, quoteBooking, reconcileQuote, toDateString, toDbTime,
   type BookingQuote, type BookingSlot, type NewBookingInput, type QuoteCheck, type StoredTotals,
 } from "@handyfix/shared";
+import { copyBookingAttachments } from "@/features/attachments/api";
 import { getSupabase } from "@/lib/supabase";
 import { fetchProviderListings, fetchSubItems } from "./catalog-api";
 import type { ProviderListing, ServiceRow, SubItemRow } from "./types";
@@ -183,7 +184,7 @@ export async function fetchCustomerBookings(userId: string): Promise<CustomerBoo
 }
 
 /**
- * Other pros for the same job after a decline or a 30 s silence: same area, similar price, online, best ranked.
+ * Other pros for the same job after a decline, when the customer asks, or once the time has passed: same area, similar price, online, best ranked.
  * Needs no database change: it reads the same public list the customer browsed.
  */
 export async function fetchAlternatives(booking: BookingRow): Promise<{ service: ServiceRow; subItem: SubItemRow | null; pros: ProviderListing[] } | null> {
@@ -222,7 +223,7 @@ export async function rebookWithProvider(args: {
   const { old, now } = args;
   const date = old.booking_date ? parseDateString(old.booking_date) : null;
   const slot = (old.booking_time ?? "").slice(0, 5) as BookingSlot;
-  if (!date || !(BOOKING_SLOTS as readonly string[]).includes(slot) || !isSlotAvailable(date, slot, now)) return { slotPassed: true };
+  if (!date || !isBookingTime(slot) || !isSlotAvailable(date, slot, now)) return { slotPassed: true };
 
   const created = await createBooking({
     userId: args.userId,
@@ -237,6 +238,8 @@ export async function rebookWithProvider(args: {
     },
     quote: quoteBooking(args.pro.price),
   });
+  // The next pro sees the same photos and voice note.
+  await copyBookingAttachments(args.userId, old.id, created.id).catch(() => undefined);
   if (old.status === "pending") await cancelBooking(old.id).catch(() => undefined);
   return created;
 }

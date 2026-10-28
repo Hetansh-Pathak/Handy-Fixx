@@ -1,18 +1,20 @@
-import { formatDuration, formatInr } from "@handyfix/shared";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
-import { Award, BadgeIndianRupee, Clock, Headphones, LocateFixed, MapPin, RotateCcw, Search, ShieldCheck, Star, Users, type LucideIcon } from "lucide-react-native";
-import { useMemo, useState } from "react";
+import { ArrowRight, Award, BadgeIndianRupee, Clock, Headphones, MapPin, RotateCcw, ShieldCheck, Star, Users, type LucideIcon } from "lucide-react-native";
 import { Linking, Pressable, ScrollView, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Eyebrow, IconTile, Logo, SectionHeading, ServiceIcon } from "@/components/brand";
+import { Eyebrow, IconTile, Logo, SectionHeading } from "@/components/brand";
+import { CitySuggestions } from "@/components/CitySuggestions";
 import { Text } from "@/components/text";
 import { Body, Button, ErrorBanner } from "@/components/ui";
 import { useSession } from "@/features/auth/session-provider";
 import { useArea } from "@/features/customer/area-context";
 import { fetchServices } from "@/features/customer/catalog-api";
+import { ServiceGrid } from "@/features/customer/ServiceGrid";
 import { env } from "@/lib/env";
 import { colors } from "@/theme/colors";
+
+const POPULAR_COUNT = 4;
 
 const STATS: { icon: LucideIcon; value: string; label: string }[] = [
   { icon: Users, value: "50,000+", label: "Happy Customers" },
@@ -46,22 +48,9 @@ export default function CustomerHome() {
   const router = useRouter();
   const { fullName } = useSession();
   const { area, setArea } = useArea();
-  const [search, setSearch] = useState("");
-  const [category, setCategory] = useState("All Services");
   const services = useQuery({ queryKey: ["services"], queryFn: fetchServices, staleTime: 5 * 60_000 });
-
-  const categories = useMemo(() => {
-    const names = new Set<string>();
-    (services.data ?? []).forEach((s) => { if (s.category) names.add(s.category); });
-    return ["All Services", ...names];
-  }, [services.data]);
-
-  const visible = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    return (services.data ?? []).filter(
-      (s) => (category === "All Services" || s.category === category) && (!q || s.name.toLowerCase().includes(q) || (s.description ?? "").toLowerCase().includes(q)),
-    );
-  }, [services.data, search, category]);
+  const popular = (services.data ?? []).slice(0, POPULAR_COUNT);
+  const showServices = () => router.push("/customer/services");
 
   return (
     <SafeAreaView className="flex-1 bg-canvas" edges={["top"]}>
@@ -92,11 +81,19 @@ export default function CustomerHome() {
               placeholderTextColor={colors.mutedSoft}
               autoCapitalize="words"
               autoComplete="postal-code"
+              returnKeyType="go"
+              onSubmitEditing={showServices}
               style={{ fontFamily: "PlusJakartaSans_400Regular" }}
               className="min-h-[44px] flex-1 px-2 text-base text-fg"
             />
-            <View className="h-11 w-11 items-center justify-center rounded-xl border border-brand/30 bg-brand-soft"><LocateFixed size={20} color={colors.brand} /></View>
+            {/* Go: the Services tab lists everything for this area (the area is shared through useArea). */}
+            <Pressable accessibilityRole="button" accessibilityLabel={area.trim() ? `Show services in ${area.trim()}` : "Show all services"}
+              onPress={showServices} hitSlop={6}
+              className={`h-11 w-11 items-center justify-center rounded-xl active:opacity-80 ${area.trim() ? "bg-brand" : "border border-brand/30 bg-brand-soft"}`}>
+              <ArrowRight size={20} color={area.trim() ? colors.white : colors.brand} />
+            </Pressable>
           </View>
+          <CitySuggestions query={area} onPick={setArea} />
           <View className="flex-row flex-wrap items-center gap-x-4 gap-y-1">
             <View className="flex-row items-center gap-1.5"><ShieldCheck size={16} color={colors.brand} /><Text className="text-sm text-muted">Verified Pros</Text></View>
             <View className="flex-row items-center gap-1.5"><Star size={16} color={colors.brand} /><Text className="text-sm text-muted">4.9 Avg Rating</Text></View>
@@ -115,51 +112,16 @@ export default function CustomerHome() {
           ))}
         </View>
 
-        {/* Services */}
-        <View className="gap-5 px-5 pt-10" accessibilityLabel="Services">
+        {/* Popular services: the full list with search and categories is the Services tab */}
+        <View className="gap-5 px-5 pt-10" accessibilityLabel="Popular services">
           <SectionHeading title="Every home service, one tap away" subtitle="Trusted professionals for every corner of your home" />
-          <View className="flex-row items-center gap-2 rounded-2xl border border-line bg-card px-3">
-            <Search size={18} color={colors.muted} />
-            <TextInput
-              accessibilityLabel="Search services"
-              value={search}
-              onChangeText={setSearch}
-              placeholder="Plumbing, cleaning…"
-              placeholderTextColor={colors.mutedSoft}
-              autoCapitalize="none"
-              style={{ fontFamily: "PlusJakartaSans_400Regular" }}
-              className="min-h-[48px] flex-1 text-base text-fg"
-            />
-          </View>
-          {categories.length > 1 ? (
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }} className="-mx-1 rounded-2xl">
-              {categories.map((c) => (
-                <Pressable key={c} accessibilityRole="button" accessibilityState={{ selected: category === c }} onPress={() => setCategory(c)}
-                  className={`min-h-[44px] justify-center rounded-xl px-4 ${category === c ? "bg-brand" : "bg-field"}`}>
-                  <Text className={`text-sm font-semibold ${category === c ? "text-white" : "text-muted"}`}>{c}</Text>
-                </Pressable>
-              ))}
-            </ScrollView>
-          ) : null}
           <ErrorBanner message={services.isError ? "Could not load services." : null} />
           {services.isError ? <Button label="Try again" variant="secondary" onPress={() => void services.refetch()} /> : null}
           {services.isPending ? <Body muted>Loading services…</Body> : null}
-          {services.isSuccess && visible.length === 0 ? <Body muted>No services match “{search}”.</Body> : null}
-          <View className="flex-row flex-wrap justify-between gap-y-4">
-            {visible.map((s) => (
-              <Pressable key={s.id} accessibilityRole="button" accessibilityLabel={s.name}
-                onPress={() => router.push({ pathname: "/customer/service/[slug]", params: { slug: s.slug } })}
-                className="w-[48%] gap-2 rounded-3xl border border-line bg-card p-4 active:opacity-80">
-                <IconTile><ServiceIcon name={s.icon_name} /></IconTile>
-                <Text className="mt-2 text-lg font-semibold text-fg">{s.name}</Text>
-                {s.description ? <Text className="text-sm leading-5 text-muted" numberOfLines={2}>{s.description}</Text> : null}
-                <View className="mt-1 flex-row flex-wrap items-center gap-x-3">
-                  <Text className="text-base font-bold text-brand">{s.base_price ? `From ${formatInr(s.base_price)}` : "On request"}</Text>
-                  {s.duration_minutes ? <Text className="text-sm text-muted">{formatDuration(s.duration_minutes)}</Text> : null}
-                </View>
-              </Pressable>
-            ))}
-          </View>
+          <ServiceGrid services={popular} />
+          {services.isSuccess && services.data.length > popular.length ? (
+            <Button label={`See all ${services.data.length} services`} variant="secondary" onPress={() => router.push("/customer/services")} />
+          ) : null}
         </View>
 
         {/* How it works */}

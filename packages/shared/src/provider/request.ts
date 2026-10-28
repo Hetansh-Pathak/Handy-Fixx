@@ -1,4 +1,4 @@
-import { REQUEST_TIMEOUT_SECONDS } from "../booking/request-timer";
+import { bookingStartsAt } from "../booking/schedule";
 import { feeForServiceBill } from "../money/fee";
 import { roundMoney, type Rupees } from "../money/money";
 
@@ -10,27 +10,22 @@ const toMs = (v: DateLike) => {
 };
 
 /**
- * Whether a booking is still an open request for the pro: pending and younger than the 30 s window.
- * A request older than that has already been (or is about to be) offered to other pros.
+ * Whether a booking is still a request the pro can answer: pending and its booked time has not started yet.
+ * There is no accept countdown (owner decision): the pro reviews the details and decides when ready.
  */
-export function isRequestOpen(
-  input: { status: string; createdAt: DateLike },
-  now: Date,
-  timeoutSeconds = REQUEST_TIMEOUT_SECONDS,
-): boolean {
+export function isRequestOpen(input: { status: string; bookingDate?: string | null; bookingTime?: string | null }, now: Date): boolean {
   if (input.status !== "pending") return false;
-  const created = toMs(input.createdAt);
-  if (created === null) return false;
-  const ageSeconds = (now.getTime() - created) / 1000;
-  // A device clock a little behind the server makes the age slightly negative: still open.
-  return ageSeconds < timeoutSeconds;
+  const startsAt = bookingStartsAt(input.bookingDate, input.bookingTime);
+  return !startsAt || now.getTime() < startsAt.getTime();
 }
 
-/** If several requests are open, the oldest first (first come, first served). */
-export function pickCurrentRequest<T extends { status: string; created_at: DateLike }>(rows: readonly T[], now: Date): T | null {
-  const open = rows.filter((r) => isRequestOpen({ status: r.status, createdAt: r.created_at }, now));
-  open.sort((a, b) => (toMs(a.created_at) ?? 0) - (toMs(b.created_at) ?? 0));
-  return open[0] ?? null;
+type RequestRow = { id: string; status: string; created_at: DateLike; booking_date?: string | null; booking_time?: string | null };
+
+/** Open requests, oldest first (first come, first served). */
+export function openRequests<T extends RequestRow>(rows: readonly T[], now: Date): T[] {
+  return rows
+    .filter((r) => isRequestOpen({ status: r.status, bookingDate: r.booking_date, bookingTime: r.booking_time }, now))
+    .sort((a, b) => (toMs(a.created_at) ?? 0) - (toMs(b.created_at) ?? 0));
 }
 
 export type RequestEconomics = {

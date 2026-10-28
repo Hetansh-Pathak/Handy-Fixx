@@ -4,6 +4,7 @@ import type { ExpoConfig } from "expo/config";
 const GOLD = "#C16430"; // brand terracotta (notification accent)
 const BLACK = "#0A0A0A"; // launcher icon background (the logo tile is dark)
 const CANVAS = "#FAF6EF"; // app background, same as the old HandyFix sites
+const MIC_REASON = "HandyFix uses the microphone so you can record a voice note describing the problem for your pro.";
 
 // FCM / Google services file. On EAS, upload it as a file secret and expose its path via
 // GOOGLE_SERVICES_JSON; locally drop it next to this file. Absent = config still validates.
@@ -51,7 +52,8 @@ const config: ExpoConfig = {
     // Permissions pulled in by default modules that HandyFix does not use. Play reviewers flag unused
     // sensitive permissions. SYSTEM_ALERT_WINDOW is only needed by the dev client overlay.
     blockedPermissions: [
-      "android.permission.RECORD_AUDIO",
+      // Microphone and camera are for the customer's problem photos and voice note; the Pro app only views them.
+      ...(isPro ? ["android.permission.RECORD_AUDIO", "android.permission.CAMERA"] : []),
       "android.permission.READ_EXTERNAL_STORAGE",
       "android.permission.WRITE_EXTERNAL_STORAGE",
       ...(isCustomer ? customerBlocked : []),
@@ -86,8 +88,19 @@ const config: ExpoConfig = {
         sounds: ["./assets/sounds/new_request.wav"],
       },
     ],
-    // Ring tone only: no microphone, no background playback service.
-    ["expo-audio", { microphonePermission: false, recordAudioAndroid: false, enableBackgroundRecording: false, enableBackgroundPlayback: false }],
+    // Customers record a voice note describing the problem; pros only play it (and the ring tone). No background audio.
+    ["expo-audio", {
+      microphonePermission: isPro ? false : MIC_REASON,
+      recordAudioAndroid: !isPro,
+      enableBackgroundRecording: false,
+      enableBackgroundPlayback: false,
+    }],
+    ["expo-image-picker", {
+      photosPermission: "HandyFix lets you add photos of the problem so your pro knows what to bring.",
+      cameraPermission: isPro ? false : "HandyFix uses the camera so you can photograph the problem for your pro.",
+      // `false` here strips RECORD_AUDIO from the manifest, which the customer's voice note needs.
+      microphonePermission: isPro ? false : MIC_REASON,
+    }],
     "expo-dev-client",
   ],
   experiments: {},

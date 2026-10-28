@@ -1,14 +1,29 @@
 /**
  * Native Google sign-in → Supabase session. The native module is imported lazily so web previews
- * and screens that never sign in with Google don't load it.
+ * and screens that never sign in with Google don't load it. On web there is no native module, so the
+ * browser is sent through Supabase's Google redirect instead and the session is read from the URL on return.
  */
 import { friendlyAuthError } from "@handyfix/shared";
+import { Platform } from "react-native";
 import { env } from "./env";
 import { getSupabase } from "./supabase";
 
-export type GoogleResult = { status: "signed_in"; email: string | null } | { status: "cancelled" };
+export type GoogleResult =
+  | { status: "signed_in"; email: string | null }
+  | { status: "cancelled" }
+  | { status: "redirecting" };
+
+async function signInWithGoogleOnWeb(): Promise<GoogleResult> {
+  const { error } = await getSupabase().auth.signInWithOAuth({
+    provider: "google",
+    options: { redirectTo: globalThis.location?.origin },
+  });
+  if (error) throw new Error(friendlyAuthError(error.message));
+  return { status: "redirecting" };
+}
 
 export async function signInWithGoogle(): Promise<GoogleResult> {
+  if (Platform.OS === "web") return signInWithGoogleOnWeb();
   if (!env.googleWebClientId) throw new Error("Google sign-in is not configured yet.");
   const { GoogleSignin, isErrorWithCode, isSuccessResponse, statusCodes } = await import("@react-native-google-signin/google-signin");
   try {
@@ -29,6 +44,7 @@ export async function signInWithGoogle(): Promise<GoogleResult> {
 
 export async function googleSignOut(): Promise<void> {
   try {
+    if (Platform.OS === "web") return;
     const { GoogleSignin } = await import("@react-native-google-signin/google-signin");
     await GoogleSignin.signOut();
   } catch {

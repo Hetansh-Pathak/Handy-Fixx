@@ -41,6 +41,10 @@ describe("servesArea", () => {
     expect(servesArea(["Gandhinagar"], "Gandhi")).toBe(false);
     expect(servesArea(["Gandhinagar"], "Surat")).toBe(false);
   });
+  it("ignores extra spaces and a state after a comma", () => {
+    expect(servesArea(["Jamnagar"], "  Jamnagar, Gujarat ")).toBe(true);
+    expect(servesArea(["Jam Khambhalia"], "jam   khambhalia")).toBe(true);
+  });
   it("a blank area matches everyone, missing coverage matches nothing", () => {
     expect(servesArea(["Surat"], "  ")).toBe(true);
     expect(servesArea(null, "Surat")).toBe(false);

@@ -61,12 +61,17 @@ const PROVIDER_COLUMNS =
  * the customer would pay. Customers read the `public_providers` view (never the table): it only exposes
  * approved, active pros and none of their contact or KYC data.
  */
-export async function fetchProviderListings(args: {
-  service: ServiceRow;
-  subItem: SubItemRow | null;
-  area: string;
-  now: Date;
-}): Promise<ProviderListing[]> {
+export async function fetchProviderListings(args: ProviderSearchArgs): Promise<ProviderListing[]> {
+  return (await searchProviders(args)).listings;
+}
+
+type ProviderSearchArgs = { service: ServiceRow; subItem: SubItemRow | null; area: string; now: Date };
+
+/**
+ * Same as fetchProviderListings, plus how many approved pros offer this service in this area but are
+ * offline right now, so an empty list can say "pros are offline" instead of "nobody works here".
+ */
+export async function searchProviders(args: ProviderSearchArgs): Promise<{ listings: ProviderListing[]; offlineCount: number }> {
   const supabase = getSupabase();
   const [providers, rates] = await Promise.all([
     supabase.from("public_providers").select(PROVIDER_COLUMNS),
@@ -81,10 +86,14 @@ export async function fetchProviderListings(args: {
   }
 
   const listings: ProviderListing[] = [];
+  let offlineCount = 0;
   for (const p of (providers.data ?? []) as ProviderViewRow[]) {
-    if (!isProviderAvailable({ isOnline: p.is_online, updatedAt: p.updated_at }, args.now)) continue;
     if (!offersService(p.service_ids, args.service.id)) continue;
     if (!servesArea(p.pincodes, args.area)) continue;
+    if (!isProviderAvailable({ isOnline: p.is_online, updatedAt: p.updated_at }, args.now)) {
+      offlineCount += 1;
+      continue;
+    }
     const price = resolveListedPrice({
       subItemPrice: args.subItem?.base_price,
       customPrice: customPrice.get(p.id),
@@ -110,7 +119,7 @@ export async function fetchProviderListings(args: {
       pincodes: p.pincodes,
     });
   }
-  return listings;
+  return { listings, offlineCount };
 }
 
 export type BookingContext = {

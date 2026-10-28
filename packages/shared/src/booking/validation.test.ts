@@ -47,7 +47,9 @@ describe("3-step booking", () => {
   it("gates the Next buttons like the old UI", () => {
     expect(canGoToStep2({ date: "2026-11-10", time: "12:00" })).toBe(true);
     expect(canGoToStep2({ date: "2026-11-10", time: "" })).toBe(false);
-    expect(canGoToStep2({ date: "2026-11-10", time: "13:00" })).toBe(false); // not an offered slot
+    expect(canGoToStep2({ date: "2026-11-10", time: "13:45" })).toBe(true); // any 15-minute step in working hours
+    expect(canGoToStep2({ date: "2026-11-10", time: "13:10" })).toBe(false);
+    expect(canGoToStep2({ date: "2026-11-10", time: "21:00" })).toBe(false);
     expect(canGoToStep3(valid)).toBe(true);
     expect(canGoToStep3({ ...valid, pincode: "123" })).toBe(false);
     expect(canGoToStep3({ ...valid, address: "   " })).toBe(false);

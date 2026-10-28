@@ -1,14 +1,15 @@
 import {
   acceptBlockMessage, canDecline, checkCanAccept, COMPLETION_CODE_LENGTH, declinePatch, formatBookingWhen,
-  formatInr, interpretCompletion, isCompletionCode, isPatchAction, jobProgress, phoneVisibleToProvider, PROVIDER_ACTION_LABEL,
+  formatInr, interpretCompletion, isCompletionCode, isPatchAction, isRequestOpen, jobProgress, phoneVisibleToProvider, PROVIDER_ACTION_LABEL,
   providerActionPatch, providerStatusLabel, providerStep, requestEconomics, settleJob, type BookingStatus, type PatchAction, type Settlement,
 } from "@handyfix/shared";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Linking, View } from "react-native";
 import { Text } from "@/components/text";
 import { Body, Button, Card, ErrorBanner, InfoBanner, Screen, ScreenHeader, TextField, Title } from "@/components/ui";
+import { AttachmentGallery } from "@/features/attachments/components";
 import { useSession } from "@/features/auth/session-provider";
 import { applyBookingPatch, completeWithCode, fetchProviderBooking, serviceNameOf, type ProviderBooking } from "@/features/provider/api";
 import { useProviderRuntime } from "@/features/provider/provider-runtime";
@@ -39,6 +40,10 @@ export default function JobScreen() {
   const [settlement, setSettlement] = useState<Settlement | null>(null);
   const walletBefore = useRef(rt.wallet);
   walletBefore.current = rt.wallet;
+  const { markRequestSeen } = rt;
+
+  // Opening a request is "seeing" it: its banner goes away (the request itself stays until answered).
+  useEffect(() => { if (id) markRequestSeen(id); }, [id, markRequestSeen]);
 
   const booking = query.data;
   if (query.isPending) return <Screen><ScreenHeader title="Job" onBack={() => router.back()} /><Body muted>Loading…</Body></Screen>;
@@ -153,12 +158,15 @@ export default function JobScreen() {
         </Card>
       ) : null}
 
-      {status === "pending" ? (
+      {status === "pending" && isRequestOpen({ status, bookingDate: booking.booking_date, bookingTime: booking.booking_time }, new Date()) ? (
         <>
+          <InfoBanner message="Review the problem, photos and voice note above, then decide. There is no timer: the customer is waiting for your answer." />
           <ErrorBanner message={blocked} />
           <Button label="Accept" loading={busy} disabled={!!blocked} onPress={() => void run("accept")} />
           {canDecline(status) ? <Button label="Decline" variant="secondary" disabled={busy} onPress={() => void decline()} /> : null}
         </>
+      ) : status === "pending" ? (
+        <Card><Body muted>The booked time has passed, so this request can no longer be accepted.</Body></Card>
       ) : null}
 
       {ACTIVE.includes(status) && step && isPatchAction(step.action) ? (
@@ -205,7 +213,8 @@ function CustomerCard({ booking, status }: { booking: ProviderBooking; status: B
       <Line label="Customer" value={booking.customer_name ?? "Customer"} />
       <Line label="When" value={formatBookingWhen(booking.booking_date, booking.booking_time)} />
       <Line label="Where" value={where || "Address not shared"} />
-      {booking.special_instructions ? <Line label="Notes" value={booking.special_instructions} /> : null}
+      {booking.special_instructions ? <Line label="Problem" value={booking.special_instructions} /> : null}
+      <AttachmentGallery bookingId={booking.id} />
       {showPhone && booking.customer_phone ? (
         <Button label={`Call ${booking.customer_phone}`} variant="secondary" onPress={() => void Linking.openURL(`tel:${booking.customer_phone}`)} />
       ) : (

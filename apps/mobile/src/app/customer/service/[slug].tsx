@@ -4,10 +4,12 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useMemo, useState } from "react";
 import { Pressable, View } from "react-native";
 import { IconTile, ServiceIcon } from "@/components/brand";
+import { Avatar } from "@/components/Avatar";
+import { CitySuggestions } from "@/components/CitySuggestions";
 import { Text } from "@/components/text";
 import { Body, Button, Chip, ErrorBanner, Screen, ScreenHeader, TextField, Title } from "@/components/ui";
 import { useArea } from "@/features/customer/area-context";
-import { fetchProviderListings, fetchServiceBySlug, fetchSubItems } from "@/features/customer/catalog-api";
+import { fetchServiceBySlug, fetchSubItems, searchProviders } from "@/features/customer/catalog-api";
 import type { ProviderListing, SubItemRow } from "@/features/customer/types";
 
 type SortChoice = Extract<ProviderSort, "top_rated" | "cheapest">;
@@ -29,10 +31,10 @@ export default function ServiceScreen() {
     queryKey: ["providers", serviceId, subId, area.trim().toLowerCase()],
     enabled: !!service.data && !subItems.isPending,
     refetchInterval: 15_000,
-    queryFn: () => fetchProviderListings({ service: service.data!, subItem, area, now: new Date() }),
+    queryFn: () => searchProviders({ service: service.data!, subItem, area, now: new Date() }),
   });
 
-  const sorted = useMemo(() => sortProviders(providers.data ?? [], sort), [providers.data, sort]);
+  const sorted = useMemo(() => sortProviders(providers.data?.listings ?? [], sort), [providers.data, sort]);
   const needsSubItem = (subItems.data?.length ?? 0) > 0 && !subItem;
 
   const book = (p: ProviderListing) =>
@@ -77,6 +79,7 @@ export default function ServiceScreen() {
       ) : null}
 
       <TextField label="Your area" value={area} onChangeText={setArea} placeholder="City or 6-digit pincode" autoCapitalize="words" />
+      <CitySuggestions query={area} onPick={setArea} />
 
       <View className="flex-row gap-2">
         <Chip label="Top rated" selected={sort === "top_rated"} onPress={() => setSort("top_rated")} />
@@ -89,7 +92,13 @@ export default function ServiceScreen() {
       {!needsSubItem && providers.isSuccess && sorted.length === 0 ? (
         <View className="gap-3 rounded-3xl border border-line bg-card p-4">
           <Text className="text-base font-semibold text-fg">No pros online{area.trim() ? ` in ${area.trim()}` : ""} right now</Text>
-          <Body muted>Pros appear here while they have the app open. Try again in a moment or check your area.</Body>
+          <Body muted>
+            {providers.data.offlineCount
+              ? `${providers.data.offlineCount} ${providers.data.offlineCount === 1 ? "pro covers" : "pros cover"} ${area.trim() || "this service"} but ${providers.data.offlineCount === 1 ? "is" : "are"} offline. Pros appear here while they have the HandyFix Pro app open and are online.`
+              : area.trim()
+                ? `No pro covers ${area.trim()} for this service yet. Try a nearby city or your 6-digit pincode.`
+                : "Pros appear here while they have the app open. Try again in a moment."}
+          </Body>
           <Button label="Refresh" variant="secondary" onPress={() => void providers.refetch()} />
         </View>
       ) : null}
@@ -97,9 +106,7 @@ export default function ServiceScreen() {
       {!needsSubItem ? sorted.map((p) => (
         <View key={p.id} className="gap-3 rounded-3xl border border-line bg-card p-4">
           <View className="flex-row items-start justify-between gap-3">
-            <View className="h-14 w-14 items-center justify-center rounded-full bg-brand">
-              <Text className="text-xl font-bold text-white">{p.fullName.trim().charAt(0).toUpperCase()}</Text>
-            </View>
+            <Avatar name={p.fullName} url={p.avatarUrl} size={56} />
             <View className="flex-1 gap-0.5">
               <Text className="text-lg font-semibold text-fg">{p.fullName}{p.isVerified ? "  ✓" : ""}</Text>
               <Text className="text-sm text-muted">

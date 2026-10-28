@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { BOOKING_SLOTS } from "./schedule";
+import { isBookingTime } from "./schedule";
 
 export const PINCODE_REGEX = /^\d{6}$/;
 export const isValidPincode = (v: string) => PINCODE_REGEX.test(v);
@@ -29,7 +29,7 @@ export const phoneSchema = z
 
 export const bookingScheduleSchema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Pick a date"),
-  time: z.enum(BOOKING_SLOTS, { errorMap: () => ({ message: "Pick a time slot" }) }),
+  time: z.string().refine(isBookingTime, "Pick a time between 8:00 AM and 8:00 PM"),
 });
 
 export const bookingAddressSchema = z.object({

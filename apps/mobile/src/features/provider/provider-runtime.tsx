@@ -1,15 +1,15 @@
 import {
-  acceptBlockMessage, checkCanAccept, declinePatch, isRequestOpen, pickCurrentRequest, providerActionPatch,
-  providerLaunchStatus, requestEconomics, walletStateFromSummary, type LaunchStatus, type WalletState,
+  formatBookingWhen, openRequests, providerLaunchStatus, requestEconomics, walletStateFromSummary, type LaunchStatus, type WalletState,
 } from "@handyfix/shared";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { AppState } from "react-native";
 import { useSession } from "@/features/auth/session-provider";
+import { configureNotificationHandler, notifyNewRequest, onRequestTapped } from "@/lib/notifications";
 import { getSupabase } from "@/lib/supabase";
-import { applyBookingPatch, fetchPendingRequests, fetchWalletSummary, setOnline, touchPresence } from "./api";
-import { RequestAlert } from "./RequestAlert";
+import { fetchPendingRequests, fetchWalletSummary, serviceNameOf, setOnline, touchPresence, type ProviderBooking } from "./api";
+import { RequestPopup } from "./RequestPopup";
 import { ensureBackgroundLocation, startPresence, stopPresence } from "./tracking";
 
 const HEARTBEAT_MS = 30_000;
@@ -29,6 +29,10 @@ type Runtime = {
   walletReady: boolean;
   launch: LaunchStatus;
   refreshWallet: () => Promise<void>;
+  /** Requests waiting for this pro's answer (no countdown), oldest first. */
+  openRequests: ProviderBooking[];
+  /** Hide the banner for a request once the pro has opened it. */
+  markRequestSeen: (id: string) => void;
 };
 
 const RuntimeContext = createContext<Runtime | null>(null);
@@ -44,9 +48,8 @@ export function ProviderRuntime({ children }: { children: ReactNode }) {
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [now, setNow] = useState(new Date());
-  const [dismissed, setDismissed] = useState<ReadonlySet<string>>(new Set());
-  const [answering, setAnswering] = useState(false);
-  const [requestError, setRequestError] = useState<string | null>(null);
+  const [seen, setSeen] = useState<ReadonlySet<string>>(new Set());
+  const notified = useRef(new Set<string>());
   const appActive = useRef(true);
 
   const approved = provider?.status === "active" && provider?.kyc_status === "approved";
@@ -105,61 +108,35 @@ export function ProviderRuntime({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!online) return;
-    const id = setInterval(() => setNow(new Date()), 500);
+    const id = setInterval(() => setNow(new Date()), 60_000);
     return () => clearInterval(id);
   }, [online]);
 
-  const request = useMemo(() => {
-    if (!online) return null;
-    return pickCurrentRequest((requests.data ?? []).filter((r) => !dismissed.has(r.id)), now);
-  }, [online, requests.data, dismissed, now]);
+  const open = useMemo(() => (online ? openRequests(requests.data ?? [], now) : []), [online, requests.data, now]);
+  const unseen = open.filter((r) => !seen.has(r.id));
+  const markRequestSeen = useCallback((id: string) => setSeen((prev) => (prev.has(id) ? prev : new Set(prev).add(id))), []);
+  const openRequest = useCallback((id: string) => {
+    markRequestSeen(id);
+    router.push({ pathname: "/provider/job/[id]", params: { id } });
+  }, [markRequestSeen, router]);
 
-  const dismiss = useCallback((id: string) => setDismissed((prev) => new Set(prev).add(id)), []);
-
-  const economics = request ? requestEconomics({ price: Number(request.provider_amount ?? 0), launchActive: launch.active }) : null;
-  const acceptCheck = request
-    ? checkCanAccept({ wallet, estimatedServiceBill: Number(request.provider_amount ?? 0), launchActive: launch.active })
-    : null;
-  const blockedMessage = acceptCheck && !acceptCheck.ok ? acceptBlockMessage(acceptCheck) : null;
-
-  const accept = useCallback(async () => {
-    if (!request || !providerId || blockedMessage) return;
-    setAnswering(true);
-    setRequestError(null);
-    try {
-      await applyBookingPatch(request.id, providerId, providerActionPatch("accept", new Date()).patch);
-      dismiss(request.id);
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["provider-requests", providerId] }),
-        queryClient.invalidateQueries({ queryKey: ["provider-bookings", providerId] }),
-        queryClient.invalidateQueries({ queryKey: ["wallet-summary", providerId] }),
-      ]);
-      router.push({ pathname: "/provider/job/[id]", params: { id: request.id } });
-    } catch (e) {
-      // The database enforces the same wallet rule: show exactly what it said.
-      setRequestError(e instanceof Error ? e.message : "Could not accept this request.");
-    } finally {
-      setAnswering(false);
+  // A phone notification once per new request. No countdown: the pro reviews it and answers when ready.
+  useEffect(() => {
+    for (const r of open) {
+      if (notified.current.has(r.id)) continue;
+      notified.current.add(r.id);
+      void notifyNewRequest({
+        bookingId: r.id,
+        title: `New request: ${serviceNameOf(r)}`,
+        body: `${formatBookingWhen(r.booking_date, r.booking_time)} · ${r.city ?? "Nearby"}. Tap to see the details and decide.`,
+      });
     }
-  }, [request, providerId, blockedMessage, dismiss, queryClient, router]);
+  }, [open]);
 
-  const decline = useCallback(async () => {
-    if (!request || !providerId) return;
-    setAnswering(true);
-    setRequestError(null);
-    try {
-      await applyBookingPatch(request.id, providerId, declinePatch(new Date()));
-      dismiss(request.id);
-      await queryClient.invalidateQueries({ queryKey: ["provider-requests", providerId] });
-    } catch (e) {
-      setRequestError(e instanceof Error ? e.message : "Could not decline this request.");
-    } finally {
-      setAnswering(false);
-    }
-  }, [request, providerId, dismiss, queryClient]);
-
-  // A request nobody answered in 30 s is no longer ours to accept (it is offered to other pros).
-  const expire = useCallback(() => { if (request) dismiss(request.id); }, [request, dismiss]);
+  useEffect(() => {
+    configureNotificationHandler();
+    return onRequestTapped(openRequest);
+  }, [openRequest]);
 
   const toggleOnline = useCallback(async () => {
     if (!providerId || toggling) return;
@@ -197,25 +174,25 @@ export function ProviderRuntime({ children }: { children: ReactNode }) {
   const refreshWallet = useCallback(async () => { await queryClient.invalidateQueries({ queryKey: ["wallet-summary", providerId] }); }, [queryClient, providerId]);
 
   const value = useMemo<Runtime>(
-    () => ({ online, canGoOnline, switchBlockedReason, toggling, notice, error, toggleOnline, wallet, walletReady: walletQuery.isSuccess, launch, refreshWallet }),
-    [online, canGoOnline, switchBlockedReason, toggling, notice, error, toggleOnline, wallet, walletQuery.isSuccess, launch, refreshWallet],
+    () => ({
+      online, canGoOnline, switchBlockedReason, toggling, notice, error, toggleOnline, wallet, walletReady: walletQuery.isSuccess, launch, refreshWallet,
+      openRequests: open, markRequestSeen,
+    }),
+    [online, canGoOnline, switchBlockedReason, toggling, notice, error, toggleOnline, wallet, walletQuery.isSuccess, launch, refreshWallet, open, markRequestSeen],
   );
 
   void userId;
   return (
     <RuntimeContext.Provider value={value}>
       {children}
-      {request && economics && isRequestOpen({ status: request.status, createdAt: request.created_at }, now) ? (
-        <RequestAlert
-          key={request.id}
-          request={request}
-          economics={economics}
-          blockedMessage={blockedMessage}
-          busy={answering}
-          error={requestError}
-          onAccept={() => void accept()}
-          onDecline={() => void decline()}
-          onExpire={expire}
+      {unseen[0] ? (
+        <RequestPopup
+          key={unseen[0].id}
+          request={unseen[0]}
+          economics={requestEconomics({ price: Number(unseen[0].provider_amount ?? 0), launchActive: launch.active })}
+          more={unseen.length - 1}
+          onView={() => openRequest(unseen[0]!.id)}
+          onLater={() => markRequestSeen(unseen[0]!.id)}
         />
       ) : null}
     </RuntimeContext.Provider>

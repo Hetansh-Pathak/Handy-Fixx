@@ -60,7 +60,7 @@ export default function ProviderHome() {
           <View className="flex-1 gap-1">
             <Text className={`text-xl font-bold ${rt.online ? "text-brand" : "text-fg"}`}>{rt.online ? "You're online" : "You're offline"}</Text>
             <Text className="text-sm text-muted">
-              {rt.online ? "New requests appear with a sound. Accept within 30 seconds." : "Go online to receive job requests. It costs ₹0."}
+              {rt.online ? "New requests arrive as a notification. Open one to see the details, photos and voice note, then accept or decline." : "Go online to receive job requests. It costs ₹0."}
             </Text>
           </View>
           <Switch

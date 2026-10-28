@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
-  bookableDates, BOOKING_SLOTS, daysFromToday, isBookableDate, isSlotAvailable, slotsForDate, toDateString, toDbTime,
+  availableTimes, bookableDates, daysFromToday, firstAvailableTime, fromClock, isBookableDate, isBookingTime, isSlotAvailable,
+  snapToAvailable, toClock, toDateString, toDbTime,
 } from "./schedule";
 
 // Local-time constructors keep these tests timezone-independent.
@@ -29,44 +30,41 @@ describe("dates", () => {
   });
 });
 
-describe("slots", () => {
-  it("hides past slots today but offers later ones", () => {
-    const today = at(2026, 11, 10);
-    const avail = Object.fromEntries(slotsForDate(today, now).map((s) => [s.slot, s.available]));
-    expect(avail).toEqual({ "08:00": false, "10:00": false, "12:00": true, "14:00": true, "16:00": true, "18:00": true });
+describe("booking times", () => {
+  it("accepts 15-minute steps from 8:00 AM to 8:00 PM", () => {
+    for (const t of ["08:00", "08:15", "13:45", "20:00"]) expect(isBookingTime(t)).toBe(true);
+    for (const t of ["07:45", "20:15", "13:10", "8:00", "24:00", "", "ab:cd"]) expect(isBookingTime(t)).toBe(false);
   });
-  it("offers every slot on a future day", () => {
-    expect(slotsForDate(at(2026, 11, 11), now).every((s) => s.available)).toBe(true);
-    expect(slotsForDate(at(2026, 11, 11), now)).toHaveLength(BOOKING_SLOTS.length);
+  it("lists 49 times on a future day", () => {
+    const times = availableTimes(at(2026, 11, 11), now);
+    expect(times).toHaveLength(49);
+    expect([times[0], times[times.length - 1]]).toEqual(["08:00", "20:00"]);
   });
-  it("respects a lead time", () => {
-    const today = at(2026, 11, 10);
-    expect(isSlotAvailable(today, "12:00", now, 0)).toBe(true);
-    expect(isSlotAvailable(today, "12:00", now, 60)).toBe(false); // only 30 min away
+  it("starts today at least an hour from now, on the next step", () => {
+    // now is 11:30 → the first time is 12:30
+    expect(firstAvailableTime(at(2026, 11, 10), now)).toBe("12:30");
+    expect(isSlotAvailable(at(2026, 11, 10), "12:00", now, 0)).toBe(true);
+    expect(isSlotAvailable(at(2026, 11, 10), "12:00", now, 60)).toBe(false);
   });
-  it("offers nothing outside the booking window", () => {
-    expect(slotsForDate(at(2026, 11, 30), now).some((s) => s.available)).toBe(false);
+  it("offers nothing late in the evening or outside the window", () => {
+    expect(availableTimes(at(2026, 11, 10), at(2026, 11, 10, 19, 30))).toEqual([]);
+    expect(firstAvailableTime(at(2026, 11, 30), now)).toBeNull();
   });
 });
 
-import { formatBookingWhen, formatDateChip, formatSlot, parseDateString } from "./schedule";
-
-describe("display formatting", () => {
-  it("formats date chips", () => {
-    expect(formatDateChip(new Date(2026, 10, 10))).toBe("Tue, 10 Nov");
-    expect(formatDateChip(new Date(2026, 0, 1))).toBe("Thu, 1 Jan");
-  });
-  it.each([["08:00", "8:00 AM"], ["12:00", "12:00 PM"], ["00:30", "12:30 AM"], ["14:00:00", "2:00 PM"], ["18:00", "6:00 PM"], ["x", "x"], ["25:00", "25:00"]])(
-    "formatSlot %s -> %s", (input, out) => expect(formatSlot(input)).toBe(out));
-  it("parses a local date string and rejects impossible dates", () => {
-    const d = parseDateString("2026-11-10")!;
-    expect([d.getFullYear(), d.getMonth(), d.getDate()]).toEqual([2026, 10, 10]);
-    for (const bad of ["2026-02-30", "2026-13-01", "10/11/2026", ""]) expect(parseDateString(bad)).toBeNull();
-  });
-  it("formats a stored booking date and time", () => {
-    expect(formatBookingWhen("2026-11-10", "14:00:00")).toBe("Tue, 10 Nov · 2:00 PM");
-    expect(formatBookingWhen("2026-11-10", null)).toBe("Tue, 10 Nov");
-    expect(formatBookingWhen(null, "08:00")).toBe("8:00 AM");
-    expect(formatBookingWhen(undefined, undefined)).toBe("");
+describe("clock", () => {
+  it.each([["00:00", 12, 0, false], ["08:15", 8, 15, false], ["12:00", 12, 0, true], ["14:30", 2, 30, true], ["20:00", 8, 0, true]] as const)(
+    "%s ↔ %i:%i pm=%s", (time, hour, minute, pm) => {
+      expect(toClock(time)).toEqual({ hour, minute, pm });
+      expect(fromClock({ hour, minute, pm })).toBe(time);
+    });
+  it("rejects garbage", () => expect(toClock("9am")).toBeNull());
+  it("snaps to the nearest bookable time", () => {
+    const opts = ["12:30", "12:45", "13:00", "14:00"];
+    expect(snapToAvailable("12:45", opts)).toBe("12:45");
+    expect(snapToAvailable("12:00", opts)).toBe("12:30"); // same hour
+    expect(snapToAvailable("09:00", opts)).toBe("12:30"); // next free time
+    expect(snapToAvailable("22:00", opts)).toBe("14:00"); // after the last: the last one
+    expect(snapToAvailable("10:00", [])).toBeNull();
   });
 });

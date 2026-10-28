@@ -33,3 +33,44 @@ export async function ensureRequestChannel() {
     lightColor: "#C16430",
   });
 }
+
+let permission: Promise<boolean> | null = null;
+
+/** Asks once per app run; later calls reuse the answer. */
+function ensurePermission(): Promise<boolean> {
+  permission ??= (async () => {
+    const current = await Notifications.getPermissionsAsync();
+    if (current.granted) return true;
+    if (!current.canAskAgain) return false;
+    return (await Notifications.requestPermissionsAsync()).granted;
+  })().catch(() => false);
+  return permission;
+}
+
+/**
+ * A phone notification for a new job request. Tapping it opens the request (see `onRequestTapped`).
+ * Best effort: on web, or without permission, the in-app banner is the only alert.
+ */
+export async function notifyNewRequest(args: { bookingId: string; title: string; body: string }): Promise<void> {
+  if (Platform.OS === "web") return;
+  try {
+    if (!(await ensurePermission())) return;
+    await ensureRequestChannel();
+    await Notifications.scheduleNotificationAsync({
+      content: { title: args.title, body: args.body, data: { bookingId: args.bookingId }, sound: "new_request.wav" },
+      trigger: Platform.OS === "android" ? { channelId: REQUEST_CHANNEL } : null,
+    });
+  } catch {
+    /* the banner inside the app still shows the request */
+  }
+}
+
+/** Calls back with the booking id when a request notification is tapped. Returns the unsubscribe function. */
+export function onRequestTapped(open: (bookingId: string) => void): () => void {
+  if (Platform.OS === "web") return () => undefined;
+  const sub = Notifications.addNotificationResponseReceivedListener((r) => {
+    const id = r.notification.request.content.data?.bookingId;
+    if (typeof id === "string") open(id);
+  });
+  return () => sub.remove();
+}

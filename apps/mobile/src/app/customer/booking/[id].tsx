@@ -1,6 +1,6 @@
 import {
   customerCanCancel, customerStatusLabel, formatBookingWhen, formatInr, formatRating, needsAlternatives, quoteBooking,
-  reconcileQuote, requestOutcome, showsCompletionCode, showsLiveMap, trackingSummary, waitSecondsLeft, type BookingStatus,
+  reconcileQuote, requestOutcome, showsCompletionCode, showsLiveMap, trackingSummary, type BookingStatus,
 } from "@handyfix/shared";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -9,6 +9,7 @@ import { Linking, View } from "react-native";
 import { Text } from "@/components/text";
 import { TrackingMap } from "@/components/TrackingMap";
 import { Body, Button, Card, ErrorBanner, InfoBanner, Screen, ScreenHeader, Title } from "@/components/ui";
+import { AttachmentGallery } from "@/features/attachments/components";
 import { loadCustomerProfile } from "@/features/auth/api";
 import { useSession } from "@/features/auth/session-provider";
 import {
@@ -24,13 +25,14 @@ export default function BookingStatusScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { userId, fullName } = useSession();
-  const { id, expected } = useLocalSearchParams<{ id: string; expected?: string }>();
+  const { id, expected, attachFailed, attachError } = useLocalSearchParams<{ id: string; expected?: string; attachFailed?: string; attachError?: string }>();
 
   const [now, setNow] = useState(new Date());
   const [confirmingCancel, setConfirmingCancel] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [browseOthers, setBrowseOthers] = useState(false);
 
   const query = useQuery({
     queryKey: ["booking", id],
@@ -44,15 +46,17 @@ export default function BookingStatusScreen() {
   const live = !!booking && !FINISHED.includes(booking.status);
   useBookingLive(id, live);
 
-  // The countdown and "last seen" ages tick every second while the booking is unfinished.
+  // "Last seen" ages tick every second while the booking is unfinished.
   useEffect(() => {
     if (!live) return;
     const t = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(t);
   }, [live]);
 
-  const outcome = booking ? requestOutcome({ status: booking.status, createdAt: booking.created_at, cancellationReason: booking.cancellation_reason }, now) : "waiting";
-  const wantsAlternatives = needsAlternatives(outcome);
+  const outcome = booking
+    ? requestOutcome({ status: booking.status, bookingDate: booking.booking_date, bookingTime: booking.booking_time, cancellationReason: booking.cancellation_reason }, now)
+    : "waiting";
+  const wantsAlternatives = needsAlternatives(outcome) || (outcome === "waiting" && browseOthers);
 
   const code = useQuery({ queryKey: ["completion-code", id], enabled: !!booking && showsCompletionCode(status), queryFn: () => fetchCompletionCode(id) });
   const phone = useQuery({
@@ -162,7 +166,13 @@ export default function BookingStatusScreen() {
       ) : null}
 
       {outcome === "waiting" ? (
-        <InfoBanner message={`${pro} has ${waitSecondsLeft(booking.created_at, now)} seconds to accept. If they cannot, we will show you the next best pros.`} />
+        <Card>
+          <Text className="text-base font-semibold text-fg">Request sent to {pro}</Text>
+          <Body muted>
+            {pro} has been notified and is reviewing your details, photos and voice note. This screen updates as soon as they accept.
+          </Body>
+          {!browseOthers ? <Button label="Choose another pro instead" variant="secondary" onPress={() => setBrowseOthers(true)} /> : null}
+        </Card>
       ) : null}
 
       {wantsAlternatives ? <Alternatives state={alternatives} busyId={busy} onChoose={(p) => void choose(p)} onBrowse={() => router.replace("/customer")} /> : null}
@@ -200,7 +210,10 @@ export default function BookingStatusScreen() {
         <Line label="Pro" value={providerName ?? "Finding your pro"} />
         <Line label="When" value={formatBookingWhen(booking.booking_date, booking.booking_time)} />
         <Line label="Where" value={[booking.address, booking.city, booking.pincode].filter(Boolean).join(", ")} />
+        {booking.special_instructions ? <Line label="Problem" value={booking.special_instructions} /> : null}
+        <AttachmentGallery bookingId={booking.id} />
       </Card>
+      {attachFailed ? <ErrorBanner message={`${attachFailed} ${attachFailed === "1" ? "file" : "files"} could not be uploaded, so your pro cannot see ${attachFailed === "1" ? "it" : "them"}. Your booking is saved; describe the problem to your pro when they call.${attachError ? ` (Reason: ${attachError})` : ""}`} /> : null}
       <Card>
         <Line label="Platform fee" value={formatInr(booking.platform_fee ?? 0)} />
         <Line label="Total" value={formatInr(booking.total_amount ?? 0)} strong />
