@@ -30,9 +30,9 @@ Package name: `in.handyfix.app`.
 | 1 | ~~Slice 3: customer booking status~~ | **DONE** (map and call need owner setup, see BLOCKED) |
 | 2 | **Slice 4b: server side of the request flow**: push to the pro when a booking arrives (FCM edge function and token table), the 30 s timeout and next-pro offers as real server logic. Needs a Firebase project from the owner. **Until then a pro whose app is closed gets no request.** | QUEUED |
 | 3 | **Slice 5b-rest: KYC and rate**: 9-step KYC wizard (camera and pickers, storage upload), payout details (UPI/bank) form, pro sets own rate inside the band (needs pricing proposal applied). Wallet/top-up/withdraw/earnings are DONE (5a). | QUEUED |
-| 4 | **Slice 5b: extra work with customer approval** (+ bill photos for parts) and **disputes** (24 h / 48 h window, evidence, admin decision, appeal) | QUEUED |
+| 4 | **Slice 5b: extra work with customer approval** (+ bill photos for parts) and **disputes** (24 h / 48 h window, evidence, admin decision, appeal) | **Database side written** as a proposal (`20261107000000_extra_work_and_disputes`, NOT applied, tested on a stub). Mobile screens still QUEUED; web reference screens in `docs/reference-ui-flat-fee/`. See `docs/FLAT_FEE_EXTRAS_AND_ADMIN.md`. |
 | 5 | **Slice 6**: chat with number blocking, reviews, notifications, account deletion | QUEUED |
-| 6 | **Admin panel** updates: price bands, disputes, wallet/fee records | QUEUED |
+| 6 | **Admin panel** updates: price bands, disputes, wallet/fee records | **DONE in `apps/admin`** (Price bands, Fees & disputes pages). They need the proposals above applied to show data. |
 | 7 | **Phase 5**: Sentry, EAS builds, Play Console internal then closed testing, location declaration | QUEUED |
 | 8 | Delete `legacy/` web apps at mobile parity; rebuild the grant document sections for the new model | QUEUED |
 

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { LayoutDashboard, Shield, Users, BookOpen, FileText, LogOut, Menu, ChevronLeft, Wallet } from 'lucide-react';
+import { LayoutDashboard, Shield, Users, BookOpen, FileText, LogOut, Menu, ChevronLeft, Wallet, Tag, Gavel } from 'lucide-react';
 import { useAdminAuth } from '@/contexts/AdminAuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
@@ -43,7 +43,9 @@ const AdminLayout: React.FC = () => {
     { to: '/kyc', icon: <Shield className="h-5 w-5" />, label: 'KYC Review', badge: pendingKyc },
     { to: '/providers', icon: <Users className="h-5 w-5" />, label: 'Providers' },
     { to: '/bookings', icon: <BookOpen className="h-5 w-5" />, label: 'Bookings' },
-    { to: '/wallets', icon: <Wallet className="h-5 w-5" />, label: 'Dues & Payments' },
+    { to: '/pricing', icon: <Tag className="h-5 w-5" />, label: 'Price bands' },
+    { to: '/disputes', icon: <Gavel className="h-5 w-5" />, label: 'Fees & disputes' },
+    { to: '/wallets', icon: <Wallet className="h-5 w-5" />, label: 'Wallets & payouts' },
     { to: '/audit', icon: <FileText className="h-5 w-5" />, label: 'Audit Log' },
   ];
 
