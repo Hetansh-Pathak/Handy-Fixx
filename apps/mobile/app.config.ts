@@ -30,9 +30,19 @@ const customerBlocked = [
   "android.permission.USE_FULL_SCREEN_INTENT",
 ];
 
+// Expo (EAS) projects, one per store app. The ID is not a secret. The customer ID is from `eas init` (@riteshkanara/handyfix);
+// the Pro ID is filled in after `eas init` is run once with EXPO_PUBLIC_APP_VARIANT=provider (until then EAS_PROJECT_ID is used).
+const EAS_OWNER = "riteshkanara";
+const EAS_PROJECT_ID = {
+  customer: "2caf96cd-ed45-433c-bba1-721466583e22",
+  provider: process.env.EAS_PROJECT_ID,
+  both: "2caf96cd-ed45-433c-bba1-721466583e22",
+}[VARIANT];
+
 const config: ExpoConfig = {
   name: IDENTITY.name,
   slug: IDENTITY.slug,
+  owner: EAS_OWNER,
   scheme: IDENTITY.scheme,
   version: "0.1.0",
   orientation: "portrait",
@@ -105,7 +115,7 @@ const config: ExpoConfig = {
   ],
   experiments: {},
   extra: {
-    eas: { projectId: process.env.EAS_PROJECT_ID },
+    eas: { projectId: EAS_PROJECT_ID },
   },
 };
 
