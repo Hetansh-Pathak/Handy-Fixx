@@ -64,10 +64,10 @@ const ProviderSettings: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 max-w-2xl">
+    <div className="mx-auto w-full max-w-7xl space-y-6">
       {/* Notification Preferences */}
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
-        <Card className="glass-card p-4">
+        <Card className="glass-card p-5 sm:p-6">
           <div className="flex items-center gap-2 mb-4">
             <Bell className="h-5 w-5 text-primary" />
             <h3 className="font-semibold">Notification Preferences</h3>
@@ -92,7 +92,7 @@ const ProviderSettings: React.FC = () => {
 
       {/* Security */}
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-        <Card className="glass-card p-4">
+        <Card className="glass-card p-5 sm:p-6">
           <div className="flex items-center gap-2 mb-4">
             <Lock className="h-5 w-5 text-primary" />
             <h3 className="font-semibold">Security</h3>
@@ -105,7 +105,7 @@ const ProviderSettings: React.FC = () => {
 
       {/* Danger Zone */}
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
-        <Card className="glass-card p-4 border-destructive/30">
+        <Card className="glass-card p-5 sm:p-6 border-destructive/30">
           <div className="flex items-center gap-2 mb-4">
             <AlertTriangle className="h-5 w-5 text-destructive" />
             <h3 className="font-semibold text-destructive">Danger Zone</h3>

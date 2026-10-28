@@ -17,8 +17,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import StatusBadge from '@/components/admin/StatusBadge';
 import { useToast } from '@/hooks/use-toast';
-import { cn, formatDate, formatDateTime, timeAgo, maskAadhaar, maskPAN, STATUS_STYLES, STATUS_LABELS, SUSPEND_REASONS } from '@/lib/utils';
+import { cn, formatDate, formatDateTime, timeAgo, maskAadhaar, maskPAN, SUSPEND_REASONS, getErrorMessage } from '@/lib/utils';
 
 const PAGE_SIZE = 20;
 
@@ -112,7 +113,7 @@ const Providers: React.FC = () => {
       setProviders((data ?? []) as Provider[]);
       setTotal(count ?? 0);
     } catch (err: unknown) {
-      toast({ title: 'Error loading providers', description: err instanceof Error ? err.message : 'Unknown', variant: 'destructive' });
+      toast({ title: 'Error loading providers', description: getErrorMessage(err), variant: 'destructive' });
     } finally {
       setLoading(false);
     }
@@ -216,7 +217,7 @@ const Providers: React.FC = () => {
       setDrawerProvider(null);
       fetchProviders();
     } catch (err: unknown) {
-      toast({ title: 'Error', description: err instanceof Error ? err.message : 'Unknown', variant: 'destructive' });
+      toast({ title: 'Error', description: getErrorMessage(err), variant: 'destructive' });
     } finally {
       setActionLoading(false);
     }
@@ -238,7 +239,7 @@ const Providers: React.FC = () => {
       setDrawerProvider(null);
       fetchProviders();
     } catch (err: unknown) {
-      toast({ title: 'Error', description: err instanceof Error ? err.message : 'Unknown', variant: 'destructive' });
+      toast({ title: 'Error', description: getErrorMessage(err), variant: 'destructive' });
     } finally {
       setActionLoading(false);
     }
@@ -247,7 +248,7 @@ const Providers: React.FC = () => {
   const totalPages = Math.ceil(total / PAGE_SIZE);
 
   return (
-    <div className="space-y-5">
+    <div className="admin-readable space-y-5">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -358,19 +359,15 @@ const Providers: React.FC = () => {
                       <div className="flex items-center gap-1 text-xs">
                         <Star className="h-3 w-3 text-warning fill-warning" />
                         <span>{p.rating?.toFixed(1) ?? '—'}</span>
-                        <span className="text-muted-foreground">({p.total_reviews ?? 0})</span>
+                        <span className="text-muted-foreground">({p.total_reviews ?? '—'})</span>
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-xs text-foreground">{p.total_jobs ?? 0}</td>
+                    <td className="px-4 py-3 text-xs text-foreground">{p.total_jobs ?? '—'}</td>
                     <td className="px-4 py-3">
-                      <Badge className={cn('text-[10px]', STATUS_STYLES[p.kyc_status] ?? '')}>
-                        {STATUS_LABELS[p.kyc_status] ?? p.kyc_status}
-                      </Badge>
+                      <StatusBadge status={p.kyc_status} prefix="KYC" />
                     </td>
                     <td className="px-4 py-3">
-                      <Badge className={cn('text-[10px]', STATUS_STYLES[p.status] ?? '')}>
-                        {STATUS_LABELS[p.status] ?? p.status}
-                      </Badge>
+                      <StatusBadge status={p.status} />
                     </td>
                     <td className="px-4 py-3 text-xs text-muted-foreground">{formatDate(p.created_at)}</td>
                     <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
@@ -430,12 +427,8 @@ const Providers: React.FC = () => {
                   <div>
                     <SheetTitle className="text-lg">{drawerProvider.full_name}</SheetTitle>
                     <div className="flex gap-2 mt-1">
-                      <Badge className={cn('text-[10px]', STATUS_STYLES[drawerProvider.kyc_status] ?? '')}>
-                        {STATUS_LABELS[drawerProvider.kyc_status] ?? drawerProvider.kyc_status}
-                      </Badge>
-                      <Badge className={cn('text-[10px]', STATUS_STYLES[drawerProvider.status] ?? '')}>
-                        {STATUS_LABELS[drawerProvider.status] ?? drawerProvider.status}
-                      </Badge>
+                      <StatusBadge status={drawerProvider.kyc_status} prefix="KYC" />
+                      <StatusBadge status={drawerProvider.status} />
                     </div>
                   </div>
                 </div>
@@ -490,10 +483,10 @@ const Providers: React.FC = () => {
                     {[
                       { label: 'Email', value: drawerProvider.email },
                       { label: 'Phone', value: drawerProvider.phone },
-                      { label: 'Experience', value: `${drawerProvider.experience_years ?? 0} years` },
-                      { label: 'Total Jobs', value: drawerProvider.total_jobs ?? 0 },
+                      { label: 'Experience', value: drawerProvider.experience_years != null ? `${drawerProvider.experience_years} years` : '—' },
+                      { label: 'Total Jobs', value: drawerProvider.total_jobs ?? '—' },
                       { label: 'Rating', value: drawerProvider.rating ? `${drawerProvider.rating.toFixed(1)} ★` : '—' },
-                      { label: 'Reviews', value: drawerProvider.total_reviews ?? 0 },
+                      { label: 'Reviews', value: drawerProvider.total_reviews ?? '—' },
                       { label: 'Total Earnings', value: drawerProvider.total_earnings ? `₹${drawerProvider.total_earnings}` : '—' },
                       { label: 'Joined', value: formatDate(drawerProvider.created_at) },
                     ].map(({ label, value }) => (
@@ -565,7 +558,7 @@ const Providers: React.FC = () => {
                       {(providerBookings as { id: string; status: string; scheduled_date: string | null; total_amount: number; created_at: string }[]).map(b => (
                         <div key={b.id} className="flex items-center justify-between p-2.5 rounded-xl bg-secondary/30 text-xs">
                           <span className="font-mono text-muted-foreground">#{b.id.slice(0, 8).toUpperCase()}</span>
-                          <Badge className={cn('text-[10px]', STATUS_STYLES[b.status] ?? '')}>{b.status}</Badge>
+                          <StatusBadge status={b.status} />
                           <span className="text-muted-foreground">{formatDate(b.scheduled_date ?? b.created_at)}</span>
                           <span className="font-semibold">₹{b.total_amount}</span>
                         </div>

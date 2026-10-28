@@ -1,52 +1,52 @@
-import React, { useState, useEffect } from 'react';
-import { NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useEffect, useState } from 'react';
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
-  LayoutDashboard, Shield, Users, BookOpen, FileText,
-  LogOut, Menu, X, ChevronLeft, Bell
+  LogOut, Menu, X,
 } from 'lucide-react';
 import { useAdminAuth } from '@/contexts/AdminAuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-
-const LOGO_URL = '/logo.png';
-
-interface SidebarItem {
-  to: string;
-  icon: React.ReactNode;
-  label: string;
-  badge?: number;
-}
+import ThemeToggle from '@/components/ThemeToggle';
 
 const AdminLayout: React.FC = () => {
   const { user, signOut } = useAdminAuth();
   const navigate = useNavigate();
-  const [collapsed, setCollapsed] = useState(false);
-  const [mobileOpen, setMobileOpen] = useState(false);
-  const [pendingKyc, setPendingKyc] = useState(0);
+  const location = useLocation();
+  const [pendingKyc, setPendingKyc] = useState<number | null>(null);
+  const [isNavigationOpen, setIsNavigationOpen] = useState(false);
 
-  // Fetch pending KYC count for badge
   useEffect(() => {
+    let active = true;
     const fetchPending = async () => {
-      const { count } = await supabase
+      const { count, error } = await supabase
         .from('service_providers')
         .select('id', { count: 'exact', head: true })
         .eq('kyc_status', 'pending');
-      setPendingKyc(count ?? 0);
+      if (!active) return;
+      if (error) {
+        console.error('Could not fetch pending KYC count:', error);
+        return;
+      }
+      setPendingKyc(count);
     };
-    fetchPending();
-    const interval = setInterval(fetchPending, 30_000);
-    return () => clearInterval(interval);
+    void fetchPending();
+    const interval = window.setInterval(() => { void fetchPending(); }, 30_000);
+    return () => {
+      active = false;
+      window.clearInterval(interval);
+    };
   }, []);
 
-  const items: SidebarItem[] = [
-    { to: '/dashboard', icon: <LayoutDashboard className="h-5 w-5" />, label: 'Dashboard' },
-    { to: '/kyc', icon: <Shield className="h-5 w-5" />, label: 'KYC Review', badge: pendingKyc },
-    { to: '/providers', icon: <Users className="h-5 w-5" />, label: 'Providers' },
-    { to: '/bookings', icon: <BookOpen className="h-5 w-5" />, label: 'Bookings' },
-    { to: '/audit', icon: <FileText className="h-5 w-5" />, label: 'Audit Log' },
+  useEffect(() => {
+    setIsNavigationOpen(false);
+  }, [location.pathname]);
+
+  const items = [
+    { to: '/dashboard', label: 'Dashboard' },
+    { to: '/kyc', label: 'KYC Review', badge: pendingKyc },
+    { to: '/providers', label: 'Providers' },
+    { to: '/bookings', label: 'Bookings' },
+    { to: '/audit', label: 'Audit Log' },
   ];
 
   const handleSignOut = async () => {
@@ -54,134 +54,86 @@ const AdminLayout: React.FC = () => {
     navigate('/login');
   };
 
-  const SidebarContent = () => (
-    <div className="flex flex-col h-full">
-      {/* Logo */}
-      <div className={cn("flex items-center gap-3 p-4 border-b border-border/50", collapsed && "justify-center")}>
-        <img src={LOGO_URL} alt="HandyFix" className="h-8 w-8 rounded-lg object-contain shrink-0" />
-        {!collapsed && (
-          <div>
-            <p className="font-bold text-sm text-foreground">HandyFix</p>
-            <p className="text-[10px] text-primary font-semibold tracking-wider uppercase">Admin Panel</p>
-          </div>
-        )}
-      </div>
-
-      {/* Nav items */}
-      <nav className="flex-1 px-3 py-3 space-y-1.5 overflow-y-auto scrollbar-hide">
-        {items.map((item) => (
-          <TooltipProvider key={item.to} delayDuration={0}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <NavLink
-                  to={item.to}
-                  onClick={() => setMobileOpen(false)}
-                  className={({ isActive }) =>
-                    cn(
-                      'w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 cursor-pointer relative',
-                      isActive
-                        ? 'bg-primary/10 text-primary font-bold border-l-4 border-primary rounded-l-none'
-                        : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
-                    )
-                  }
-                >
-                  <span className="shrink-0">{item.icon}</span>
-                  {!collapsed && <span className="flex-1 text-left truncate">{item.label}</span>}
-                  {item.badge !== undefined && item.badge > 0 && (
-                    <span className={cn(
-                      "ml-auto px-2 py-0.5 rounded-full text-xs font-bold bg-destructive text-destructive-foreground shrink-0 flex items-center justify-center min-w-[20px] h-5",
-                      collapsed && "absolute -top-1 -right-1 px-1 py-0 text-[10px] min-w-[16px] h-4"
-                    )}>
-                      {item.badge}
-                    </span>
-                  )}
-                </NavLink>
-              </TooltipTrigger>
-              {collapsed && <TooltipContent side="right">{item.label}</TooltipContent>}
-            </Tooltip>
-          </TooltipProvider>
-        ))}
-      </nav>
-
-      {/* Collapse toggle (desktop) */}
-      <div className="hidden md:flex p-3 border-t border-border/50">
-        <button
-          onClick={() => setCollapsed(c => !c)}
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-medium text-muted-foreground hover:bg-secondary/50 justify-center transition-all"
-        >
-          <ChevronLeft className={cn("h-4 w-4 transition-transform", collapsed && "rotate-180")} />
-          {!collapsed && <span>Collapse Sidebar</span>}
-        </button>
-      </div>
-    </div>
-  );
-
   return (
-    <div className="min-h-screen bg-background flex">
-      {/* Desktop sidebar */}
-      <aside className={cn(
-        "hidden md:flex flex-col border-r border-border/50 bg-card transition-all duration-300 shrink-0",
-        collapsed ? "w-16" : "w-64"
-      )}>
-        <SidebarContent />
-      </aside>
+    <div className="min-h-dvh bg-background flex flex-col">
+      <header className="sticky top-0 z-30 border-b border-border/50 bg-background/80 backdrop-blur-xl">
+        <div className="container mx-auto flex min-h-16 flex-wrap items-center justify-between gap-x-4">
+          <button type="button" onClick={() => navigate('/dashboard')} className="flex shrink-0 items-center gap-2">
+            <img src="/logo.png" alt="HandyFix" className="h-10 w-10 rounded-xl object-contain shadow-lg" />
+            <span className="text-xl font-bold text-foreground">HandyFix</span>
+          </button>
 
-      {/* Mobile sidebar overlay */}
-      <AnimatePresence>
-        {mobileOpen && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/40 z-40 md:hidden"
-              onClick={() => setMobileOpen(false)}
-            />
-            <motion.aside
-              initial={{ x: -240 }} animate={{ x: 0 }} exit={{ x: -240 }}
-              transition={{ type: 'spring', stiffness: 400, damping: 40 }}
-              className="fixed left-0 top-0 bottom-0 w-64 bg-card border-r border-border/50 z-50 md:hidden"
-            >
-              <SidebarContent />
-            </motion.aside>
-          </>
-        )}
-      </AnimatePresence>
+          <nav
+            id="admin-navigation"
+            aria-label="Admin navigation"
+            className={`order-3 -mx-4 w-[calc(100%+2rem)] border-t border-border/70 bg-card px-4 py-2 xl:order-none xl:mx-0 xl:w-auto xl:flex-1 xl:border-t-0 xl:bg-transparent xl:px-0 ${isNavigationOpen ? 'flex' : 'hidden xl:flex'}`}
+          >
+            <div className="flex w-full min-w-0 flex-col gap-1 xl:w-full xl:flex-row xl:justify-center xl:gap-2">
+              {items.map(item => {
+                const active = location.pathname === item.to;
+                return (
+                  <NavLink
+                    key={item.to}
+                    to={item.to}
+                    aria-current={active ? 'page' : undefined}
+                    onClick={() => setIsNavigationOpen(false)}
+                    className={cn(
+                      'relative inline-flex min-h-10 w-full items-center justify-between gap-1 rounded-lg px-3 text-sm transition-colors xl:w-auto xl:justify-center xl:px-2.5',
+                      active
+                        ? 'bg-primary/10 font-semibold text-primary xl:bg-transparent'
+                        : 'text-muted-foreground hover:bg-secondary hover:text-foreground xl:hover:bg-transparent'
+                    )}
+                  >
+                    <span>{item.label}</span>
+                    {item.badge !== null && item.badge !== undefined && item.badge > 0 && (
+                      <span className={cn(
+                        'flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-xs font-bold',
+                        active ? 'bg-primary/20 text-primary' : 'bg-primary text-primary-foreground'
+                      )}>
+                        {item.badge > 99 ? '99+' : item.badge}
+                      </span>
+                    )}
+                  </NavLink>
+                );
+              })}
+            </div>
+          </nav>
 
-      {/* Main content */}
-      <div className="flex-1 flex flex-col min-w-0">
-        {/* Top bar */}
-        <header className="sticky top-0 z-30 flex items-center justify-between h-14 px-4 bg-card/80 backdrop-blur-xl border-b border-border/50">
-          <div className="flex items-center gap-3">
+          <div className="ml-auto flex items-center gap-2 shrink-0 xl:ml-0">
+            <ThemeToggle />
             <button
-              onClick={() => setMobileOpen(true)}
-              className="md:hidden p-2 rounded-lg hover:bg-accent transition-colors"
+              type="button"
+              aria-label={isNavigationOpen ? 'Close navigation menu' : 'Open navigation menu'}
+              aria-expanded={isNavigationOpen}
+              aria-controls="admin-navigation"
+              onClick={() => setIsNavigationOpen(open => !open)}
+              className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-foreground transition-colors hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring xl:hidden"
             >
-              <Menu className="h-5 w-5" />
+              {isNavigationOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </button>
-            <span className="text-xs font-semibold text-muted-foreground hidden sm:block">
-              HandyFix Operations
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground hidden sm:block truncate max-w-[200px]">
+            <span className="hidden max-w-[220px] truncate text-sm text-muted-foreground md:block">
               {user?.email}
             </span>
-            <Button
-              variant="outline"
-              size="sm"
+            <button
+              type="button"
               onClick={handleSignOut}
-              className="border-destructive/30 text-destructive hover:bg-destructive/10 text-xs h-8"
+              className="inline-flex h-10 items-center gap-2 rounded-lg px-3 text-sm font-medium text-destructive transition-colors hover:bg-destructive/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
-              <LogOut className="h-3.5 w-3.5 mr-1.5" />
-              Logout
-            </Button>
+              <LogOut className="h-4 w-4" />
+              <span className="hidden sm:inline">Sign out</span>
+            </button>
           </div>
-        </header>
+        </div>
+      </header>
 
-        {/* Page content */}
-        <main className="flex-1 p-4 md:p-6 overflow-auto">
+      <main className="flex min-w-0 flex-1 flex-col p-4 md:p-6">
+        <div className="w-full min-w-0 flex-1">
           <Outlet />
-        </main>
-      </div>
+        </div>
+        <footer className="mt-auto border-t border-border pt-6 pb-2 text-center text-xs text-muted-foreground">
+          © 2026 HandyFix. All rights reserved. Made with <span className="text-primary" aria-label="love">♥</span> in India.
+        </footer>
+      </main>
     </div>
   );
 };

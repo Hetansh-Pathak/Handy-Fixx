@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
-import { DollarSign, Star, Briefcase, TrendingUp, Clock, MapPin, CheckCircle2 } from 'lucide-react';
+import { IndianRupee, Star, Briefcase, TrendingUp, Clock, MapPin, CheckCircle2 } from 'lucide-react';
 import LockedPage from '@/components/provider/LockedPage';
 
 const statusClasses: Record<string, string> = {
@@ -21,9 +21,13 @@ const statusClasses: Record<string, string> = {
 const Dashboard: React.FC = () => {
   const { provider } = useProvider();
   const navigate = useNavigate();
-  const [weeklyData, setWeeklyData] = useState<{ day: string; earnings: number }[]>([]);
-  const [pendingBookings, setPendingBookings] = useState<any[]>([]);
-  const [todayStats, setTodayStats] = useState({ jobs: 0, earnings: 0 });
+  const [weeklyData, setWeeklyData] = useState<{ day: string; earnings: number }[] | null>(null);
+  const [pendingBookings, setPendingBookings] = useState<any[] | null>(null);
+  const [todayStats, setTodayStats] = useState<{ jobs: number; earnings: number | null } | null>(null);
+  const [dashboardErrors, setDashboardErrors] = useState<string[]>([]);
+  const reportError = useCallback((error: string) => {
+    setDashboardErrors(current => current.includes(error) ? current : [...current, error]);
+  }, []);
 
   const fetchWeeklyEarnings = useCallback(async () => {
     if (!provider) return;
@@ -33,23 +37,29 @@ const Dashboard: React.FC = () => {
       const d = new Date();
       d.setDate(d.getDate() - i);
       const dateStr = d.toISOString().split('T')[0];
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('provider_earnings')
         .select('provider_amount')
         .eq('provider_id', provider.id)
         .gte('created_at', `${dateStr}T00:00:00`)
         .lte('created_at', `${dateStr}T23:59:59`);
+      if (error) {
+        console.error('Could not load provider earnings:', error);
+        reportError('Weekly earnings could not be loaded.');
+        setWeeklyData(null);
+        return;
+      }
       results.push({
         day: days[d.getDay()],
-        earnings: data?.reduce((sum, e) => sum + Number(e.provider_amount), 0) || 0,
+        earnings: data?.reduce((sum, e) => sum + Number(e.provider_amount), 0) ?? 0,
       });
     }
     setWeeklyData(results);
-  }, [provider]);
+  }, [provider, reportError]);
 
   const fetchPending = useCallback(async () => {
     if (!provider) return;
-    const { data } = await (supabase as any)
+    const { data, error } = await (supabase as any)
       .from('bookings')
       .select('*, services(name, icon_name, duration_minutes)')
       // customer_name & customer_phone are now direct columns on bookings
@@ -57,23 +67,44 @@ const Dashboard: React.FC = () => {
       .eq('status', 'pending')
       .order('created_at', { ascending: true })
       .limit(5);
-    setPendingBookings(data || []);
-  }, [provider]);
+    if (error) {
+      console.error('Could not load pending provider bookings:', error);
+      reportError('Pending requests could not be loaded.');
+      setPendingBookings(null);
+      return;
+    }
+    setPendingBookings(data ?? []);
+  }, [provider, reportError]);
 
   const fetchTodayStats = useCallback(async () => {
     if (!provider) return;
     const today = new Date().toISOString().split('T')[0];
-    const { data: todayBookings } = await (supabase as any)
+    const { data: todayBookings, error } = await (supabase as any)
       .from('bookings')
-      .select('total_amount')
+      .select('provider_amount, total_amount, platform_fee')
       .eq('provider_id', provider.id)
       .or(`booking_date.eq.${today},scheduled_date.eq.${today}`)
       .eq('status', 'completed');
-    setTodayStats({
-      jobs: todayBookings?.length || 0,
-      earnings: todayBookings?.reduce((s, b) => s + Number(b.total_amount || 0), 0) || 0,
+    if (error) {
+      console.error('Could not load today’s provider statistics:', error);
+      reportError('Today’s earnings could not be loaded.');
+      setTodayStats(null);
+      return;
+    }
+    const amounts = (todayBookings ?? []).map((booking: any) => {
+      if (booking.provider_amount != null) return Number(booking.provider_amount);
+      if (booking.total_amount != null && booking.platform_fee != null) {
+        return Number(booking.total_amount) - Number(booking.platform_fee);
+      }
+      return null;
     });
-  }, [provider]);
+    setTodayStats({
+      jobs: todayBookings?.length ?? 0,
+      earnings: amounts.every((amount: number | null) => amount !== null)
+        ? amounts.reduce((sum: number, amount: number | null) => sum + (amount ?? 0), 0)
+        : null,
+    });
+  }, [provider, reportError]);
 
   useEffect(() => {
     fetchWeeklyEarnings();
@@ -91,10 +122,10 @@ const Dashboard: React.FC = () => {
   }, [provider, fetchPending, fetchTodayStats, fetchWeeklyEarnings]);
 
   const stats = [
-    { label: "Today's Earnings", value: `₹${todayStats.earnings.toLocaleString()}`, icon: DollarSign, color: 'text-primary' },
-    { label: 'Rating', value: `${Number(provider?.rating || 0).toFixed(1)} ⭐`, icon: Star, color: 'text-primary' },
-    { label: 'Total Jobs', value: provider?.total_jobs || 0, icon: Briefcase, color: 'text-blue-400' },
-    { label: 'Acceptance', value: `${Number(provider?.acceptance_rate || 100).toFixed(0)}%`, icon: TrendingUp, color: 'text-success' },
+    { label: "Today's Earnings", value: todayStats?.earnings != null ? `₹${todayStats.earnings.toLocaleString('en-IN')}` : '—', icon: IndianRupee, color: 'text-primary' },
+    { label: 'Rating', value: provider?.rating != null ? `${Number(provider.rating).toFixed(1)} ⭐` : '—', icon: Star, color: 'text-primary' },
+    { label: 'Total Jobs', value: provider?.total_jobs ?? '—', icon: Briefcase, color: 'text-blue-400' },
+    { label: 'Acceptance', value: provider?.acceptance_rate != null ? `${Number(provider.acceptance_rate).toFixed(0)}%` : '—', icon: TrendingUp, color: 'text-success' },
   ];
 
   if (provider?.kyc_status !== 'approved') {
@@ -103,6 +134,11 @@ const Dashboard: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      {dashboardErrors.length > 0 && (
+        <div role="alert" className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
+          {dashboardErrors.join(' ')}
+        </div>
+      )}
       {provider && (
         <div className="flex items-center gap-2">
           <h1 className="text-xl font-semibold">Welcome back, {provider.full_name}</h1>
@@ -129,7 +165,7 @@ const Dashboard: React.FC = () => {
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
           <Card className="glass-card p-4">
             <h3 className="font-semibold mb-4">Weekly Earnings</h3>
-            <ResponsiveContainer width="100%" height={200}>
+            {weeklyData ? <ResponsiveContainer width="100%" height={200}>
               <BarChart data={weeklyData}>
                 <XAxis dataKey="day" stroke="hsl(40 6% 55%)" fontSize={12} />
                 <YAxis stroke="hsl(40 6% 55%)" fontSize={12} tickFormatter={v => `₹${v}`} />
@@ -139,7 +175,7 @@ const Dashboard: React.FC = () => {
                 />
                 <Bar dataKey="earnings" fill="hsl(45 100% 50%)" radius={[4, 4, 0, 0]} />
               </BarChart>
-            </ResponsiveContainer>
+            </ResponsiveContainer> : <p className="py-20 text-center text-sm text-muted-foreground">Earnings data unavailable.</p>}
           </Card>
         </motion.div>
 
@@ -152,7 +188,9 @@ const Dashboard: React.FC = () => {
                 View All
               </Button>
             </div>
-            {pendingBookings.length === 0 ? (
+            {pendingBookings === null ? (
+              <p className="text-muted-foreground text-sm text-center py-8">Pending requests unavailable.</p>
+            ) : pendingBookings.length === 0 ? (
               <p className="text-muted-foreground text-sm text-center py-8">No pending requests 🎉</p>
             ) : (
               <div className="space-y-3">
@@ -162,20 +200,24 @@ const Dashboard: React.FC = () => {
                     onClick={() => navigate('/provider-panel/bookings')}
                   >
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm truncate">{(b as any).services?.name || 'Service'}</p>
+                      {((b as any).services?.name) && <p className="font-medium text-sm truncate">{(b as any).services.name}</p>}
                       <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
                         <Clock className="h-3 w-3" />
-                        <span>{new Date(b.scheduled_date).toLocaleDateString()}</span>
+                        {b.scheduled_date && <span>{new Date(b.scheduled_date).toLocaleDateString()}</span>}
                         {b.scheduled_time && <span>· {b.scheduled_time}</span>}
                       </div>
                       <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
                         <MapPin className="h-3 w-3" />
-                        <span className="truncate">{b.address || b.city || 'No address'}</span>
+                        {(b.address || b.city) && <span className="truncate">{b.address || b.city}</span>}
                       </div>
                     </div>
                     <div className="text-right ml-3">
-                      <p className="font-semibold text-sm text-primary">₹{Number(b.total_amount || 0).toLocaleString()}</p>
-                      <Badge className={statusClasses[b.status]} variant="secondary">{b.status}</Badge>
+                      {b.provider_amount != null || (b.total_amount != null && b.platform_fee != null) ? (
+                        <p className="font-semibold text-sm text-primary">₹{Number(
+                          b.provider_amount ?? Number(b.total_amount) - Number(b.platform_fee)
+                        ).toLocaleString('en-IN')}</p>
+                      ) : null}
+                      {statusClasses[b.status] && <Badge className={statusClasses[b.status]} variant="secondary">{b.status}</Badge>}
                     </div>
                   </motion.div>
                 ))}

@@ -20,6 +20,7 @@ import AttachmentViewer from "@/components/AttachmentViewer";
 
 type BookingDetails = {
   id: string;
+  customer_id: string;
   status: string | null;
   booking_date: string;
   booking_time: string;
@@ -201,28 +202,40 @@ const BookingConfirmation = () => {
   };
 
   const fetchBooking = async () => {
-    if (!bookingId) return;
-    const { data } = await supabase
+    if (!bookingId || !user) return;
+    const { data, error } = await supabase
       .from("bookings")
-      .select("id, status, booking_date, booking_time, scheduled_date, scheduled_time, address, city, pincode, total_amount, provider_id, provider_departed_at, provider_eta_minutes, cancellation_reason, special_instructions, description, services(name, slug), service_providers(full_name, name, rating, phone)")
+      .select("id, customer_id, status, booking_date, booking_time, scheduled_date, scheduled_time, address, city, pincode, total_amount, provider_id, provider_departed_at, provider_eta_minutes, cancellation_reason, special_instructions, description, services(name, slug), service_providers(full_name, name, rating, phone)")
       .eq("id", bookingId)
+      .eq("customer_id", user.id)
       .single();
-    setBooking(data as unknown as BookingDetails | null);
+    if (error) {
+      console.error("Could not load booking confirmation:", error);
+      toast({ title: "Could not load booking", description: error.message, variant: "destructive" });
+      setBooking(null);
+      return;
+    }
+    setBooking(data as unknown as BookingDetails);
   };
 
   const checkReview = async () => {
     if (!bookingId) return;
-    const { count } = await supabase
+    const { data, error } = await supabase
       .from("reviews")
-      .select("*", { count: "exact", head: true })
+      .select("id")
       .eq("booking_id", bookingId);
-    setHasReview((count ?? 0) > 0);
+    if (error) {
+      console.error("Could not check for an existing booking review:", error);
+      toast({ title: "Could not check review status", description: error.message, variant: "destructive" });
+      return;
+    }
+    setHasReview((data?.length ?? 0) > 0);
   };
 
   useEffect(() => {
-    fetchBooking();
-    checkReview();
-  }, [bookingId]);
+    void fetchBooking();
+    void checkReview();
+  }, [bookingId, user?.id]);
 
   // Realtime — booking status changes appear live
   useEffect(() => {
@@ -259,16 +272,16 @@ const BookingConfirmation = () => {
 
   useEffect(() => {
     if (booking && !toastShown) {
-      const status = booking.status ?? 'pending';
-      if (status === 'pending') {
+      if (booking.status === 'pending') {
         toast({
           title: "⏳ Request Sent!",
           description: "Waiting for the provider to accept your booking.",
         });
-      } else {
+      } else if (booking.status) {
+        const providerName = booking.service_providers?.full_name ?? booking.service_providers?.name;
         toast({
-          title: "🎉 Booking Placed!",
-          description: `${booking.service_providers?.full_name ?? booking.service_providers?.name ?? 'Provider'} will confirm soon.`,
+          title: "Booking details loaded",
+          description: providerName ? `${providerName} is assigned to your booking.` : "Your booking details are ready.",
         });
       }
       setToastShown(true);
@@ -280,8 +293,14 @@ const BookingConfirmation = () => {
     return `HF-${booking.id.slice(0, 8).toUpperCase()}`;
   }, [booking?.id]);
 
-  const status = booking?.status ?? "pending";
-  const display = statusDisplay[status as keyof typeof statusDisplay] ?? statusDisplay.pending;
+  const status = booking?.status ?? "unknown";
+  const display = statusDisplay[status as keyof typeof statusDisplay] ?? {
+    icon: "•",
+    iconBg: "bg-secondary border-border",
+    title: "Status unavailable",
+    subtitle: "The booking status is not available.",
+    titleColor: "text-muted-foreground",
+  };
 
   // Live timeline steps
   const steps = [
@@ -296,29 +315,38 @@ const BookingConfirmation = () => {
     if (!user || !booking) return;
     setSubmittingReview(true);
 
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("full_name")
-      .eq("user_id", user.id)
-      .maybeSingle();
+    try {
+      if (booking.status !== "completed") throw new Error("A review can be submitted after the service is completed.");
+      if (booking.customer_id !== user.id) throw new Error("This booking does not belong to your account.");
+      if (!booking.provider_id) throw new Error("This booking has no assigned provider to review.");
 
-    const { error } = await supabase.from("reviews").insert({
-      booking_id:    booking.id,
-      customer_id:   user.id,          // NOT NULL — required by schema
-      user_id:       user.id,          // nullable — satisfies RLS policy if it checks user_id
-      provider_id:   booking.provider_id,
-      rating:        reviewRating,
-      comment:       reviewComment || null,
-      reviewer_name: profile?.full_name || user.email,
-    });
+      const { data: existingReview, error: reviewCheckError } = await supabase
+        .from("reviews")
+        .select("id")
+        .eq("booking_id", booking.id)
+        .maybeSingle();
+      if (reviewCheckError) throw reviewCheckError;
+      if (existingReview) throw new Error("A review has already been submitted for this booking.");
 
-    setSubmittingReview(false);
-    if (!error) {
+      const { error } = await supabase.from("reviews").insert({
+        booking_id: booking.id,
+        customer_id: booking.customer_id,
+        user_id: user.id,
+        provider_id: booking.provider_id,
+        rating: reviewRating,
+        comment: reviewComment || null,
+        service_name: booking.services?.name ?? null,
+      });
+      if (error?.code === "23505") throw new Error("A review has already been submitted for this booking.");
+      if (error) throw error;
       toast({ title: "Review submitted! ⭐", description: "Thank you for your feedback." });
       setShowReview(false);
       setHasReview(true);
-    } else {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Could not submit your review.";
+      toast({ title: "Error", description: message, variant: "destructive" });
+    } finally {
+      setSubmittingReview(false);
     }
   };
 
@@ -411,7 +439,7 @@ const BookingConfirmation = () => {
             >
               <Avatar className="h-14 w-14">
                 <AvatarFallback className="bg-gradient-gold text-primary-foreground text-lg font-bold">
-                {(booking.service_providers?.full_name ?? booking.service_providers?.name ?? "P")[0]}
+                {(booking.service_providers?.full_name ?? booking.service_providers?.name ?? "").slice(0, 1).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1">

@@ -25,13 +25,13 @@ const Index = () => {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, ease: 'easeOut' }}
-        className="text-center max-w-md"
+        className="relative text-center max-w-md"
       >
         {/* Glow ring */}
         <motion.div
           animate={{ scale: [1, 1.12, 1], opacity: [0.3, 0.55, 0.3] }}
           transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
-          className="absolute w-48 h-48 rounded-full left-1/2 -translate-x-1/2 bg-primary/20 blur-2xl"
+          className="absolute inset-x-0 mx-auto w-48 h-48 rounded-full bg-primary/20 blur-2xl"
         />
 
         {/* Real logo */}

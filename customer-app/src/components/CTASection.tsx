@@ -1,8 +1,9 @@
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { Apple, Play } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 const CTASection = () => {
+  const navigate = useNavigate();
   return (
     <section className="py-20 bg-gradient-gold relative overflow-hidden">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_120%,hsl(35_100%_40%_/_0.5),transparent_60%)]" />
@@ -14,25 +15,16 @@ const CTASection = () => {
           transition={{ duration: 0.6 }}
         >
           <h2 className="text-3xl md:text-5xl font-extrabold text-primary-foreground mb-4">
-            Book in 60 seconds.
+            Book a home service.
             <br />
-            Track in real time.
+            Track your booking.
           </h2>
-          <div className="flex items-center justify-center gap-1 mb-8">
-            {[1, 2, 3, 4, 5].map((s) => (
-              <span key={s} className="text-primary-foreground text-2xl">★</span>
-            ))}
-            <span className="text-primary-foreground/80 ml-2 text-sm">4.9 • 25,000+ reviews</span>
-          </div>
-
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Button className="bg-primary-foreground text-primary font-bold px-8 py-6 rounded-xl hover:bg-primary-foreground/90 flex items-center gap-2">
-              <Apple className="w-5 h-5" />
-              App Store
-            </Button>
-            <Button className="bg-primary-foreground text-primary font-bold px-8 py-6 rounded-xl hover:bg-primary-foreground/90 flex items-center gap-2">
-              <Play className="w-5 h-5" />
-              Google Play
+          <div className="flex justify-center">
+            <Button
+              onClick={() => navigate("/services")}
+              className="bg-primary-foreground text-primary font-bold px-8 py-6 rounded-xl hover:bg-primary-foreground/90"
+            >
+              Browse Services
             </Button>
           </div>
         </motion.div>

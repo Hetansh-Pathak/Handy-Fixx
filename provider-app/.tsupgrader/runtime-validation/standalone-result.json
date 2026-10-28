@@ -1,0 +1,103 @@
+{
+  "planHash": "7f43a20059dad7b5d19257223b4749e1846a39d8b2a929461b81e6cd6abc692b",
+  "phase": "standalone",
+  "recordedAtUtc": "2026-10-24T08:11:01.8328414Z",
+  "retryCount": 0,
+  "resetBaseline": false,
+  "complete": true,
+  "result": {
+    "setupSucceeded": true,
+    "setupDurationMs": 0,
+    "setupFailureOutput": null,
+    "assertions": [
+      {
+        "name": "tsc-no-emit",
+        "kind": "process",
+        "verificationMethod": "exit-code",
+        "passed": true,
+        "timedOut": false,
+        "skipped": false,
+        "skippedReason": null,
+        "exitCode": 0,
+        "outputSample": "",
+        "durationMs": 3131
+      },
+      {
+        "name": "provider-login-smoke",
+        "kind": "playwright-route",
+        "verificationMethod": "exit-code",
+        "passed": true,
+        "timedOut": false,
+        "skipped": false,
+        "skippedReason": null,
+        "exitCode": 0,
+        "outputSample": "\r\nRunning 1 test using 1 worker\r\n\r\n[1/1] playwright-scripts\\provider-login-smoke.spec.ts:5:1 \u203A provider-login-smoke\r\n  1 passed (4.0s)\r\n",
+        "durationMs": 5209
+      },
+      {
+        "name": "tests-pass",
+        "kind": "process",
+        "verificationMethod": "test-results",
+        "passed": true,
+        "timedOut": false,
+        "skipped": false,
+        "skippedReason": null,
+        "exitCode": 0,
+        "outputSample": "\r\n\u003E handyfix-provider@1.0.0 test\r\n\u003E vitest run\r\n\r\n\u001B[33m(!) Your Vite config uses features that are unsupported by \u0060configLoader: \u0027native\u0027\u0060, which is planned to become the default in a future major version of Vite:\r\n  - \u0060__dirname\u0060 (vitest.config.ts:14:32). Use \u0060import.meta.dirname\u0060 instead\r\nSet \u0060VITE_CONFIG_NATIVE_IGNORE_WARNING=true\u0060 to suppress this warning.\u001B[39m\r\n[vite:react-swc] We recommend switching to \u0060@vitejs/plugin-react\u0060 for improved performance as no swc plugins are used. More information at https://vite.dev/rolldown\r\n\r\n RUN  v5.0.3 D:/Handy-Fix_V_2.0/Handy-Fixx/provider-app\r\n\r\n\r\n Test Files  1 passed (1)\r\n      Tests  1 passed (1)\r\n   Start at  13:41:00\r\n   Duration  1.52s (environment 81%, setup 12%, transform 4%, worker 1%, import 1%)\r\n\r\n",
+        "durationMs": 4551,
+        "testResults": {
+          "testFramework": "vitest",
+          "runnerDetectedFrom": "package_json",
+          "testsTotal": 1,
+          "testsPassed": 1,
+          "testsFailed": 0,
+          "testsSkipped": 0,
+          "parseFailed": false
+        }
+      }
+    ],
+    "executions": [
+      {
+        "source": "devServer",
+        "resolvedExecutable": "C:\\Program Files\\nodejs\\npm.CMD",
+        "args": [
+          "run",
+          "dev",
+          "--",
+          "--host",
+          "127.0.0.1",
+          "--port",
+          "3003",
+          "--strictPort"
+        ],
+        "cwd": "D:\\Handy-Fix_V_2.0\\Handy-Fixx\\provider-app",
+        "env": {},
+        "prependPath": [],
+        "platform": "win32"
+      },
+      {
+        "source": "tsc-no-emit",
+        "resolvedExecutable": "C:\\Program Files\\nodejs\\npx.CMD",
+        "args": [
+          "tsc",
+          "--noEmit"
+        ],
+        "cwd": "D:\\Handy-Fix_V_2.0\\Handy-Fixx\\provider-app",
+        "env": {},
+        "prependPath": [],
+        "platform": "win32"
+      },
+      {
+        "source": "tests-pass",
+        "resolvedExecutable": "C:\\Program Files\\nodejs\\npm.CMD",
+        "args": [
+          "test"
+        ],
+        "cwd": "D:\\Handy-Fix_V_2.0\\Handy-Fixx\\provider-app",
+        "env": {},
+        "prependPath": [],
+        "platform": "win32"
+      }
+    ]
+  }
+}

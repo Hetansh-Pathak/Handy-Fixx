@@ -11,17 +11,28 @@ import { Star, MessageSquare } from 'lucide-react';
 const Reviews: React.FC = () => {
   const { provider } = useProvider();
   const [reviews, setReviews] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [filter, setFilter] = useState('all');
   const [sort, setSort] = useState('latest');
 
   const fetchReviews = useCallback(async () => {
     if (!provider) return;
-    const { data } = await supabase
+    setLoading(true);
+    const { data, error } = await supabase
       .from('reviews')
       .select('*, bookings(services(name)), profiles!reviews_customer_id_fkey(full_name)')
       .eq('provider_id', provider.id)
       .order('created_at', { ascending: false });
-    setReviews(data || []);
+    if (error) {
+      console.error('Could not load provider reviews:', error);
+      setLoadError(error.message);
+      setReviews([]);
+    } else {
+      setLoadError(null);
+      setReviews(data ?? []);
+    }
+    setLoading(false);
   }, [provider]);
 
   useEffect(() => { fetchReviews(); }, [fetchReviews]);
@@ -52,18 +63,28 @@ const Reviews: React.FC = () => {
       {/* Summary */}
       <div className="grid sm:grid-cols-2 gap-4">
         <Card className="glass-card p-4 text-center">
-          <p className="text-4xl font-bold gold-text">{Number(provider?.rating || 0).toFixed(1)}</p>
-          <div className="flex justify-center gap-0.5 my-2">
-            {[1, 2, 3, 4, 5].map(s => (
-              <Star key={s} className={`h-5 w-5 ${s <= Math.round(Number(provider?.rating || 0)) ? 'fill-primary text-primary' : 'text-muted-foreground'}`} />
-            ))}
-          </div>
-          <p className="text-sm text-muted-foreground">{provider?.total_reviews || 0} reviews</p>
+          <p className="text-4xl font-bold gold-text">
+            {provider?.rating != null ? Number(provider.rating).toFixed(1) : '—'}
+          </p>
+          {provider?.rating != null && (
+            <div className="flex justify-center gap-0.5 my-2">
+              {[1, 2, 3, 4, 5].map(s => (
+                <Star key={s} className={`h-5 w-5 ${s <= Math.round(Number(provider.rating)) ? 'fill-primary text-primary' : 'text-muted-foreground'}`} />
+              ))}
+            </div>
+          )}
+          <p className="text-sm text-muted-foreground">
+            {provider?.total_reviews != null ? `${provider.total_reviews} reviews` : 'Review count unavailable'}
+          </p>
         </Card>
 
         <Card className="glass-card p-4">
           <h4 className="font-semibold mb-2 text-sm">Rating Breakdown</h4>
-          {ratingBreakdown.map(r => (
+          {loadError ? (
+            <p role="alert" className="text-sm text-destructive">{loadError}</p>
+          ) : loading ? (
+            <p className="text-sm text-muted-foreground">Loading reviews…</p>
+          ) : ratingBreakdown.map(r => (
             <div key={r.rating} className="flex items-center gap-2 text-sm mb-1">
               <span className="w-3">{r.rating}</span>
               <Star className="h-3 w-3 fill-primary text-primary" />
@@ -100,7 +121,11 @@ const Reviews: React.FC = () => {
       </div>
 
       {/* Review list */}
-      {filtered.length === 0 ? (
+      {loadError ? (
+        <Card role="alert" className="glass-card p-8 text-center text-destructive">{loadError}</Card>
+      ) : loading ? (
+        <Card className="glass-card p-8 text-center text-muted-foreground">Loading reviews…</Card>
+      ) : filtered.length === 0 ? (
         <Card className="glass-card p-8 text-center text-muted-foreground">No reviews yet</Card>
       ) : (
         <div className="space-y-3">
@@ -108,13 +133,19 @@ const Reviews: React.FC = () => {
             <motion.div key={r.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
               <Card className="glass-card p-4">
                 <div className="flex items-start justify-between mb-2">
-                    <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3">
+                    {((r as any).profiles?.full_name || r.reviewer_name) && (
                     <div className="w-9 h-9 rounded-full bg-primary/20 flex items-center justify-center text-primary font-semibold text-sm">
-                      {((r as any).profiles?.full_name || r.reviewer_name || 'C')[0].toUpperCase()}
+                      {((r as any).profiles?.full_name || r.reviewer_name)[0].toUpperCase()}
                     </div>
+                    )}
                     <div>
-                      <p className="font-medium text-sm">{(r as any).profiles?.full_name || r.reviewer_name || 'Anonymous Customer'}</p>
-                      <p className="text-xs text-muted-foreground">{(r as any).bookings?.services?.name || r.service_name || 'Service'}</p>
+                      {(r as any).profiles?.full_name || r.reviewer_name ? (
+                        <p className="font-medium text-sm">{(r as any).profiles?.full_name || r.reviewer_name}</p>
+                      ) : null}
+                      {((r as any).bookings?.services?.name || r.service_name) && (
+                        <p className="text-xs text-muted-foreground">{(r as any).bookings?.services?.name || r.service_name}</p>
+                      )}
                     </div>
                   </div>
                   <span className="text-xs text-muted-foreground">{new Date(r.created_at).toLocaleDateString()}</span>

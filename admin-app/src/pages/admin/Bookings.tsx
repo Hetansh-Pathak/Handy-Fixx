@@ -4,7 +4,7 @@ import {
   Search, Filter, ChevronLeft, ChevronRight, Eye, Loader2,
   Calendar, Clock, MapPin, User, Shield, AlertTriangle,
   RefreshCw, CheckCircle, XCircle, UserCheck, ArrowRight,
-  Phone, Mail, FileText, Image as ImageIcon, Volume2
+  Phone, FileText, Image as ImageIcon, Volume2
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card } from '@/components/ui/card';
@@ -19,8 +19,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
+import StatusBadge from '@/components/admin/StatusBadge';
 import { useToast } from '@/hooks/use-toast';
-import { cn, formatDate, formatDateTime, timeAgo, shortId, STATUS_STYLES, STATUS_LABELS, CANCEL_REASONS } from '@/lib/utils';
+import { cn, formatDate, formatDateTime, timeAgo, shortId, CANCEL_REASONS, getErrorMessage } from '@/lib/utils';
 
 const PAGE_SIZE = 20;
 
@@ -47,7 +48,6 @@ interface Booking {
   updated_at: string;
 
   // Joined fields
-  profiles?: { full_name: string | null; phone: string | null; email: string | null } | null;
   service_providers?: { full_name: string; phone: string | null; rating: number | null; kyc_status: string; status: string } | null;
   services?: { name: string; category: string | null } | null;
 }
@@ -115,7 +115,6 @@ const Bookings: React.FC = () => {
         .from('bookings')
         .select(`
           *,
-          profiles:customer_id (full_name, phone, email),
           service_providers:provider_id (full_name, phone, rating, kyc_status, status),
           services:service_id (name, category)
         `, { count: 'exact' });
@@ -135,7 +134,7 @@ const Bookings: React.FC = () => {
       setTotal(count ?? 0);
       setRealtimeAlert(false);
     } catch (err: unknown) {
-      toast({ title: 'Error loading bookings', description: err instanceof Error ? err.message : 'Unknown error', variant: 'destructive' });
+      toast({ title: 'Error loading bookings', description: getErrorMessage(err), variant: 'destructive' });
     } finally {
       setLoading(false);
     }
@@ -259,7 +258,7 @@ const Bookings: React.FC = () => {
       setSelectedBooking(null);
       fetchBookings();
     } catch (err: unknown) {
-      toast({ title: 'Cancellation Error', description: err instanceof Error ? err.message : 'Unknown error', variant: 'destructive' });
+      toast({ title: 'Cancellation Error', description: getErrorMessage(err), variant: 'destructive' });
     } finally {
       setActionLoading(false);
     }
@@ -289,7 +288,7 @@ const Bookings: React.FC = () => {
       setSelectedBooking(null);
       fetchBookings();
     } catch (err: unknown) {
-      toast({ title: 'Reassign Error', description: err instanceof Error ? err.message : 'Unknown error', variant: 'destructive' });
+      toast({ title: 'Reassign Error', description: getErrorMessage(err), variant: 'destructive' });
     } finally {
       setActionLoading(false);
     }
@@ -303,7 +302,7 @@ const Bookings: React.FC = () => {
   const totalPages = Math.ceil(total / PAGE_SIZE);
 
   return (
-    <div className="space-y-5">
+    <div className="admin-readable space-y-5">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -384,19 +383,19 @@ const Bookings: React.FC = () => {
                     </td>
                     <td className="px-4 py-3">
                       <p className="font-medium text-xs text-foreground truncate max-w-[120px]">
-                        {b.customer_name || b.profiles?.full_name || 'Customer'}
+                        {b.customer_name || '—'}
                       </p>
-                      <p className="text-[10px] text-muted-foreground">{b.customer_phone || b.profiles?.phone || '—'}</p>
+                      <p className="text-[10px] text-muted-foreground">{b.customer_phone || '—'}</p>
                     </td>
                     <td className="px-4 py-3">
-                      <p className="text-xs font-medium text-foreground">{b.services?.name || 'Home Service'}</p>
+                      <p className="text-xs font-medium text-foreground">{b.services?.name || '—'}</p>
                       <p className="text-[10px] text-muted-foreground truncate max-w-[130px]">
                         {b.service_providers?.full_name ? `Pro: ${b.service_providers.full_name}` : 'Unassigned'}
                       </p>
                     </td>
                     <td className="px-4 py-3 text-xs">
                       <p className="font-medium text-foreground">{formatDate(b.scheduled_date || b.created_at)}</p>
-                      <p className="text-[10px] text-muted-foreground">{b.scheduled_time || 'Flexible'}</p>
+                      <p className="text-[10px] text-muted-foreground">{b.scheduled_time || '—'}</p>
                     </td>
                     <td className="px-4 py-3 text-xs text-muted-foreground">
                       <p className="truncate max-w-[120px]">{b.address}</p>
@@ -406,9 +405,7 @@ const Bookings: React.FC = () => {
                       ₹{b.total_amount}
                     </td>
                     <td className="px-4 py-3">
-                      <Badge className={cn('text-[10px]', STATUS_STYLES[b.status] ?? '')}>
-                        {STATUS_LABELS[b.status] ?? b.status}
-                      </Badge>
+                      <StatusBadge status={b.status} />
                     </td>
                     <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
                       <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => openDrawer(b)}>
@@ -450,9 +447,7 @@ const Bookings: React.FC = () => {
                     <span className="text-xs font-mono text-muted-foreground">Booking ID</span>
                     <SheetTitle className="text-xl font-mono">{shortId(selectedBooking.id)}</SheetTitle>
                   </div>
-                  <Badge className={cn('text-xs px-3 py-1', STATUS_STYLES[selectedBooking.status] ?? '')}>
-                    {STATUS_LABELS[selectedBooking.status] ?? selectedBooking.status}
-                  </Badge>
+                  <StatusBadge status={selectedBooking.status} className="px-3 py-1" />
                 </div>
               </SheetHeader>
 
@@ -494,11 +489,8 @@ const Bookings: React.FC = () => {
                       <p className="font-bold text-foreground text-xs uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
                         <User className="h-3.5 w-3.5 text-primary" /> Customer Info
                       </p>
-                      <p className="font-semibold text-sm">{selectedBooking.customer_name || selectedBooking.profiles?.full_name || 'Customer'}</p>
-                      <p className="text-muted-foreground flex items-center gap-1"><Phone className="h-3 w-3" /> {selectedBooking.customer_phone || selectedBooking.profiles?.phone || '—'}</p>
-                      {selectedBooking.profiles?.email && (
-                        <p className="text-muted-foreground flex items-center gap-1"><Mail className="h-3 w-3" /> {selectedBooking.profiles.email}</p>
-                      )}
+                      <p className="font-semibold text-sm">{selectedBooking.customer_name || '—'}</p>
+                      <p className="text-muted-foreground flex items-center gap-1"><Phone className="h-3 w-3" /> {selectedBooking.customer_phone || '—'}</p>
                     </div>
 
                     {/* Provider */}
@@ -512,9 +504,7 @@ const Bookings: React.FC = () => {
                           <p className="text-muted-foreground flex items-center gap-1"><Phone className="h-3 w-3" /> {selectedBooking.service_providers.phone || '—'}</p>
                           <div className="flex gap-2 mt-1">
                             <Badge className="text-[10px] bg-primary/10 text-primary">★ {selectedBooking.service_providers.rating?.toFixed(1) ?? 'N/A'}</Badge>
-                            <Badge className={cn('text-[10px]', STATUS_STYLES[selectedBooking.service_providers.kyc_status])}>
-                              KYC {selectedBooking.service_providers.kyc_status}
-                            </Badge>
+                            <StatusBadge status={selectedBooking.service_providers.kyc_status} prefix="KYC" />
                           </div>
                         </>
                       ) : (

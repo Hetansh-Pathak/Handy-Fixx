@@ -86,6 +86,11 @@ database/migrations/customer/   # Run these for the customer schema
 database/migrations/provider/   # Run these for the provider schema
 ```
 
+Apply provider migrations in filename order. The online-status control uses
+`database/migrations/provider/20261025000000_online_status_eligibility.sql`
+to install the authenticated `set_provider_online` RPC; the Provider app
+requires this migration before the control can update availability.
+
 ### 3. Deploy Edge Functions
 
 ```bash

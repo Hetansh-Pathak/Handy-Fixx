@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { cn, formatDateTime, timeAgo, STATUS_STYLES } from '@/lib/utils';
+import { cn, formatDateTime, timeAgo, STATUS_STYLES, getErrorMessage } from '@/lib/utils';
 
 interface DashboardCounts {
   pending_kyc: number;
@@ -94,9 +94,7 @@ const Dashboard: React.FC = () => {
       if (auditRes.error) throw auditRes.error;
       setAuditLog((auditRes.data ?? []) as AuditEntry[]);
     } catch (err: unknown) {
-      const msg = err instanceof Error 
-        ? err.message 
-        : (typeof err === 'object' && err !== null && 'message' in err ? String((err as { message: unknown }).message) : 'Failed to load dashboard');
+      const msg = getErrorMessage(err, 'Failed to load dashboard');
       toast({ title: 'Error', description: msg, variant: 'destructive' });
     } finally {
       setLoading(false);

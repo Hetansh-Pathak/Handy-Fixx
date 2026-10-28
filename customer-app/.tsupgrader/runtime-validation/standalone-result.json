@@ -1,0 +1,157 @@
+{
+  "planHash": "dc50c25534e3e455e32ae753ce551002bfcd1b5a2d889e6ed5c9f9c3a76c5fd9",
+  "phase": "standalone",
+  "recordedAtUtc": "2026-10-24T09:18:04.5230109Z",
+  "retryCount": 2,
+  "resetBaseline": false,
+  "complete": true,
+  "result": {
+    "setupSucceeded": true,
+    "setupDurationMs": 0,
+    "setupFailureOutput": null,
+    "assertions": [
+      {
+        "name": "typescript-no-emit",
+        "kind": "process",
+        "verificationMethod": "exit-code",
+        "passed": true,
+        "timedOut": false,
+        "skipped": false,
+        "skippedReason": null,
+        "exitCode": 0,
+        "outputSample": "",
+        "durationMs": 3395
+      },
+      {
+        "name": "production-build",
+        "kind": "process",
+        "verificationMethod": "exit-code",
+        "passed": true,
+        "timedOut": false,
+        "skipped": false,
+        "skippedReason": null,
+        "exitCode": 0,
+        "outputSample": "\r\n\u003E handyfix-customer@1.0.0 build\r\n\u003E vite build\r\n\r\n\u001B[33m(!) Your Vite config uses features that are unsupported by \u0060configLoader: \u0027native\u0027\u0060, which is planned to become the default in a future major version of Vite:\r\n  - \u0060__dirname\u0060 (vite.config.ts:14:25). Use \u0060import.meta.dirname\u0060 instead\r\nSet \u0060VITE_CONFIG_NATIVE_IGNORE_WARNING=true\u0060 to suppress this warning.\u001B[39m\r\n\u001B[36mvite v8.3.3 \u001B[32mbuilding client environment for production...\u001B[36m\u001B[39m\r\ntransforming...\r\n\u2713 3029 modules transformed.\r\nrendering chunks...\r\ncomputing gzip size...\r\ndist/index.html                                 1.97 kB \u2502 gzip:  0.74 kB\r\ndist/assets/service-painting-B-WEwci8.jpg      20.13 kB\r\ndist/assets/service-plumbing-C1Fz9tG8.jpg      21.24 kB\r\ndist/assets/service-pest-DJMMOQ26.jpg          22.37 kB\r\ndist/assets/service-carpentry-nyVOOlRL.jpg     24.64 kB\r\ndist/assets/service-electrical-DptRfGwB.jpg    33.98 kB\r\ndist/assets/earn-pro-pZ46DQjX.jpg              34.82 kB\r\ndist/assets/service-cleaning-DkEhLPQf.jpg      35.91 kB\r\ndist/assets/expert-woman-VmdLjaaW.jpg          36.97 kB\r\ndist/assets/service-hvac-C972SnLM.jpg          42.38 kB\r\ndist/assets/hero-handyman-BlVBdpWo.jpg         57.30 kB\r\ndist/assets/logo-Bgb7AlLy.png                 270.84 kB\r\ndist/assets/LiveMap-CcXJxNtP.css               14.80 kB \u2502 gzip:  6.31 kB\r\ndist/assets/index-4Yn-5xof.css                 75.47 kB \u2502 gzip: 13.56 kB\r\ndist/assets/loader-circle-DLotjP2g.js           0.13 kB \u2502 gzip:  0.14 kB\r\ndist/assets/message-circle-CFVCyJFQ.js          0.13 kB \u2502 gzip:  0.15 kB\r\ndist/assets/arrow-left-BvCXSwg3.js              0.15 kB \u2502 gzip:  0.15 kB\r\ndist/assets/arrow-right-_MesII9E.js             0.15 kB \u2502 gzip:  0.15 kB\r\ndist/assets/circle-check-BUDlksgY.js            0.16 kB \u2502 gzip:  0.16 kB\r\ndist/assets/clock-DJOA5TDV.js                   0.17 kB \u2502 gzip:  0.16 kB\r\ndist/assets/rotate-ccw-BqeJqTAR.js              0.18 kB \u2502 gzip:  0.17 kB\r\ndist/assets/info-V8rcYhLG.js                    0.19 kB \u2502 gzip:  0.17 kB\r\ndist/assets/mail-DixspVbF.js                    0.20 kB \u2502 gzip:  0.19 kB\r\ndist/assets/briefcase-VC661xwb.js               0.20 kB \u2502 gzip:  0.18 kB\r\ndist/assets/circle-alert-zcogwMC8.js            0.23 kB \u2502 gzip:  0.18 kB\r\ndist/assets/calendar-oJNdhdVn.js                0.24 kB \u2502 gzip:  0.19 kB\r\ndist/assets/map-pin-BVXgyaF2.js                 0.24 kB \u2502 gzip:  0.21 kB\r\ndist/assets/mic-Bd5bt9vn.js                     0.25 kB \u2502 gzip:  0.20 kB\r\ndist/assets/send-CJ36Gx7V.js                    0.27 kB \u2502 gzip:  0.22 kB\r\ndist/assets/shield-check-DLTvPfe4.js            0.30 kB \u2502 gzip:  0.24 kB\r\ndist/assets/package-CRBtEbQ4.js                 0.37 kB \u2502 gzip:  0.24 kB\r\ndist/assets/phone-C0Hb_3-L.js                   0.38 kB \u2502 gzip:  0.24 kB\r\ndist/assets/star-Co854LLx.js                    0.46 kB \u2502 gzip:  0.28 kB\r\ndist/assets/textarea-11vFGTBP.js                0.54 kB \u2502 gzip:  0.36 kB\r\ndist/assets/useActiveServices-BeukbZEE.js       0.60 kB \u2502 gzip:  0.42 kB\r\ndist/assets/logo-D6qxQMzp.js                    0.63 kB \u2502 gzip:  0.42 kB\r\ndist/assets/input-DESiz2ie.js                   0.64 kB \u2502 gzip:  0.40 kB\r\ndist/assets/NotFound-D1yP4-Oe.js                0.68 kB \u2502 gzip:  0.40 kB\r\ndist/assets/lock-LODAiWc9.js                    0.76 kB \u2502 gzip:  0.41 kB\r\ndist/assets/badge-lYAjBzbw.js                   0.76 kB \u2502 gzip:  0.41 kB\r\ndist/assets/draftAttachmentStore-D7e_fOAJ.js    1.67 kB \u2502 gzip:  0.88 kB\r\ndist/assets/AuthCallback-BXe_AcWZ.js            1.86 kB \u2502 gzip:  0.95 kB\r\ndist/assets/ResetPassword-CkpCvDeL.js           2.61 kB \u2502 gzip:  1.19 kB\r\ndist/assets/BookingChat-C0KPCz0Z.js             3.08 kB \u2502 gzip:  1.45 kB\r\ndist/assets/AnimatePresence-C_NeAjIC.js         3.19 kB \u2502 gzip:  1.55 kB\r\ndist/assets/tabs-CGmLhndm.js                    3.32 kB \u2502 gzip:  1.38 kB\r\ndist/assets/ForgotPassword-DhkJnY1t.js          3.33 kB \u2502 gzip:  1.37 kB\r\ndist/assets/About-DwUC83Gt.js                   6.54 kB \u2502 gzip:  2.12 kB\r\ndist/assets/Notifications-CHFurzNi.js           7.18 kB \u2502 gzip:  2.77 kB\r\ndist/assets/Auth-Ch1PpkE-.js                    7.80 kB \u2502 gzip:  2.65 kB\r\ndist/assets/Contact-DGkVKEUE.js              \n\u2026[truncated]",
+        "durationMs": 4812
+      },
+      {
+        "name": "tests-pass",
+        "kind": "process",
+        "verificationMethod": "test-results",
+        "passed": true,
+        "timedOut": false,
+        "skipped": false,
+        "skippedReason": null,
+        "exitCode": 0,
+        "outputSample": "\r\n\u003E handyfix-customer@1.0.0 test\r\n\u003E vitest run\r\n\r\n\u001B[33m(!) Your Vite config uses features that are unsupported by \u0060configLoader: \u0027native\u0027\u0060, which is planned to become the default in a future major version of Vite:\r\n  - \u0060__dirname\u0060 (vitest.config.ts:14:32). Use \u0060import.meta.dirname\u0060 instead\r\nSet \u0060VITE_CONFIG_NATIVE_IGNORE_WARNING=true\u0060 to suppress this warning.\u001B[39m\r\n[vite:react-swc] We recommend switching to \u0060@vitejs/plugin-react\u0060 for improved performance as no swc plugins are used. More information at https://vite.dev/rolldown\r\n\r\n RUN  v5.0.3 D:/Handy-Fix_V_2.0/Handy-Fixx/customer-app\r\n\r\n\r\n Test Files  2 passed (2)\r\n      Tests  3 passed (3)\r\n   Start at  14:48:02\r\n   Duration  2.25s (environment 80%, setup 14%, transform 4%, worker 1%, import 1%, tests 1%)\r\n\r\n",
+        "durationMs": 5201,
+        "testResults": {
+          "testFramework": "vitest",
+          "runnerDetectedFrom": "package_json",
+          "testsTotal": 3,
+          "testsPassed": 3,
+          "testsFailed": 0,
+          "testsSkipped": 0,
+          "parseFailed": false
+        }
+      },
+      {
+        "name": "homepage-serves",
+        "kind": "http-probe",
+        "verificationMethod": "http-status",
+        "passed": true,
+        "timedOut": false,
+        "skipped": false,
+        "skippedReason": null,
+        "exitCode": null,
+        "outputSample": "HTTP 200\n\u003C!doctype html\u003E\r\n\u003Chtml lang=\u0022en\u0022\u003E\r\n  \u003Chead\u003E\n    \u003Cscript type=\u0022module\u0022\u003Eimport { injectIntoGlobalHook } from \u0022/@react-refresh\u0022;\ninjectIntoGlobalHook(window);\nwindow.$RefreshReg$ = () =\u003E {};\nwindow.$RefreshSig$ = () =\u003E (type) =\u003E type;\u003C/script\u003E\n\n    \u003Cscript type=\u0022module\u0022 src=\u0022/@vite/client\u0022\u003E\u003C/script\u003E\n\r\n    \u003Cmeta charset=\u0022UTF-8\u0022 /\u003E\r\n    \u003Clink rel=\u0022icon\u0022 type=\u0022image/png\u0022 href=\u0022/logo.png\u0022 /\u003E\r\n    \u003Cmeta name=\u0022viewport\u0022 content=\u0022width=device-width, initial-scale=1.0\u0022 /\u003E\r\n    \u003Clink rel=\u0022preconnect\u0022 href=\u0022https://fonts.googleapis.com\u0022 /\u003E\r\n    \u003Clink rel=\u0022preconnect\u0022 href=\u0022https://fonts.gstatic.com\u0022 crossorigin /\u003E\r\n    \u003Clink\r\n      rel=\u0022stylesheet\u0022\r\n      href=\u0022https://fonts.googleapis.com/css2?family=Plus\u002BJakarta\u002BSans:wght@400;500;600;700;800\u0026display=swap\u0022\r\n      media=\u0022print\u0022\r\n      onload=\u0022this.media=\u0027all\u0027\u0022\r\n    /\u003E\r\n    \u003Cnoscript\u003E\r\n      \u003Clink\r\n        rel=\u0022stylesheet\u0022\r\n        href=\u0022https://fonts.googleapis.com/css2?family=Plus\u002BJakarta\u002BSans:wght@400;500;600;700;800\u0026display=swap\u0022\r\n      /\u003E\r\n    \u003C/noscript\u003E\r\n    \u003Ctitle\u003EHandyFix \u2013 Home Services Marketplace\u003C/title\u003E\r\n    \u003Cmeta name=\u0022description\u0022 content=\u0022Book verified home service professionals. Plumbing, electrical, painting, carpentry and more. Fast, reliable, guaranteed.\u0022 /\u003E\r\n    \u003Cmeta name=\u0022author\u0022 content=\u0022HandyFix\u0022 /\u003E\r\n\r\n    \u003Cmeta property=\u0022og:title\u0022 content=\u0022HandyFix \u2013 Home Services Marketplace\u0022 /\u003E\r\n    \u003Cmeta property=\u0022og:description\u0022 content=\u0022Book verified home service professionals. Fast, reliable, guaranteed.\u0022 /\u003E\r\n    \u003Cmeta property=\u0022og:type\u0022 content=\u0022website\u0022 /\u003E\r\n    \u003Cmeta property=\u0022og:image\u0022 content=\u0022/logo.png\u0022 /\u003E\r\n\r\n    \u003Cmeta name=\u0022twitter:card\u0022 content=\u0022summary_large_image\u0022 /\u003E\r\n    \u003Cmeta name=\u0022twitter:site\u0022 content=\u0022@HandyFix\u0022 /\u003E\r\n    \u003Cmeta name=\u0022twitter:image\u0022 content=\u0022/logo.png\u0022 /\u003E\r\n  \u003C/head\u003E\r\n\r\n  \u003Cbody\u003E\r\n    \u003Cdiv id=\u0022root\u0022\u003E\u003C/div\u003E\r\n    \u003Cscript type=\u0022module\u0022 src=\u0022/src/main.tsx?t=1792833456512\u0022\u003E\u003C/script\u003E\r\n  \u003C/body\u003E\r\n\u003C/html\u003E\r\n",
+        "durationMs": 25
+      },
+      {
+        "name": "services-route-serves",
+        "kind": "http-probe",
+        "verificationMethod": "http-status",
+        "passed": true,
+        "timedOut": false,
+        "skipped": false,
+        "skippedReason": null,
+        "exitCode": null,
+        "outputSample": "HTTP 200\n\u003C!doctype html\u003E\r\n\u003Chtml lang=\u0022en\u0022\u003E\r\n  \u003Chead\u003E\n    \u003Cscript type=\u0022module\u0022\u003Eimport { injectIntoGlobalHook } from \u0022/@react-refresh\u0022;\ninjectIntoGlobalHook(window);\nwindow.$RefreshReg$ = () =\u003E {};\nwindow.$RefreshSig$ = () =\u003E (type) =\u003E type;\u003C/script\u003E\n\n    \u003Cscript type=\u0022module\u0022 src=\u0022/@vite/client\u0022\u003E\u003C/script\u003E\n\r\n    \u003Cmeta charset=\u0022UTF-8\u0022 /\u003E\r\n    \u003Clink rel=\u0022icon\u0022 type=\u0022image/png\u0022 href=\u0022/logo.png\u0022 /\u003E\r\n    \u003Cmeta name=\u0022viewport\u0022 content=\u0022width=device-width, initial-scale=1.0\u0022 /\u003E\r\n    \u003Clink rel=\u0022preconnect\u0022 href=\u0022https://fonts.googleapis.com\u0022 /\u003E\r\n    \u003Clink rel=\u0022preconnect\u0022 href=\u0022https://fonts.gstatic.com\u0022 crossorigin /\u003E\r\n    \u003Clink\r\n      rel=\u0022stylesheet\u0022\r\n      href=\u0022https://fonts.googleapis.com/css2?family=Plus\u002BJakarta\u002BSans:wght@400;500;600;700;800\u0026display=swap\u0022\r\n      media=\u0022print\u0022\r\n      onload=\u0022this.media=\u0027all\u0027\u0022\r\n    /\u003E\r\n    \u003Cnoscript\u003E\r\n      \u003Clink\r\n        rel=\u0022stylesheet\u0022\r\n        href=\u0022https://fonts.googleapis.com/css2?family=Plus\u002BJakarta\u002BSans:wght@400;500;600;700;800\u0026display=swap\u0022\r\n      /\u003E\r\n    \u003C/noscript\u003E\r\n    \u003Ctitle\u003EHandyFix \u2013 Home Services Marketplace\u003C/title\u003E\r\n    \u003Cmeta name=\u0022description\u0022 content=\u0022Book verified home service professionals. Plumbing, electrical, painting, carpentry and more. Fast, reliable, guaranteed.\u0022 /\u003E\r\n    \u003Cmeta name=\u0022author\u0022 content=\u0022HandyFix\u0022 /\u003E\r\n\r\n    \u003Cmeta property=\u0022og:title\u0022 content=\u0022HandyFix \u2013 Home Services Marketplace\u0022 /\u003E\r\n    \u003Cmeta property=\u0022og:description\u0022 content=\u0022Book verified home service professionals. Fast, reliable, guaranteed.\u0022 /\u003E\r\n    \u003Cmeta property=\u0022og:type\u0022 content=\u0022website\u0022 /\u003E\r\n    \u003Cmeta property=\u0022og:image\u0022 content=\u0022/logo.png\u0022 /\u003E\r\n\r\n    \u003Cmeta name=\u0022twitter:card\u0022 content=\u0022summary_large_image\u0022 /\u003E\r\n    \u003Cmeta name=\u0022twitter:site\u0022 content=\u0022@HandyFix\u0022 /\u003E\r\n    \u003Cmeta name=\u0022twitter:image\u0022 content=\u0022/logo.png\u0022 /\u003E\r\n  \u003C/head\u003E\r\n\r\n  \u003Cbody\u003E\r\n    \u003Cdiv id=\u0022root\u0022\u003E\u003C/div\u003E\r\n    \u003Cscript type=\u0022module\u0022 src=\u0022/src/main.tsx?t=1792833456512\u0022\u003E\u003C/script\u003E\r\n  \u003C/body\u003E\r\n\u003C/html\u003E\r\n",
+        "durationMs": 18
+      }
+    ],
+    "executions": [
+      {
+        "source": "typescript-no-emit",
+        "resolvedExecutable": "C:\\Program Files\\nodejs\\npx.CMD",
+        "args": [
+          "tsc",
+          "--noEmit"
+        ],
+        "cwd": "D:\\Handy-Fix_V_2.0\\Handy-Fixx\\customer-app",
+        "env": {},
+        "prependPath": [],
+        "platform": "win32"
+      },
+      {
+        "source": "production-build",
+        "resolvedExecutable": "C:\\Program Files\\nodejs\\npm.CMD",
+        "args": [
+          "run",
+          "build"
+        ],
+        "cwd": "D:\\Handy-Fix_V_2.0\\Handy-Fixx\\customer-app",
+        "env": {},
+        "prependPath": [],
+        "platform": "win32"
+      },
+      {
+        "source": "tests-pass",
+        "resolvedExecutable": "C:\\Program Files\\nodejs\\npm.CMD",
+        "args": [
+          "test"
+        ],
+        "cwd": "D:\\Handy-Fix_V_2.0\\Handy-Fixx\\customer-app",
+        "env": {},
+        "prependPath": [],
+        "platform": "win32"
+      },
+      {
+        "source": "homepage-serves",
+        "resolvedExecutable": "C:\\Program Files\\nodejs\\npm.CMD",
+        "args": [
+          "run",
+          "dev",
+          "--",
+          "--host",
+          "127.0.0.1",
+          "--port",
+          "3000",
+          "--strictPort"
+        ],
+        "cwd": "D:\\Handy-Fix_V_2.0\\Handy-Fixx\\customer-app",
+        "env": {},
+        "prependPath": [],
+        "platform": "win32"
+      },
+      {
+        "source": "services-route-serves",
+        "resolvedExecutable": "C:\\Program Files\\nodejs\\npm.CMD",
+        "args": [
+          "run",
+          "dev",
+          "--",
+          "--host",
+          "127.0.0.1",
+          "--port",
+          "3000",
+          "--strictPort"
+        ],
+        "cwd": "D:\\Handy-Fix_V_2.0\\Handy-Fixx\\customer-app",
+        "env": {},
+        "prependPath": [],
+        "platform": "win32"
+      }
+    ]
+  }
+}

@@ -1,3 +1,5 @@
+import { lazy, Suspense } from 'react';
+import { ThemeProvider } from 'next-themes';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from '@/components/ui/toaster';
@@ -6,12 +8,12 @@ import { AdminAuthProvider } from '@/contexts/AdminAuthContext';
 import AdminRoute from '@/components/admin/AdminRoute';
 import AdminLayout from '@/components/admin/AdminLayout';
 
-import Login from '@/pages/admin/Login';
-import Dashboard from '@/pages/admin/Dashboard';
-import KycReview from '@/pages/admin/KycReview';
-import Providers from '@/pages/admin/Providers';
-import Bookings from '@/pages/admin/Bookings';
-import AuditLog from '@/pages/admin/AuditLog';
+const Login = lazy(() => import('@/pages/admin/Login'));
+const Dashboard = lazy(() => import('@/pages/admin/Dashboard'));
+const KycReview = lazy(() => import('@/pages/admin/KycReview'));
+const Providers = lazy(() => import('@/pages/admin/Providers'));
+const Bookings = lazy(() => import('@/pages/admin/Bookings'));
+const AuditLog = lazy(() => import('@/pages/admin/AuditLog'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -24,10 +26,16 @@ const queryClient = new QueryClient({
 
 export default function App() {
   return (
+    <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} storageKey="handyfix-theme" disableTransitionOnChange>
     <QueryClientProvider client={queryClient}>
       <AdminAuthProvider>
         <BrowserRouter>
-          <Routes>
+          <Suspense fallback={
+            <div className="min-h-screen bg-background flex items-center justify-center" aria-busy="true">
+              <div className="w-8 h-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+            </div>
+          }>
+            <Routes>
             <Route path="/login" element={<Login />} />
 
             <Route
@@ -45,11 +53,13 @@ export default function App() {
             </Route>
 
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
-          </Routes>
+            </Routes>
+          </Suspense>
         </BrowserRouter>
         <Toaster />
         <SonnerToaster />
       </AdminAuthProvider>
     </QueryClientProvider>
+    </ThemeProvider>
   );
 }

@@ -12,7 +12,8 @@ import { supabase } from "@/integrations/supabase/client";
 
 type ProviderDetails = {
   id: string;
-  name: string;
+  name: string | null;
+  full_name: string | null;
   avatar_url: string | null;
   bio: string | null;
   rating: number | null;
@@ -65,7 +66,11 @@ const ProviderDetail = () => {
     const load = async () => {
       if (!providerId) return;
 
-      const [{ data: providerData }, { data: serviceData }, { data: reviewData }] = await Promise.all([
+      const [
+        { data: providerData, error: providerError },
+        { data: serviceData, error: servicesError },
+        { data: reviewData, error: reviewsError },
+      ] = await Promise.all([
         supabase
           .from("service_providers")
           .select("id, name, full_name, avatar_url, bio, rating, total_reviews, total_jobs, experience_years, is_verified, is_email_verified, city")
@@ -83,7 +88,13 @@ const ProviderDetail = () => {
           .limit(10),
       ]);
 
-      setProvider(providerData as ProviderDetails | null);
+      if (providerError) console.error("Could not load provider details:", providerError);
+      if (servicesError) console.error("Could not load provider services:", servicesError);
+      if (reviewsError) console.error("Could not load provider reviews:", reviewsError);
+      setProvider(providerData ? {
+        ...(providerData as ProviderDetails),
+        name: providerData.full_name ?? providerData.name,
+      } : null);
       setServices((serviceData ?? []) as ServiceOffer[]);
       setReviews((reviewData ?? []) as ReviewRow[]);
       setLoading(false);
@@ -93,7 +104,7 @@ const ProviderDetail = () => {
   }, [providerId]);
 
   const initials = useMemo(() => {
-    if (!provider?.name) return "P";
+    if (!provider?.name) return "";
     return provider.name
       .split(" ")
       .map((part) => part[0])
@@ -118,7 +129,7 @@ const ProviderDetail = () => {
             <ArrowLeft className="w-4 h-4" /> Back
           </button>
           <ChevronRight className="w-4 h-4" />
-          <span className="text-foreground">{provider?.name ?? "Provider"}</span>
+          {provider?.name && <span className="text-foreground">{provider.name}</span>}
         </div>
       </div>
 
@@ -140,7 +151,7 @@ const ProviderDetail = () => {
 
               <div>
                 <div className="flex flex-wrap items-center gap-2 mb-1">
-                  <h1 className="text-2xl font-bold text-foreground">{provider?.name}</h1>
+                  {provider?.name && <h1 className="text-2xl font-bold text-foreground">{provider.name}</h1>}
                   {(provider?.is_email_verified || provider?.is_verified) && (
                     <Badge className="bg-green-500/10 text-green-400 border border-green-500/20">
                       <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Verified Pro
@@ -155,12 +166,18 @@ const ProviderDetail = () => {
                 <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
                   <span className="flex items-center gap-1.5 text-yellow-400">
                     <Star className="w-4 h-4 fill-current" />
-                    <span className="font-bold text-foreground">{provider?.rating ?? 0}</span>
-                    <span className="text-muted-foreground">({provider?.total_reviews ?? 0} reviews)</span>
+                    {provider?.rating !== null && provider?.rating !== undefined && (
+                      <span className="font-bold text-foreground">{provider.rating}</span>
+                    )}
+                    {provider?.total_reviews !== null && provider?.total_reviews !== undefined && (
+                      <span className="text-muted-foreground">({provider.total_reviews} reviews)</span>
+                    )}
                   </span>
                   <span className="flex items-center gap-1">
                     <BriefcaseBusiness className="w-4 h-4 text-primary" />
-                    {provider?.total_jobs ?? 0} jobs completed
+                    {provider?.total_jobs !== null && provider?.total_jobs !== undefined
+                      ? `${provider.total_jobs} jobs completed`
+                      : "Jobs completed unavailable"}
                   </span>
                   {provider?.experience_years && (
                     <span className="flex items-center gap-1">
@@ -265,7 +282,7 @@ const ProviderDetail = () => {
                     className="bg-secondary rounded-xl p-4 border border-border"
                   >
                     <div className="flex items-center justify-between mb-2">
-                      <StarRating rating={review.rating ?? 5} />
+                      {review.rating !== null && <StarRating rating={review.rating} />}
                       {review.created_at && (
                         <span className="text-xs text-muted-foreground">
                           {format(new Date(review.created_at), "d MMM yyyy")}
@@ -288,7 +305,9 @@ const ProviderDetail = () => {
               <div className="flex items-center gap-2 mb-4">
                 <Star className="w-4 h-4 text-yellow-400 fill-current" />
                 <span className="font-bold text-foreground">{provider?.rating ?? "—"}</span>
-                <span className="text-muted-foreground text-sm">· {provider?.total_reviews ?? 0} reviews</span>
+                {provider?.total_reviews !== null && provider?.total_reviews !== undefined && (
+                  <span className="text-muted-foreground text-sm">· {provider.total_reviews} reviews</span>
+                )}
               </div>
 
               <div className="space-y-2 mb-6">

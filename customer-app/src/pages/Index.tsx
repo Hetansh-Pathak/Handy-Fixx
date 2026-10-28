@@ -3,8 +3,6 @@ import Navbar from "@/components/Navbar";
 import HeroSection from "@/components/HeroSection";
 import StatsBar from "@/components/StatsBar";
 import ServicesGrid from "@/components/ServicesGrid";
-import MostBooked from "@/components/MostBooked";
-import PromoCards from "@/components/PromoCards";
 import HowItWorks from "@/components/HowItWorks";
 import WhyChoose from "@/components/WhyChoose";
 import ExpertSection from "@/components/ExpertSection";
@@ -22,10 +20,12 @@ const Index = () => {
     if (!raw) return;
 
     try {
-      const payload = JSON.parse(raw) as { providerName?: string; dateTime?: string };
+      const payload = JSON.parse(raw) as { dateTime?: string };
       toast({
-        title: "Booking Confirmed!",
-        description: `${payload.providerName ?? "Your provider"} will arrive on ${payload.dateTime ?? "your selected slot"}.`,
+        title: "Booking request created",
+        description: payload.dateTime
+          ? `Your service request was submitted for ${payload.dateTime}.`
+          : "Your service request was submitted.",
       });
     } finally {
       sessionStorage.removeItem("booking-toast");
@@ -38,8 +38,6 @@ const Index = () => {
       <HeroSection />
       <StatsBar />
       <ServicesGrid />
-      <MostBooked />
-      <PromoCards />
       <HowItWorks />
       <WhyChoose />
       <ExpertSection />

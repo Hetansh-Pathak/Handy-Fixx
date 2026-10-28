@@ -31,7 +31,7 @@ interface ServiceOption {
   icon: string | null;
 }
 
-const KycOnboarding: React.FC = () => {
+const KycOnboarding: React.FC<{ onClose?: () => void }> = ({ onClose }) => {
   const { provider, refreshProvider } = useProvider();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -83,6 +83,8 @@ const KycOnboarding: React.FC = () => {
 
   // Upload Progress Tracking
   const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({});
+  const loadedProviderId = useRef<string | null>(null);
+  const [draftReadyProviderId, setDraftReadyProviderId] = useState<string | null>(null);
 
   // Fetch Available Services from DB
   useEffect(() => {
@@ -93,7 +95,8 @@ const KycOnboarding: React.FC = () => {
 
   // Pre-fill existing data from provider and provider_kyc
   const loadExistingData = useCallback(async () => {
-    if (!provider) return;
+    if (!provider || loadedProviderId.current === provider.id) return;
+    loadedProviderId.current = provider.id;
 
     if (provider.first_name) setFirstName(provider.first_name);
     if (provider.last_name) setLastName(provider.last_name);
@@ -131,9 +134,52 @@ const KycOnboarding: React.FC = () => {
       if (kycRow.certificate_path) setCertificatePath(kycRow.certificate_path);
       if (kycRow.consent_accepted_at) setTermsAccepted(true);
     }
+    setDraftReadyProviderId(provider.id);
   }, [provider]);
 
   useEffect(() => { loadExistingData(); }, [loadExistingData]);
+
+  // Keep non-sensitive onboarding fields in the authenticated provider record.
+  useEffect(() => {
+    if (!provider || draftReadyProviderId !== provider.id) return;
+    const timeout = window.setTimeout(async () => {
+      const { error } = await supabase
+        .from('service_providers')
+        .update({
+          first_name: firstName.trim() || null,
+          last_name: lastName.trim() || null,
+          date_of_birth: dob || null,
+          pincodes: selectedCities,
+          service_ids: selectedServices,
+          experience_years: experienceYears,
+          bio: bio.trim() || null,
+          onboarding_step: step,
+        })
+        .eq('id', provider.id);
+
+      if (error) {
+        toast({
+          title: 'Draft could not be saved',
+          description: error.message,
+          variant: 'destructive',
+        });
+      }
+    }, 700);
+
+    return () => window.clearTimeout(timeout);
+  }, [
+    provider?.id,
+    draftReadyProviderId,
+    firstName,
+    lastName,
+    dob,
+    selectedCities,
+    selectedServices,
+    experienceYears,
+    bio,
+    step,
+    toast,
+  ]);
 
   // Upload helper to private provider-kyc bucket
   const uploadFileToBucket = async (file: File, key: string): Promise<string> => {
@@ -455,7 +501,10 @@ const KycOnboarding: React.FC = () => {
             </div>
             <Button
               className="w-full gold-gradient text-primary-foreground font-semibold"
-              onClick={() => navigate('/provider-panel')}
+              onClick={() => {
+                onClose?.();
+                navigate('/provider-panel');
+              }}
             >
               Go to Provider Panel
             </Button>
@@ -479,7 +528,10 @@ const KycOnboarding: React.FC = () => {
             </p>
             <Button
               className="w-full gold-gradient text-primary-foreground font-semibold"
-              onClick={() => navigate('/provider-panel')}
+              onClick={() => {
+                onClose?.();
+                navigate('/provider-panel');
+              }}
             >
               Go to Dashboard
             </Button>

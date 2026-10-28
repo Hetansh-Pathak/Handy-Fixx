@@ -256,7 +256,7 @@ const Booking = () => {
 
       const formattedDate = format(selectedDate, "yyyy-MM-dd");
       const formattedTime = `${selectedTime}:00`;
-      const customerName = profileData?.full_name || user.email?.split("@")[0] || "Customer";
+      const customerName = profileData?.full_name || user.email?.split("@")[0] || null;
 
       const insertPayload: TablesInsert<"bookings"> = {
         customer_id:          user.id,
@@ -348,7 +348,6 @@ const Booking = () => {
       sessionStorage.setItem(
         "booking-toast",
         JSON.stringify({
-          providerName: provider?.full_name ?? (provider as { name?: string } | null)?.name ?? "Your Provider",
           dateTime: `${format(selectedDate, "d MMMM")}, ${selectedTime}`,
         }),
       );

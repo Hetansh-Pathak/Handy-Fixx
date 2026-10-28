@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { useAdminAuth } from '@/contexts/AdminAuthContext';
+import { getErrorMessage } from '@/lib/utils';
 
 const Login: React.FC = () => {
   const { toast } = useToast();
@@ -51,7 +52,7 @@ const Login: React.FC = () => {
       toast({ title: 'Welcome back, Admin 👋' });
       navigate('/dashboard', { replace: true });
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Login failed.';
+      const msg = getErrorMessage(err, 'Login failed.');
       setError(msg);
     } finally {
       setLoading(false);

@@ -693,6 +693,10 @@ export type Database = {
         Args: { p_user_id: string; p_role: string }
         Returns: boolean
       }
+      set_provider_online: {
+        Args: { p_is_online: boolean }
+        Returns: Json
+      }
     }
     Enums: {
       [_ in never]: never

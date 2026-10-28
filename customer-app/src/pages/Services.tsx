@@ -1,24 +1,12 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { motion, AnimatePresence } from "framer-motion";
-import { MapPin, Clock, ChevronRight, Wrench, Zap, Sparkles, PaintBucket, Wind, Hammer, Bug, Thermometer, Settings, Scissors, Search, Tag, Shield, Star, Briefcase, ArrowRight } from "lucide-react";
+import { MapPin, Clock, ChevronRight, Wrench, Zap, Sparkles, PaintBucket, Wind, Hammer, Bug, Thermometer, Settings, Scissors, Search, Briefcase, ArrowRight } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
-
-type Service = {
-  id: string;
-  name: string;
-  slug: string;
-  description: string | null;
-  icon_name: string | null;
-  base_price: number | null;
-  duration_minutes: number | null;
-  category: string | null;
-  is_active: boolean | null;
-};
+import { useActiveServices } from "@/hooks/useActiveServices";
 
 const iconMap: Record<string, React.ReactNode> = {
   Wrench: <Wrench className="w-6 h-6" />,
@@ -56,18 +44,18 @@ const cardVariants = {
 const SLIDES = [
   {
     id: 0,
-    tag: "LIMITED-TIME OFFER",
-    tagColor: "bg-black/30 text-yellow-100",
-    title: ["₹50 off your", "first booking"],
+    tag: "EXPLORE SERVICES",
+    tagColor: "bg-primary/20 text-primary-foreground",
+    title: ["Find help for", "your home."],
     titleAccent: [false, true],
-    body: "New to HandyFix? Your first service is on us — no code needed, applied automatically at checkout.",
-    cta: "Claim offer",
+    body: "Browse available home-service categories and choose an option that fits your needs.",
+    cta: "Browse services",
     ctaPath: "/services",
-    bg: "from-amber-400 to-yellow-500",
-    textColor: "text-black",
-    accentColor: "text-black/80",
-    Icon: Tag,
-    iconBg: "text-black/20",
+    bg: "from-primary/80 to-primary",
+    textColor: "text-primary-foreground",
+    accentColor: "text-white",
+    Icon: Wrench,
+    iconBg: "text-primary-foreground/30",
   },
   {
     id: 1,
@@ -86,43 +74,13 @@ const SLIDES = [
   },
   {
     id: 2,
-    tag: "VERIFIED PROFESSIONALS",
-    tagColor: "bg-purple-500/30 text-purple-200",
-    title: ["Every pro is", "background-checked."],
-    titleAccent: [false, true],
-    body: "Identity-verified and rated by real customers — so you know exactly who's walking through your door.",
-    cta: "Meet our pros",
-    ctaPath: "/services",
-    bg: "from-gray-900 to-gray-950",
-    textColor: "text-white",
-    accentColor: "text-purple-400",
-    Icon: Shield,
-    iconBg: "text-purple-500/20",
-  },
-  {
-    id: 3,
-    tag: "TOP RATED",
-    tagColor: "bg-orange-500/30 text-orange-200",
-    title: ["4.9★ rated", "across all services."],
-    titleAccent: [false, true],
-    body: "50,000+ bookings completed. Real reviews, real results — see why customers keep coming back.",
-    cta: "Browse services",
-    ctaPath: "/services",
-    bg: "from-orange-900 to-amber-950",
-    textColor: "text-white",
-    accentColor: "text-amber-400",
-    Icon: Star,
-    iconBg: "text-amber-500/20",
-  },
-  {
-    id: 4,
-    tag: "JOIN 2,000+ PROS",
+    tag: "PROVIDER SIGN-UP",
     tagColor: "bg-yellow-500/30 text-yellow-100",
     title: ["Turn your skills into", "daily income."],
     titleAccent: [false, true],
-    body: "Flexible hours, guaranteed payouts, and steady bookings from real customers near you. Apply in minutes.",
+    body: "Explore the provider application and manage your professional profile through HandyFix.",
     cta: "Apply as a pro",
-    ctaPath: "/",
+    ctaPath: "/become-a-pro",
     bg: "from-yellow-950 to-amber-900",
     textColor: "text-white",
     accentColor: "text-yellow-400",
@@ -134,8 +92,7 @@ const SLIDES = [
 const Services = () => {
   const [searchParams] = useSearchParams();
   const city = searchParams.get("city") || searchParams.get("pincode") || "";
-  const [services, setServices] = useState<Service[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: services = [], isPending: loading, isFetching, error, refetch } = useActiveServices();
   const navigate = useNavigate();
   const [activeSlide, setActiveSlide] = useState(0);
   const [paused, setPaused] = useState(false);
@@ -150,17 +107,6 @@ const Services = () => {
     intervalRef.current = setInterval(nextSlide, 4500);
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
   }, [paused, nextSlide]);
-
-  useEffect(() => {
-    supabase
-      .from("services")
-      .select("*")
-      .eq("is_active", true)
-      .then(({ data }) => {
-        setServices((data as Service[]) || []);
-        setLoading(false);
-      });
-  }, []);
 
   return (
     <div className="min-h-screen bg-background">
@@ -220,12 +166,7 @@ const Services = () => {
                     </p>
                     <button
                       onClick={() => navigate(slide.ctaPath)}
-                      className={`inline-flex items-center gap-2 font-bold px-5 py-2.5 rounded-xl border-2 transition-all duration-200 hover:gap-3
-                        ${
-                          slide.id === 0
-                            ? "bg-black text-yellow-300 border-black hover:bg-gray-900"
-                            : `bg-transparent ${slide.textColor} border-current hover:bg-white/10`
-                        }`}
+                      className={`inline-flex items-center gap-2 font-bold px-5 py-2.5 rounded-xl border-2 transition-all duration-200 hover:gap-3 bg-transparent ${slide.textColor} border-current hover:bg-white/10`}
                     >
                       {slide.cta} <ArrowRight className="w-4 h-4" />
                     </button>
@@ -276,11 +217,19 @@ const Services = () => {
 
           {categories.map((cat) => (
             <TabsContent key={cat.value} value={cat.value}>
-              <AnimatePresence mode="wait">
-                {loading ? (
+              {error ? (
+                <div role="alert" className="flex flex-col items-center gap-3 rounded-2xl border border-border bg-card py-12 text-center">
+                  <p className="text-sm text-muted-foreground">Services could not be loaded. Check your connection and try again.</p>
+                  <Button type="button" variant="outline" onClick={() => void refetch()} disabled={isFetching}>
+                    {isFetching ? "Trying again..." : "Try again"}
+                  </Button>
+                </div>
+              ) : (
+                <AnimatePresence mode="wait">
+                  {loading ? (
                   <motion.div
                     key="skeleton"
-                    className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"
+                    className="fluid-card-grid grid gap-6"
                   >
                     {Array.from({ length: 8 }).map((_, i) => (
                       <div
@@ -294,13 +243,13 @@ const Services = () => {
                       </div>
                     ))}
                   </motion.div>
-                ) : (
+                  ) : (
                   <motion.div
                     key={cat.value}
                     variants={containerVariants}
                     initial="hidden"
                     animate="visible"
-                    className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"
+                    className="fluid-card-grid grid gap-6"
                   >
                     {services
                       .filter((s) => cat.value === "all" || s.category === cat.value)
@@ -345,14 +294,15 @@ const Services = () => {
                       </div>
                     )}
                   </motion.div>
-                )}
-              </AnimatePresence>
+                  )}
+                </AnimatePresence>
+              )}
             </TabsContent>
           ))}
         </Tabs>
 
         {/* Popular CTA */}
-        {!loading && (
+        {!loading && !error && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}

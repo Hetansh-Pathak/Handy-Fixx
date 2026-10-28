@@ -2,12 +2,12 @@ import { motion } from "framer-motion";
 import { ShieldCheck, MapPin, Clock, Headphones, CreditCard, RotateCcw } from "lucide-react";
 
 const features = [
-  { icon: ShieldCheck, title: "Verified & Vetted", desc: "Every pro is background-checked and insured." },
-  { icon: MapPin, title: "Live GPS Tracking", desc: "Track your pro in real-time on the way to your home." },
-  { icon: Clock, title: "Upfront Pricing", desc: "No hidden fees. Know the price before booking." },
-  { icon: Headphones, title: "24/7 Support", desc: "Our support team is always available." },
-  { icon: CreditCard, title: "Secure Payments", desc: "Pay securely in-app after the job is done." },
-  { icon: RotateCcw, title: "Money-Back Guarantee", desc: "Not satisfied? Get a full refund." },
+  { icon: ShieldCheck, title: "Provider Details", desc: "Review the information available on each provider profile." },
+  { icon: MapPin, title: "Booking Tracking", desc: "Follow booking status and available location updates." },
+  { icon: Clock, title: "Schedule a Service", desc: "Choose a service and submit a booking request online." },
+  { icon: Headphones, title: "Booking Chat", desc: "Use booking chat when it is available for your service." },
+  { icon: CreditCard, title: "Price Details", desc: "Review service and booking prices before you submit." },
+  { icon: RotateCcw, title: "Booking Management", desc: "View and manage your bookings from your account." },
 ];
 
 const WhyChoose = () => {
@@ -20,10 +20,10 @@ const WhyChoose = () => {
           viewport={{ once: true }}
         >
           <h2 className="text-3xl md:text-4xl font-extrabold text-foreground mb-3">
-            Why 25,000+ customers choose HandyFix
+            Manage home services with HandyFix
           </h2>
           <p className="text-muted-foreground text-lg mb-14">
-            We go above and beyond for every job
+            Browse available services and manage your bookings in one place.
           </p>
         </motion.div>
 

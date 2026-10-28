@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
@@ -17,7 +18,7 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   Star, Calendar, XCircle, Package, Loader2, MessageCircle, ChevronRight
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, getErrorMessage } from "@/lib/utils";
 import AttachmentViewer, { useBookingAttachments, AttachmentBadges } from "@/components/AttachmentViewer";
 
 const sb = supabase as any;
@@ -42,9 +43,9 @@ const STATUS_LABEL: Record<string, { label: string; cls: string; icon: string }>
 
 type BookingCard = {
   booking_id: string;
-  status: string;
-  service_name: string;
-  provider_name: string;
+  status: string | null;
+  service_name: string | null;
+  provider_name: string | null;
   provider_id: string | null;
   created_at: string;
   has_chat: boolean;
@@ -201,6 +202,31 @@ function timeAgo(dateStr: string): string {
 }
 
 const tabs = ["all", "upcoming", "completed", "cancelled"] as const;
+type BookingTab = typeof tabs[number];
+
+const seenBookingStorageKey = (userId: string) => `hf_seen_bookings_${userId}`;
+
+const readSeenBookingIds = (userId: string): Partial<Record<BookingTab, string[]>> => {
+  const stored = localStorage.getItem(seenBookingStorageKey(userId));
+  if (!stored) return {};
+
+  try {
+    const parsed: unknown = JSON.parse(stored);
+    if (!parsed || typeof parsed !== "object") return {};
+
+    const storedByTab = parsed as Record<string, unknown>;
+    const seen: Partial<Record<BookingTab, string[]>> = {};
+    for (const tab of tabs) {
+      const ids = storedByTab[tab];
+      if (Array.isArray(ids)) {
+        seen[tab] = ids.filter((id): id is string => typeof id === "string");
+      }
+    }
+    return seen;
+  } catch {
+    return {};
+  }
+};
 
 /** Lightweight badge that shows 🎤/📷 if the booking has attachments */
 function AttachmentBadgeForCard({ bookingId }: { bookingId: string }) {
@@ -214,90 +240,40 @@ const MyBookings = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
-
-  const [cards, setCards] = useState<BookingCard[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
+  const [activeTab, setActiveTab] = useState<BookingTab>("all");
+  const [seenBookingIds, setSeenBookingIds] = useState<Partial<Record<BookingTab, string[]>>>({});
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
   const [reviewBookingId, setReviewBookingId] = useState<string | null>(null);
-  const [reviewInfo, setReviewInfo] = useState<{ service: string; provider: string; provider_id: string | null } | null>(null);
+  const [reviewInfo, setReviewInfo] = useState<{ service: string | null; provider: string | null; provider_id: string | null } | null>(null);
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewComment, setReviewComment] = useState("");
   const [submittingReview, setSubmittingReview] = useState(false);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
 
-  const buildCards = (notifs: any[]): BookingCard[] => {
-    // Group notifications by booking_id
-    const byBooking: Record<string, any[]> = {};
-    for (const n of notifs) {
-      if (!n.booking_id) continue;
-      if (!byBooking[n.booking_id]) byBooking[n.booking_id] = [];
-      byBooking[n.booking_id].push(n);
-    }
+  const bookingsQuery = useQuery({
+    queryKey: ["customer-bookings", user?.id],
+    enabled: Boolean(user),
+    staleTime: 2 * 60 * 1000,
+    queryFn: async () => {
+      if (!user) return [];
 
-    return Object.entries(byBooking).map(([booking_id, notifList]) => {
-      // Sort: newest last to get latest status
-      notifList.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
-      const latest = notifList[notifList.length - 1];
-      const first = notifList[0];
+      const { data, error } = await sb
+        .from("bookings")
+        .select("id, status, created_at, customer_id, provider_id, services(name), service_providers(full_name, name), latitude, longitude, address, city")
+        .eq("customer_id", user.id)
+        .order("created_at", { ascending: false });
 
-      // Derive status from latest notification type
-      let status = "pending";
-      for (const n of notifList) {
-        const s = NOTIF_STATUS[n.type];
-        if (s) status = s;
+      if (error) {
+        console.error("Could not load customer bookings:", error);
+        throw new Error(error.message);
       }
 
-      // Extract provider & service from data JSON or message text
-      const data = (latest.data || first.data || {}) as Record<string, any>;
-      let provider_name = data.provider_name || data.providerName || "Your Provider";
-      let service_name  = data.service_name  || data.serviceName  || "Home Service";
-      let provider_id   = data.provider_id   || data.providerId   || null;
-
-      // Fallback: parse from message string if data is empty
-      if (!data.provider_name) {
-        const msg = first.message || "";
-        const m = msg.match(/^(.+?) (accepted|started|completed|is on)/);
-        if (m) provider_name = m[1];
-      }
-
-      const has_chat = ["confirmed", "on_the_way", "in_progress"].includes(status);
-      const has_review_prompt = status === "completed";
-
-      return {
-        booking_id,
-        status,
-        service_name,
-        provider_name,
-        provider_id,
-        created_at: first.created_at,
-        has_chat,
-        has_review_prompt,
-        latitude: null,
-        longitude: null,
-        address: null,
-        city: null,
-      };
-    }).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-  };
-
-  const loadData = async () => {
-    if (!user) return;
-    setLoading(true);
-
-    // ── Strategy 1: Try direct booking query (works after SQL is run) ──────
-    const { data: direct } = await sb
-      .from("bookings")
-      .select("id, status, booking_date, booking_time, scheduled_date, address, city, latitude, longitude, total_amount, created_at, provider_id, services(name), service_providers(full_name, name)")
-      .eq("customer_id", user.id)
-      .order("created_at", { ascending: false });
-
-    if (direct && direct.length > 0) {
-      // Convert real bookings to card format
-      const realCards: BookingCard[] = direct.map((b: any) => ({
+      return (data ?? []).map((b: any): BookingCard => ({
         booking_id:        b.id,
-        status:            b.status ?? "pending",
-        service_name:      b.services?.name ?? "Home Service",
-        provider_name:     b.service_providers?.full_name ?? b.service_providers?.name ?? "Provider",
+        status:            b.status,
+        service_name:      b.services?.name ?? null,
+        provider_name:     b.service_providers?.full_name ?? b.service_providers?.name ?? null,
         provider_id:       b.provider_id,
         created_at:        b.created_at,
         has_chat:          ["confirmed", "on_the_way", "in_progress"].includes(b.status ?? ""),
@@ -307,27 +283,33 @@ const MyBookings = () => {
         address:           b.address ?? null,
         city:              b.city ?? null,
       }));
-      setCards(realCards);
-      setLoading(false);
-      return;
-    }
+    },
+  });
+  const cards = bookingsQuery.data ?? [];
+  const loading = bookingsQuery.isLoading;
+  const loadError = bookingsQuery.error ? "Your bookings could not be loaded. Please try again." : null;
+  const loadData = async () => { await bookingsQuery.refetch(); };
 
-    // ── Strategy 2: Build cards entirely from customer_notifications ────────
-    // customer_notifications has its own RLS (customers always read their own)
-    const { data: notifs } = await sb
-      .from("customer_notifications")
-      .select("id, type, title, message, booking_id, data, created_at")
-      .eq("user_id", user.id)
-      .not("booking_id", "is", null)
-      .order("created_at", { ascending: false });
+  useEffect(() => {
+    setSeenBookingIds(user ? readSeenBookingIds(user.id) : {});
+  }, [user?.id]);
 
-    if (notifs && notifs.length > 0) {
-      setCards(buildCards(notifs));
-    }
-    setLoading(false);
+  const markTabSeen = (tab: BookingTab, visibleCards: BookingCard[]) => {
+    if (!user) return;
+    const nextSeenBookingIds = {
+      ...seenBookingIds,
+      [tab]: Array.from(new Set([
+        ...(seenBookingIds[tab] ?? []),
+        ...visibleCards.map(card => card.booking_id),
+      ])),
+    };
+    setSeenBookingIds(nextSeenBookingIds);
+    localStorage.setItem(seenBookingStorageKey(user.id), JSON.stringify(nextSeenBookingIds));
   };
 
-  useEffect(() => { loadData(); }, [user]);
+  const handleTabChange = (value: string) => {
+    if (tabs.includes(value as BookingTab)) setActiveTab(value as BookingTab);
+  };
 
   // Realtime — update status live
   useEffect(() => {
@@ -346,7 +328,7 @@ const MyBookings = () => {
         else if (s === "on_the_way") toast({ title: "🚗 Provider is on the way", description: "You can now track their live location." });
         else if (s === "in_progress") toast({ title: "🚀 Service Started!", description: "Your provider has arrived." });
         else if (s === "completed") toast({ title: "🎉 Service Completed!", description: "Please leave a review." });
-        loadData();
+        void loadData();
       })
       .subscribe();
     return () => { sb.removeChannel(channel); };
@@ -365,7 +347,9 @@ const MyBookings = () => {
       return;
     }
     toast({ title: "Booking cancelled" });
-    setCards(prev => prev.map(c => c.booking_id === bookingId ? { ...c, status: "cancelled" } : c));
+    queryClient.setQueryData<BookingCard[]>(["customer-bookings", user?.id], previous =>
+      previous?.map(c => c.booking_id === bookingId ? { ...c, status: "cancelled" } : c)
+    );
   };
 
   const openReview = (card: BookingCard) => {
@@ -379,39 +363,53 @@ const MyBookings = () => {
     if (!user || !reviewBookingId) return;
     setSubmittingReview(true);
 
-    const { data: profile } = await sb.from("profiles").select("full_name").eq("user_id", user.id).maybeSingle();
+    try {
+      const { data: booking, error: bookingError } = await sb
+        .from("bookings")
+        .select("id, customer_id, status, provider_id, services(name)")
+        .eq("id", reviewBookingId)
+        .eq("customer_id", user.id)
+        .single();
+      if (bookingError) throw bookingError;
+      if (booking.status !== "completed") throw new Error("A review can be submitted after the service is completed.");
+      if (!booking.provider_id) throw new Error("This booking has no assigned provider to review.");
 
-    // Try to get provider_id if we don't have it
-    let pid = reviewInfo?.provider_id;
-    if (!pid) {
-      const { data: bk } = await sb.from("bookings").select("provider_id").eq("id", reviewBookingId).single();
-      pid = bk?.provider_id ?? null;
+      const { data: existingReview, error: reviewCheckError } = await sb
+        .from("reviews")
+        .select("id")
+        .eq("booking_id", booking.id)
+        .maybeSingle();
+      if (reviewCheckError) throw reviewCheckError;
+      if (existingReview) throw new Error("A review has already been submitted for this booking.");
+
+      const { error } = await sb.from("reviews").insert({
+        booking_id: reviewBookingId,
+        customer_id: booking.customer_id,
+        user_id: user.id,
+        provider_id: booking.provider_id,
+        rating: reviewRating,
+        comment: reviewComment || null,
+        service_name: booking.services?.name ?? null,
+      });
+      if (error?.code === "23505") throw new Error("A review has already been submitted for this booking.");
+      if (error) throw error;
+
+      toast({ title: "Review submitted! ⭐", description: "Thanks for your feedback." });
+      setReviewBookingId(null);
+      setReviewInfo(null);
+      queryClient.setQueryData<BookingCard[]>(["customer-bookings", user?.id], previous =>
+        previous?.map(c => c.booking_id === reviewBookingId ? { ...c, has_review_prompt: false } : c)
+      );
+    } catch (error: unknown) {
+      toast({ title: "Error", description: getErrorMessage(error, "Could not submit your review."), variant: "destructive" });
+    } finally {
+      setSubmittingReview(false);
     }
-
-    const { error } = await sb.from("reviews").insert({
-      booking_id:    reviewBookingId,
-      customer_id:   user.id,
-      provider_id:   pid,
-      rating:        reviewRating,
-      comment:       reviewComment,
-      reviewer_name: profile?.full_name || user.email,
-    });
-
-    setSubmittingReview(false);
-    if (error) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
-      return;
-    }
-    toast({ title: "Review submitted! ⭐", description: "Thanks for your feedback." });
-    setReviewBookingId(null);
-    setReviewInfo(null);
-    // Mark reviewed
-    setCards(prev => prev.map(c => c.booking_id === reviewBookingId ? { ...c, has_review_prompt: false } : c));
   };
 
   const grouped = useMemo(() => ({
     all:       cards,
-    upcoming:  cards.filter(c => ["pending", "confirmed", "on_the_way", "in_progress"].includes(c.status)),
+    upcoming:  cards.filter(c => ["pending", "confirmed", "on_the_way", "in_progress"].includes(c.status ?? "")),
     completed: cards.filter(c => c.status === "completed"),
     cancelled: cards.filter(c => c.status === "cancelled"),
   }), [cards]);
@@ -436,18 +434,19 @@ const MyBookings = () => {
           </Button>
         </div>
 
-        <Tabs defaultValue="all">
+        <Tabs value={activeTab} onValueChange={handleTabChange}>
           <TabsList className="mb-6 bg-secondary p-1">
             {tabs.map(tab => (
               <TabsTrigger
                 key={tab}
                 value={tab}
+                onClick={() => markTabSeen(tab, grouped[tab])}
                 className="capitalize relative data-[state=active]:bg-gradient-gold data-[state=active]:text-primary-foreground"
               >
                 {tabLabels[tab]}
-                {grouped[tab].length > 0 && (
+                {grouped[tab].filter(card => !(seenBookingIds[tab] ?? []).includes(card.booking_id)).length > 0 && (
                   <span className="ml-1.5 bg-primary/20 text-primary text-xs rounded-full px-1.5 py-0.5 font-bold">
-                    {grouped[tab].length}
+                    {grouped[tab].filter(card => !(seenBookingIds[tab] ?? []).includes(card.booking_id)).length}
                   </span>
                 )}
               </TabsTrigger>
@@ -471,6 +470,11 @@ const MyBookings = () => {
                       </div>
                     ))}
                   </div>
+                ) : loadError ? (
+                  <div role="alert" className="rounded-2xl border border-destructive/30 bg-destructive/5 p-6 text-center text-destructive">
+                    {loadError}
+                    <Button variant="outline" className="ml-3" onClick={() => void loadData()}>Retry</Button>
+                  </div>
                 ) : grouped[tab].length === 0 ? (
                   <motion.div
                     key="empty"
@@ -490,9 +494,13 @@ const MyBookings = () => {
                 ) : (
                   <motion.div key={tab} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
                     {grouped[tab].map((card, i) => {
-                      const st = STATUS_LABEL[card.status] ?? STATUS_LABEL.pending;
+                      const st = STATUS_LABEL[card.status ?? ""] ?? {
+                        label: "Status unavailable",
+                        cls: "bg-secondary text-muted-foreground border-border",
+                        icon: "•",
+                      };
                       const ref = `#HF-${card.booking_id.slice(0, 8).toUpperCase()}`;
-                      const canCancel = ["pending", "confirmed"].includes(card.status);
+                      const canCancel = ["pending", "confirmed"].includes(card.status ?? "");
 
                       return (
                         <motion.div
@@ -511,7 +519,7 @@ const MyBookings = () => {
                               </div>
                               <div>
                                 <div className="flex items-center gap-2 flex-wrap mb-1">
-                                  <p className="font-semibold text-foreground">{card.service_name}</p>
+                                  {card.service_name && <p className="font-semibold text-foreground">{card.service_name}</p>}
                                   <Badge className={cn("text-xs border", st.cls)}>
                                     {st.label}
                                   </Badge>
@@ -520,14 +528,14 @@ const MyBookings = () => {
                                 <p className="text-xs text-muted-foreground font-mono mb-2">{ref}</p>
 
                                 {/* Provider */}
-                                <div className="flex items-center gap-2 mb-2">
+                                {card.provider_name && <div className="flex items-center gap-2 mb-2">
                                   <Avatar className="w-5 h-5">
                                     <AvatarFallback className="bg-gradient-gold text-primary-foreground text-[10px] font-bold">
                                       {card.provider_name[0].toUpperCase()}
                                     </AvatarFallback>
                                   </Avatar>
                                   <span className="text-sm text-muted-foreground">{card.provider_name}</span>
-                                </div>
+                                </div>}
 
                                 {/* Time */}
                                 <div className="flex items-center gap-1 text-xs text-muted-foreground">
@@ -627,7 +635,9 @@ const MyBookings = () => {
             <DialogHeader className="p-4 pb-0 border-b border-border">
               <DialogTitle className="text-foreground flex items-center gap-2">
                 <MessageCircle className="w-5 h-5 text-primary" />
-                Chat with {cards.find(c => c.booking_id === activeChatId)?.provider_name ?? "Provider"}
+                {cards.find(c => c.booking_id === activeChatId)?.provider_name
+                  ? `Chat with ${cards.find(c => c.booking_id === activeChatId)?.provider_name}`
+                  : "Booking chat"}
               </DialogTitle>
             </DialogHeader>
             <BookingChat bookingId={activeChatId} currentUserId={user.id} senderType="customer" />
@@ -644,9 +654,12 @@ const MyBookings = () => {
           {reviewInfo && (
             <div className="space-y-5 pt-2">
               <div className="text-center">
-                <p className="text-muted-foreground text-sm">
-                  {reviewInfo.service} with <span className="text-foreground font-medium">{reviewInfo.provider}</span>
-                </p>
+                {(reviewInfo.service || reviewInfo.provider) && (
+                  <p className="text-muted-foreground text-sm">
+                    {reviewInfo.service}{reviewInfo.service && reviewInfo.provider ? " with " : ""}
+                    {reviewInfo.provider && <span className="text-foreground font-medium">{reviewInfo.provider}</span>}
+                  </p>
+                )}
                 <div className="flex justify-center mt-4">
                   <StarPicker value={reviewRating} onChange={setReviewRating} />
                 </div>

@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { motion } from 'framer-motion';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
-import { DollarSign, TrendingUp, Clock, Loader2, Wallet, ArrowDownToLine } from 'lucide-react';
+import { IndianRupee, TrendingUp, Clock, Loader2, Wallet, ArrowDownToLine } from 'lucide-react';
 import LockedPage from '@/components/provider/LockedPage';
 
 const Earnings: React.FC = () => {
@@ -142,7 +142,7 @@ const Earnings: React.FC = () => {
       {/* Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {[
-          { label: 'Total Earnings', value: totals.total, icon: DollarSign, color: 'text-primary' },
+          { label: 'Total Earnings', value: totals.total, icon: IndianRupee, color: 'text-primary' },
           { label: 'Pending', value: totals.pending, icon: Clock, color: 'text-warning' },
           { label: 'Paid Out', value: totals.paid, icon: TrendingUp, color: 'text-success' },
         ].map((s, i) => (

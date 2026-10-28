@@ -1,77 +1,62 @@
 import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
-import { Shield, Star, Users, Award, CheckCircle, Quote } from "lucide-react";
+import { Star, Quote } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 
-const steps = [
-  { icon: Shield, title: "Background Check", desc: "Police verification + identity proof for every pro." },
-  { icon: CheckCircle, title: "Skill Assessment", desc: "Practical test by our certified evaluators in their trade." },
-  { icon: Award, title: "Trial Job", desc: "Real job under supervision before going live on platform." },
-];
-
-const team = [
-  { name: "Vikram Patel", role: "CEO & Co-Founder", initials: "VP" },
-  { name: "Ananya Roy", role: "Head of Operations", initials: "AR" },
-  { name: "Nikhil Mehta", role: "CTO", initials: "NM" },
-  { name: "Sneha Joshi", role: "Head of Pro Success", initials: "SJ" },
-];
-
 const About = () => {
   const navigate = useNavigate();
 
-  const { data: providerCount } = useQuery({
+  const { data: providerCount, error: providerCountError } = useQuery({
     queryKey: ["provider-count"],
     queryFn: async () => {
-      const { count } = await supabase
+      const { count, error } = await supabase
         .from("service_providers")
         .select("*", { count: "exact", head: true })
-        .eq("is_active", true);
-      return count || 0;
+        .eq("is_verified", true);
+      if (error) throw error;
+      return count;
     },
   });
 
-  const { data: bookingCount } = useQuery({
+  const { data: bookingCount, error: bookingCountError } = useQuery({
     queryKey: ["booking-count-about"],
     queryFn: async () => {
-      const { count } = await supabase
+      const { count, error } = await supabase
         .from("bookings")
         .select("*", { count: "exact", head: true });
-      return count || 0;
+      if (error) throw error;
+      return count;
     },
   });
 
-  const { data: testimonials } = useQuery({
+  const { data: testimonials, error: testimonialsError } = useQuery({
     queryKey: ["testimonials-about"],
     queryFn: async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("reviews")
         .select("rating, comment, reviewer_name, services(name)")
         .gte("rating", 4)
         .not("comment", "is", null)
+        .not("reviewer_name", "is", null)
         .order("rating", { ascending: false })
         .limit(6);
-      return data || [];
+      if (error) throw error;
+      return data ?? [];
     },
   });
 
   const liveStats = [
-    { value: `${Math.max(bookingCount || 0, 50000).toLocaleString()}+`, label: "Bookings Completed" },
-    { value: `${Math.max(providerCount || 0, 2000)}+`, label: "Verified Pros" },
-    { value: "15+", label: "Cities Served" },
-    { value: "4.9★", label: "Average Rating" },
+    ...(bookingCount !== undefined && bookingCount !== null
+      ? [{ value: bookingCount.toLocaleString(), label: "Bookings" }]
+      : []),
+    ...(providerCount !== undefined && providerCount !== null
+      ? [{ value: providerCount.toLocaleString(), label: "Verified providers" }]
+      : []),
   ];
-
-  const fallbackTestimonials = [
-    { reviewer_name: "Priya Sharma", comment: "HandyFix saved my weekend! The plumber arrived in 30 minutes and fixed everything perfectly.", rating: 5, services: { name: "Plumbing" } },
-    { reviewer_name: "Rahul Mehta", comment: "I use HandyFix for all my office repairs. Reliable, fast, and their pricing is always transparent.", rating: 5, services: { name: "Electrical" } },
-    { reviewer_name: "Kavya Iyer", comment: "The cleaning team was exceptional. My apartment sparkles! Will definitely book again.", rating: 5, services: { name: "House Cleaning" } },
-  ];
-
-  const displayTestimonials = testimonials && testimonials.length >= 2 ? testimonials : fallbackTestimonials;
 
   return (
     <div className="min-h-screen bg-background">
@@ -87,7 +72,7 @@ const About = () => {
               We're <span className="text-gradient-gold">HandyFix</span>
             </h1>
             <p className="text-muted-foreground text-lg max-w-2xl mx-auto mb-8 leading-relaxed">
-              Founded in 2023 in Ahmedabad, HandyFix was born from a simple frustration — finding a reliable plumber shouldn't feel like luck. We built a marketplace where every professional is vetted, every job is guaranteed, and every customer comes first.
+              HandyFix connects households with home-service professionals through a simple, convenient booking experience.
             </p>
             <div className="flex items-center justify-center gap-4 flex-wrap">
               <Button className="bg-gradient-gold text-primary-foreground font-bold px-8 py-3 rounded-xl shadow-gold hover:opacity-90"
@@ -104,7 +89,7 @@ const About = () => {
       </section>
 
       {/* Live Stats */}
-      <section className="py-12 bg-gradient-gold">
+      {liveStats.length > 0 && <section className="py-12 bg-gradient-gold">
         <div className="container mx-auto grid grid-cols-2 md:grid-cols-4 gap-8">
           {liveStats.map((stat, i) => (
             <motion.div key={stat.label} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }}
@@ -114,7 +99,12 @@ const About = () => {
             </motion.div>
           ))}
         </div>
-      </section>
+      </section>}
+      {(bookingCountError || providerCountError) && (
+        <p role="alert" className="container mx-auto px-4 py-4 text-center text-sm text-muted-foreground">
+          Some live platform statistics could not be loaded.
+        </p>
+      )}
 
       {/* Mission */}
       <section className="py-20">
@@ -128,64 +118,17 @@ const About = () => {
         </div>
       </section>
 
-      {/* How We Verify */}
-      <section className="py-20 bg-card/50">
-        <div className="container mx-auto">
-          <motion.h2 initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
-            className="text-3xl md:text-4xl font-extrabold text-foreground mb-12 text-center">
-            How We Verify Every Pro
-          </motion.h2>
-          <div className="grid md:grid-cols-3 gap-8">
-            {steps.map((step, i) => (
-              <motion.div key={step.title} initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }} transition={{ delay: i * 0.15 }}
-                className="bg-card border border-border rounded-2xl p-8 text-center hover:border-primary/30 transition-colors">
-                <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-5">
-                  <step.icon className="w-8 h-8 text-primary" />
-                </div>
-                <div className="w-8 h-8 rounded-full bg-primary/20 text-primary text-sm font-bold flex items-center justify-center mx-auto mb-3">
-                  {i + 1}
-                </div>
-                <h3 className="font-bold text-lg text-foreground mb-2">{step.title}</h3>
-                <p className="text-muted-foreground text-sm leading-relaxed">{step.desc}</p>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Team */}
-      <section className="py-20">
-        <div className="container mx-auto">
-          <motion.h2 initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
-            className="text-3xl md:text-4xl font-extrabold text-foreground mb-12 text-center">
-            Meet the Team
-          </motion.h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-            {team.map((member, i) => (
-              <motion.div key={member.name} initial={{ opacity: 0, scale: 0.9 }} whileInView={{ opacity: 1, scale: 1 }}
-                viewport={{ once: true }} transition={{ delay: i * 0.1 }}
-                className="bg-card border border-border rounded-2xl p-6 text-center hover:border-primary/30 transition-colors">
-                <div className="w-20 h-20 rounded-full bg-gradient-gold flex items-center justify-center mx-auto mb-4 text-2xl font-bold text-primary-foreground">
-                  {member.initials}
-                </div>
-                <p className="font-bold text-foreground">{member.name}</p>
-                <p className="text-sm text-muted-foreground mt-1">{member.role}</p>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* Testimonials from DB */}
-      <section className="py-20 bg-card/50">
+      {((testimonials?.length ?? 0) > 0 || testimonialsError) && <section className="py-20 bg-card/50">
         <div className="container mx-auto">
           <motion.h2 initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
             className="text-3xl md:text-4xl font-extrabold text-foreground mb-12 text-center">
             What our customers say
           </motion.h2>
-          <div className="grid md:grid-cols-3 gap-6">
-            {displayTestimonials.slice(0, 6).map((t, i) => (
+          {testimonialsError ? (
+            <p role="alert" className="text-center text-sm text-muted-foreground">Customer reviews are temporarily unavailable.</p>
+          ) : <div className="grid md:grid-cols-3 gap-6">
+            {(testimonials ?? []).slice(0, 6).map((t, i) => (
               <motion.div key={i} initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }} transition={{ delay: i * 0.1 }}
                 className="bg-card border border-border rounded-2xl p-6">
@@ -193,10 +136,10 @@ const About = () => {
                 <p className="text-muted-foreground text-sm leading-relaxed mb-4">"{t.comment}"</p>
                 <div className="flex items-center gap-3">
                   <div className="w-9 h-9 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold text-sm">
-                    {(t.reviewer_name || "U")[0]}
+                    {t.reviewer_name?.[0]}
                   </div>
                   <div>
-                    <p className="font-semibold text-foreground text-sm">{t.reviewer_name || "Customer"}</p>
+                    <p className="font-semibold text-foreground text-sm">{t.reviewer_name}</p>
                     <p className="text-xs text-muted-foreground">{(t.services as any)?.name}</p>
                   </div>
                   <div className="ml-auto flex">
@@ -207,9 +150,9 @@ const About = () => {
                 </div>
               </motion.div>
             ))}
-          </div>
+          </div>}
         </div>
-      </section>
+      </section>}
 
       {/* CTA */}
       <section className="py-20">

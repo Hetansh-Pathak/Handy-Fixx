@@ -1,5 +1,4 @@
 import { useNavigate } from "react-router-dom";
-import logo from "@/assets/logo.png";
 
 const Footer = () => {
   const navigate = useNavigate();
@@ -35,8 +34,8 @@ const Footer = () => {
         <div className="grid grid-cols-2 md:grid-cols-5 gap-8">
           <div className="col-span-2 md:col-span-1">
             <button className="flex items-center gap-2 mb-4" onClick={() => navigate("/")}>
-              <img src={logo} alt="HandyFix" className="w-10 h-10 rounded-xl object-cover shadow-lg" />
-              <span className="text-lg font-bold text-foreground">HandyFix</span>
+              <img src="/logo.png" alt="HandyFix" className="h-10 w-10 rounded-xl object-contain shadow-lg" />
+              <span className="text-xl font-bold text-foreground">HandyFix</span>
             </button>
             <p className="text-sm text-muted-foreground leading-relaxed">
               Your trusted home services marketplace. Fast, reliable, guaranteed.

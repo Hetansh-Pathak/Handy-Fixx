@@ -157,11 +157,13 @@ const ServiceDetail = () => {
         console.log("🎯 Providers after service filter:", filtered);
 
         // Normalize column names for UI
-        const normalized = filtered.map((p) => ({
+        const normalized = filtered
+          .filter((p) => p.full_name || p.name)
+          .map((p) => ({
           ...p,
-          full_name: p.full_name || p.name || "Provider",
+          full_name: p.full_name || p.name,
           is_online: Boolean(p.is_available ?? p.is_online),
-        })) as unknown as Provider[];
+          })) as unknown as Provider[];
 
         setProviders(normalized);
       } catch {
@@ -412,7 +414,7 @@ const ServiceDetail = () => {
                 <div className="flex flex-col md:flex-row gap-4">
                   <Avatar className="w-16 h-16 flex-shrink-0">
                     <AvatarFallback className="bg-gradient-gold text-primary-foreground text-xl font-bold">
-                      {(provider.full_name || "P")[0].toUpperCase()}
+                      {provider.full_name?.[0].toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
 
@@ -434,15 +436,17 @@ const ServiceDetail = () => {
                     )}
 
                     <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
-                      <span className="flex items-center gap-1 text-yellow-400">
-                        <Star className="w-4 h-4 fill-current" />
-                        <span className="font-semibold">{Number(provider.rating ?? 0).toFixed(1)}</span>
-                        <span className="text-muted-foreground">({provider.total_reviews ?? 0} reviews)</span>
-                      </span>
-                      <span className="flex items-center gap-1">
+                      {provider.rating !== null && (
+                        <span className="flex items-center gap-1 text-yellow-400">
+                          <Star className="w-4 h-4 fill-current" />
+                          <span className="font-semibold">{Number(provider.rating).toFixed(1)}</span>
+                          {provider.total_reviews !== null && <span className="text-muted-foreground">({provider.total_reviews} reviews)</span>}
+                        </span>
+                      )}
+                      {provider.total_jobs !== null && <span className="flex items-center gap-1">
                         <Briefcase className="w-4 h-4" />
-                        {provider.total_jobs ?? 0} jobs
-                      </span>
+                        {provider.total_jobs} jobs
+                      </span>}
                       {provider.experience_years && (
                         <span>{provider.experience_years} yrs exp</span>
                       )}

@@ -17,6 +17,16 @@ import { useNavigate } from 'react-router-dom';
 import { GUJARAT_CITIES, SERVICE_ICONS } from '@/lib/constants';
 import { Shield, ArrowRight, Clock, AlertTriangle, ShieldCheck } from 'lucide-react';
 
+interface ProfileDraft {
+  full_name: string;
+  phone: string;
+  email: string;
+  bio: string;
+  experience_years: number;
+  selectedServiceIds: string[];
+  customPrices: Record<string, number>;
+}
+
 const Profile: React.FC = () => {
   const navigate = useNavigate();
   const { provider, refreshProvider } = useProvider();
@@ -26,7 +36,10 @@ const Profile: React.FC = () => {
   const [citySuggestions, setCitySuggestions] = useState<string[]>([]);
   const [showCityDropdown, setShowCityDropdown] = useState(false);
   const [cityHighlight, setCityHighlight] = useState(-1);
+  const [draftReadyProviderId, setDraftReadyProviderId] = useState<string | null>(null);
   const cityWrapperRef = useRef<HTMLDivElement>(null);
+  const initializedProviderId = useRef<string | null>(null);
+  const lastSavedDraft = useRef<string | null>(null);
 
   // Close city dropdown on outside click
   useEffect(() => {
@@ -64,36 +77,74 @@ const Profile: React.FC = () => {
   // Load existing custom prices
   useEffect(() => {
     if (!provider?.id) return;
+    let cancelled = false;
     (supabase as any)
       .from('provider_service_pricing')
       .select('service_id, custom_price')
       .eq('provider_id', provider.id)
       .then(({ data }: { data: any[] | null }) => {
-        if (data) {
-          const priceMap: Record<string, number> = {};
-          data.forEach(p => { priceMap[p.service_id] = p.custom_price; });
-          setCustomPrices(priceMap);
-        }
+        if (!data || cancelled) return;
+        const priceMap: Record<string, number> = {};
+        data.forEach(p => { priceMap[p.service_id] = p.custom_price; });
+        setCustomPrices(current => ({ ...priceMap, ...current }));
       });
+    return () => { cancelled = true; };
   }, [provider?.id]);
 
-  // Sync form + selected services when provider loads
+  // Initialize from server data once, then prefer this tab's unsaved draft.
   useEffect(() => {
-    if (provider) {
-      setForm({
-        full_name: provider.full_name || '',
-        phone: provider.phone || '',
-        email: provider.email || '',
-        bio: provider.bio || '',
-        experience_years: provider.experience_years || 0,
-        bank_account_name: provider.bank_account_name || '',
-        bank_account_number: provider.bank_account_number || '',
-        bank_ifsc: provider.bank_ifsc || '',
-        upi_id: provider.upi_id || '',
-      });
-      setSelectedServiceIds((provider as any).service_ids || []);
+    if (!provider || initializedProviderId.current === provider.id) return;
+
+    lastSavedDraft.current = null;
+    const draftKey = `handyfix-provider-profile-draft:${provider.id}`;
+    let draft: ProfileDraft | null = null;
+    const savedDraft = sessionStorage.getItem(draftKey);
+    if (savedDraft) {
+      try {
+        draft = JSON.parse(savedDraft) as ProfileDraft;
+      } catch (error) {
+        console.error('Unable to restore provider profile draft', error);
+        sessionStorage.removeItem(draftKey);
+      }
     }
+
+    setForm({
+      full_name: draft?.full_name ?? provider.full_name ?? '',
+      phone: draft?.phone ?? provider.phone ?? '',
+      email: draft?.email ?? provider.email ?? '',
+      bio: draft?.bio ?? provider.bio ?? '',
+      experience_years: draft?.experience_years ?? provider.experience_years ?? 0,
+      bank_account_name: provider.bank_account_name || '',
+      bank_account_number: provider.bank_account_number || '',
+      bank_ifsc: provider.bank_ifsc || '',
+      upi_id: provider.upi_id || '',
+    });
+    setSelectedServiceIds(draft?.selectedServiceIds ?? (provider as any).service_ids ?? []);
+    setCustomPrices(draft?.customPrices ?? {});
+    initializedProviderId.current = provider.id;
+    setDraftReadyProviderId(provider.id);
   }, [provider]);
+
+  useEffect(() => {
+    if (!provider || draftReadyProviderId !== provider.id || initializedProviderId.current !== provider.id) return;
+    const draftKey = `handyfix-provider-profile-draft:${provider.id}`;
+    const draft: ProfileDraft = {
+      full_name: form.full_name,
+      phone: form.phone,
+      email: form.email,
+      bio: form.bio,
+      experience_years: form.experience_years,
+      selectedServiceIds,
+      customPrices,
+    };
+    const serializedDraft = JSON.stringify(draft);
+    if (lastSavedDraft.current === serializedDraft) {
+      sessionStorage.removeItem(draftKey);
+      return;
+    }
+    lastSavedDraft.current = null;
+    sessionStorage.setItem(draftKey, serializedDraft);
+  }, [provider, draftReadyProviderId, form, selectedServiceIds, customPrices]);
 
   useEffect(() => {
     if (resendSeconds <= 0) return;
@@ -163,6 +214,19 @@ const Profile: React.FC = () => {
     );
   };
 
+  const calculateProfileCompletion = () => {
+    const completedFields = [
+      Boolean(form.full_name.trim()),
+      Boolean(form.phone.trim()),
+      Boolean(form.bio.trim()),
+      Number(form.experience_years) > 0,
+      Boolean(provider?.pincodes?.length),
+      selectedServiceIds.length > 0,
+      Boolean(form.bank_account_number.trim() || form.upi_id.trim()),
+    ];
+    return Math.round((completedFields.filter(Boolean).length / completedFields.length) * 100);
+  };
+
   const saveCustomPrice = async (serviceId: string, price: number) => {
     if (!provider?.id || !price) return;
     await (supabase as any).from('provider_service_pricing').upsert({
@@ -183,15 +247,7 @@ const Profile: React.FC = () => {
 
     setSaving(true);
 
-    // Completion: name + phone + bio + experience + cities + services + bank
-    const filled = [
-      form.full_name, form.phone, form.bio,
-      Number(form.experience_years) > 0,
-      (provider.pincodes && provider.pincodes.length > 0),
-      selectedServiceIds.length > 0,
-      (form.bank_account_number || form.upi_id),
-    ];
-    const completion = Math.round((filled.filter(Boolean).length / filled.length) * 100);
+    const completion = calculateProfileCompletion();
 
     const { error } = await supabase.from('service_providers').update({
       full_name: form.full_name,
@@ -224,6 +280,16 @@ const Profile: React.FC = () => {
     }
 
     toast({ title: 'Profile saved ✅', description: 'Services, prices, and service cities are now live.' });
+    lastSavedDraft.current = JSON.stringify({
+      full_name: form.full_name,
+      phone: form.phone,
+      email: form.email,
+      bio: form.bio,
+      experience_years: form.experience_years,
+      selectedServiceIds,
+      customPrices,
+    } satisfies ProfileDraft);
+    sessionStorage.removeItem(`handyfix-provider-profile-draft:${provider.id}`);
     refreshProvider();
     setSaving(false);
   };
@@ -274,18 +340,19 @@ const Profile: React.FC = () => {
   };
 
   const update = (key: string, value: any) => setForm(f => ({ ...f, [key]: value }));
+  const profileCompletion = calculateProfileCompletion();
 
   return (
-    <div className="space-y-6 max-w-2xl">
+    <div className="mx-auto w-full max-w-7xl space-y-6">
       {/* Profile completion */}
       {provider && (
-        <Card className="glass-card p-4">
+        <Card className="glass-card p-5 sm:p-6">
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm font-medium">Profile Completion</span>
-            <span className="text-sm text-primary font-semibold">{provider.profile_completion || 0}%</span>
+            <span className="text-sm text-primary font-semibold">{profileCompletion}%</span>
           </div>
           <div className="h-2 bg-secondary rounded-full overflow-hidden">
-            <div className="h-full gold-gradient rounded-full transition-all" style={{ width: `${provider.profile_completion || 0}%` }} />
+            <div className="h-full gold-gradient rounded-full transition-all" style={{ width: `${profileCompletion}%` }} />
           </div>
           {selectedServiceIds.length === 0 && (
             <p className="text-xs text-warning mt-2">⚠️ Select services below to appear in customer search</p>
@@ -295,7 +362,7 @@ const Profile: React.FC = () => {
 
       {/* Basic Info */}
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
-        <Card className="glass-card p-4 space-y-4">
+        <Card className="glass-card p-5 sm:p-6 space-y-4">
           <h3 className="font-semibold">Basic Information</h3>
           <div className="grid sm:grid-cols-2 gap-4">
             <div>
@@ -340,7 +407,7 @@ const Profile: React.FC = () => {
           service_ids[] is saved to the DB on profile save.
           ═══════════════════════════════════════════════════ */}
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }}>
-        <Card className="glass-card p-4">
+        <Card className="glass-card p-5 sm:p-6">
           <div className="flex items-center gap-2 mb-1">
             <Briefcase className="h-5 w-5 text-primary" />
             <h3 className="font-semibold">Services You Offer</h3>

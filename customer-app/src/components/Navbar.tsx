@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/contexts/AuthContext";
 import { useApp } from "@/contexts/AppContext";
-import logo from "@/assets/logo.png";
+import ThemeToggle from "@/components/ThemeToggle";
 
 const navLinks = [
   { label: "Services",     href: "/services"    },
@@ -27,8 +27,10 @@ const Navbar = () => {
   const { user, signOut } = useAuth();
   const { pincode, upcomingBookingsCount, unreadNotificationsCount, profile } = useApp();
 
-  const fallbackName = user?.email?.slice(0, 1).toUpperCase() ?? "U";
+  const fallbackName = user?.email?.slice(0, 1).toUpperCase() ?? "";
   const displayName = profile?.full_name || user?.email?.split("@")[0] || "My Account";
+  const isNotificationsActive = location.pathname.startsWith("/notifications");
+  const isProfileActive = location.pathname.startsWith("/profile");
 
   const handleSignOut = async () => { await signOut(); navigate("/"); };
 
@@ -49,10 +51,10 @@ const Navbar = () => {
       initial={{ y: -100 }} animate={{ y: 0 }} transition={{ duration: 0.5, ease: "easeOut" }}
       className="fixed top-0 left-0 right-0 z-50 border-b border-border/50 backdrop-blur-xl bg-background/80"
     >
-      <div className="container mx-auto flex items-center justify-between py-3">
+      <div className="container mx-auto flex min-h-16 items-center justify-between">
         {/* Logo */}
         <button className="flex items-center gap-2" onClick={() => navigate("/")}>
-          <img src={logo} alt="HandyFix" className="w-10 h-10 rounded-xl object-cover shadow-lg" />
+          <img src="/logo.png" alt="HandyFix" className="h-10 w-10 rounded-xl object-contain shadow-lg" />
           <span className="text-xl font-bold text-foreground">HandyFix</span>
         </button>
 
@@ -73,15 +75,21 @@ const Navbar = () => {
 
         {/* Desktop auth */}
         <div className="hidden md:flex items-center gap-3">
+          <ThemeToggle />
           {user ? (
             <>
               {/* Notification Bell */}
               <button
-                className="relative p-2 rounded-xl border border-border bg-card hover:border-primary/40 transition-colors"
+                className={`relative p-2 rounded-xl border bg-card transition-colors hover:border-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                  isNotificationsActive ? "border-primary/40 text-primary" : "border-border text-muted-foreground"
+                }`}
                 onClick={() => navigate("/notifications")}
-                aria-label="Notifications"
+                aria-label={unreadNotificationsCount > 0
+                  ? `Notifications, ${unreadNotificationsCount} unread`
+                  : "Notifications"}
+                aria-current={isNotificationsActive ? "page" : undefined}
               >
-                <Bell className="w-5 h-5 text-muted-foreground" />
+                <Bell className="w-5 h-5" />
                 {unreadNotificationsCount > 0 && (
                   <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-[9px] font-bold rounded-full w-4 h-4 flex items-center justify-center animate-pulse">
                     {unreadNotificationsCount > 9 ? "9+" : unreadNotificationsCount}
@@ -91,14 +99,20 @@ const Navbar = () => {
 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <button className="flex items-center gap-2 px-3 py-2 rounded-xl border border-border bg-card hover:border-primary/40 transition-colors">
+                  <button
+                    aria-label="Account menu"
+                    aria-current={isProfileActive ? "page" : undefined}
+                    className={`flex h-10 items-center gap-2 rounded-xl border px-3 transition-colors hover:border-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                      isProfileActive ? "border-primary/40 text-primary" : "border-border bg-card text-foreground"
+                    }`}
+                  >
                     <Avatar className="w-7 h-7">
                       <AvatarImage src={profile?.avatar_url ?? undefined} />
                       <AvatarFallback className="bg-gradient-gold text-primary-foreground text-xs font-bold">
                         {profile?.full_name?.slice(0, 1).toUpperCase() || fallbackName}
                       </AvatarFallback>
                     </Avatar>
-                    <span className="text-sm font-medium max-w-[100px] truncate">{displayName}</span>
+                    <span className="max-w-[100px] truncate text-sm font-medium">{displayName}</span>
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-48">
@@ -133,9 +147,50 @@ const Navbar = () => {
         </div>
 
         {/* Mobile hamburger */}
-        <button className="md:hidden text-foreground p-1" onClick={() => setIsOpen(!isOpen)}>
-          {isOpen ? <X size={24} /> : <Menu size={24} />}
-        </button>
+        <div className="md:hidden flex items-center gap-2">
+          <ThemeToggle />
+          {user && (
+            <>
+              <button
+                type="button"
+                onClick={() => navigate("/notifications")}
+                aria-label={unreadNotificationsCount > 0
+                  ? `Notifications, ${unreadNotificationsCount} unread`
+                  : "Notifications"}
+                aria-current={isNotificationsActive ? "page" : undefined}
+                className={`relative inline-flex h-10 w-10 items-center justify-center rounded-xl border bg-card transition-colors hover:border-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                  isNotificationsActive ? "border-primary/40 text-primary" : "border-border text-muted-foreground"
+                }`}
+              >
+                <Bell className="h-5 w-5" />
+                {unreadNotificationsCount > 0 && (
+                  <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground">
+                    {unreadNotificationsCount > 9 ? "9+" : unreadNotificationsCount}
+                  </span>
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate("/profile")}
+                aria-label="Profile"
+                aria-current={isProfileActive ? "page" : undefined}
+                className={`inline-flex h-10 w-10 items-center justify-center rounded-xl border bg-card transition-colors hover:border-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                  isProfileActive ? "border-primary/40 text-primary" : "border-border text-muted-foreground"
+                }`}
+              >
+                <User className="h-5 w-5" />
+              </button>
+            </>
+          )}
+          <button
+            type="button"
+            aria-label={isOpen ? "Close navigation menu" : "Open navigation menu"}
+            className="text-foreground p-1"
+            onClick={() => setIsOpen(!isOpen)}
+          >
+            {isOpen ? <X size={24} /> : <Menu size={24} />}
+          </button>
+        </div>
       </div>
 
       {/* Mobile menu */}
@@ -156,26 +211,10 @@ const Navbar = () => {
                 </button>
               ))}
 
-              {user && (
-                <button
-                  type="button"
-                  onClick={() => { setIsOpen(false); navigate("/notifications"); }}
-                  className="relative text-left py-3 px-3 rounded-lg text-sm transition-colors flex items-center justify-between text-muted-foreground hover:bg-secondary hover:text-foreground"
-                >
-                  <span className="flex items-center gap-2"><Bell className="w-4 h-4" /> Notifications</span>
-                  {unreadNotificationsCount > 0 && (
-                    <span className="bg-primary text-primary-foreground text-[9px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
-                      {unreadNotificationsCount > 9 ? "9+" : unreadNotificationsCount}
-                    </span>
-                  )}
-                </button>
-              )}
-
               <div className="border-t border-border mt-2 pt-3">
                 {user ? (
                   <>
                     <p className="text-xs text-muted-foreground px-3 mb-2">{user.email}</p>
-                    <Button variant="outline" className="w-full justify-start mb-2" onClick={() => { setIsOpen(false); navigate("/profile"); }}><User className="w-4 h-4 mr-2" />My Profile</Button>
                     <Button className="w-full bg-gradient-gold text-primary-foreground font-semibold" onClick={handleSignOut}><LogOut className="w-4 h-4 mr-2" />Log Out</Button>
                   </>
                 ) : (

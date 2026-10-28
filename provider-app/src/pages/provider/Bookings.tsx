@@ -26,6 +26,22 @@ import LockedPage from '@/components/provider/LockedPage';
 
 type BookingStatus = 'pending' | 'confirmed' | 'on_the_way' | 'in_progress' | 'completed' | 'cancelled';
 
+const getSeenCompletedBookings = (providerId: string): Set<string> => {
+  const storageKey = `handyfix-seen-completed-bookings:${providerId}`;
+  const savedIds = window.localStorage.getItem(storageKey);
+  if (!savedIds) return new Set();
+  try {
+    const parsed: unknown = JSON.parse(savedIds);
+    return Array.isArray(parsed) && parsed.every(id => typeof id === 'string')
+      ? new Set(parsed)
+      : new Set();
+  } catch (error) {
+    console.error('Unable to read seen completed bookings', error);
+    window.localStorage.removeItem(storageKey);
+    return new Set();
+  }
+};
+
 // ── Provider location mini-map ─────────────────────────────────────────────────
 const ProviderBookingMap = ({ bookingId, status, latitude, longitude }: {
   bookingId: string;
@@ -146,6 +162,7 @@ const Bookings = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [bookings, setBookings] = useState<any[]>([]);
+  const [unseenCompletedCount, setUnseenCompletedCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState('pending');
   const [actionLoading, setActionLoading] = useState<string | null>(null);
@@ -201,6 +218,10 @@ const Bookings = () => {
       toast({ title: 'Could not load bookings', description: error.message, variant: 'destructive' });
     } else {
       setBookings(enrichedData);
+      const seenIds = getSeenCompletedBookings(provider.id);
+      setUnseenCompletedCount(
+        enrichedData.filter((booking: any) => booking.status === 'completed' && !seenIds.has(booking.id)).length,
+      );
     }
     setLoading(false);
   }, [provider?.id]);
@@ -356,11 +377,22 @@ const Bookings = () => {
     cancelled: bookings.filter(b => b.status === 'cancelled').length,
   };
 
+  const markCompletedBookingsSeen = () => {
+    if (!provider?.id) return;
+    const storageKey = `handyfix-seen-completed-bookings:${provider.id}`;
+    const seenIds = getSeenCompletedBookings(provider.id);
+    bookings
+      .filter(booking => booking.status === 'completed')
+      .forEach(booking => seenIds.add(booking.id));
+    window.localStorage.setItem(storageKey, JSON.stringify([...seenIds].slice(-1000)));
+    setUnseenCompletedCount(0);
+  };
+
   const tabs = [
     { value: 'pending',   label: 'New',       count: counts.pending   },
     { value: 'confirmed', label: 'Upcoming',  count: counts.confirmed },
     { value: 'active',    label: 'Active',    count: counts.active    },
-    { value: 'completed', label: 'Done',      count: counts.completed },
+    { value: 'completed', label: 'Done',      count: unseenCompletedCount },
     { value: 'cancelled', label: 'Cancelled', count: counts.cancelled },
   ];
 
@@ -371,14 +403,17 @@ const Bookings = () => {
   return (
     <div className="space-y-4 pb-20 md:pb-0">
       {/* Tab bar */}
-      <div className="bg-secondary w-full grid grid-cols-5 gap-1 p-1 rounded-xl">
+      <div className="bg-secondary w-full grid grid-cols-2 min-[420px]:grid-cols-3 sm:grid-cols-5 gap-1 p-1 rounded-xl">
         {tabs.map(t => (
           <button
             key={t.value}
             type="button"
-            onClick={() => setTab(t.value)}
+            onClick={() => {
+              setTab(t.value);
+              if (t.value === 'completed') markCompletedBookingsSeen();
+            }}
             className={cn(
-              'relative text-xs py-2 font-medium rounded-lg transition-colors text-center flex items-center justify-center',
+              'relative min-h-10 px-2 text-xs py-2 font-medium rounded-lg transition-colors text-center flex items-center justify-center',
               tab === t.value
                 ? 'bg-primary text-primary-foreground font-bold shadow-sm'
                 : 'text-muted-foreground hover:text-foreground hover:bg-background/50',
@@ -543,7 +578,7 @@ const Bookings = () => {
                               {(booking.customer_name || 'C')[0].toUpperCase()}
                             </div>
                             <span className="text-sm font-medium text-foreground">
-                              {booking.customer_name || 'Customer'}
+                              {booking.customer_name || '—'}
                             </span>
                           </div>
                           {booking.customer_phone && ['confirmed', 'in_progress'].includes(status) && (

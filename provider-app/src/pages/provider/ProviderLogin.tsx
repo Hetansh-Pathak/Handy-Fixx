@@ -106,7 +106,7 @@ const ProviderLogin: React.FC = () => {
       return;
     }
 
-    // pending_approval: let them in — ProviderRoute will redirect to onboarding
+    // Keep returning providers on the dashboard; locked pages link to onboarding when required.
     toast({ title: `Welcome back, ${providerData.full_name}! 👋`, description: "Let's pick up where you left off." });
     navigate('/provider-panel');
     setLoading(false);

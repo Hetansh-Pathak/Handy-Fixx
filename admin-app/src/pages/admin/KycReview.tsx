@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Card } from '@/components/ui/card';
+import StatusBadge from '@/components/admin/StatusBadge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -15,7 +16,7 @@ import {
   Shield, CheckCircle2, XCircle, Search, Eye, Loader2,
   ChevronLeft, AlertTriangle
 } from 'lucide-react';
-import { cn, maskAadhaar, maskPAN, KYC_REJECTION_REASONS, formatDate } from '@/lib/utils';
+import { cn, maskAadhaar, maskPAN, KYC_REJECTION_REASONS, formatDate, getErrorMessage } from '@/lib/utils';
 
 interface ProviderReviewItem {
   id: string;
@@ -133,7 +134,7 @@ const KycReview: React.FC = () => {
       setSelectedProvider(null);
       fetchProviders();
     } catch (err: unknown) {
-      toast({ title: 'Approval Error', description: err instanceof Error ? err.message : 'Unknown error', variant: 'destructive' });
+      toast({ title: 'Approval Error', description: getErrorMessage(err), variant: 'destructive' });
     } finally {
       setActionLoading(false);
     }
@@ -157,7 +158,7 @@ const KycReview: React.FC = () => {
       setSelectedProvider(null);
       fetchProviders();
     } catch (err: unknown) {
-      toast({ title: 'Rejection Error', description: err instanceof Error ? err.message : 'Unknown error', variant: 'destructive' });
+      toast({ title: 'Rejection Error', description: getErrorMessage(err), variant: 'destructive' });
     } finally {
       setActionLoading(false);
     }
@@ -228,13 +229,7 @@ const KycReview: React.FC = () => {
                       Submitted: {p.kyc_submitted_at ? formatDate(p.kyc_submitted_at) : 'N/A'}
                     </p>
                   </div>
-                  <Badge className={cn('text-[10px]',
-                    p.kyc_status === 'approved' ? 'bg-success/20 text-success' :
-                    p.kyc_status === 'rejected' ? 'bg-destructive/20 text-destructive' :
-                    'bg-blue-500/20 text-blue-500'
-                  )}>
-                    {p.kyc_status}
-                  </Badge>
+                  <StatusBadge status={p.kyc_status} prefix="KYC" />
                 </div>
               </Card>
             ))
@@ -257,7 +252,7 @@ const KycReview: React.FC = () => {
                 </div>
                 <div className="text-right text-xs text-muted-foreground">
                   <p>DOB: <strong>{selectedProvider.date_of_birth ?? 'N/A'}</strong></p>
-                  <p>Exp: <strong>{selectedProvider.experience_years ?? 0} yrs</strong></p>
+                  <p>Exp: <strong>{selectedProvider.experience_years != null ? `${selectedProvider.experience_years} yrs` : '—'}</strong></p>
                 </div>
               </div>
 

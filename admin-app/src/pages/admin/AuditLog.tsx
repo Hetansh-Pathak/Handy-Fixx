@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { cn, formatDateTime, timeAgo, shortId } from '@/lib/utils';
+import { cn, formatDateTime, timeAgo, shortId, getErrorMessage } from '@/lib/utils';
 
 const PAGE_SIZE = 25;
 
@@ -63,7 +63,7 @@ const AuditLog: React.FC = () => {
       setLogs((data ?? []) as unknown as AuditEntry[]);
       setTotal(count ?? 0);
     } catch (err: unknown) {
-      toast({ title: 'Error loading audit logs', description: err instanceof Error ? err.message : 'Unknown error', variant: 'destructive' });
+      toast({ title: 'Error loading audit logs', description: getErrorMessage(err), variant: 'destructive' });
     } finally {
       setLoading(false);
     }
@@ -74,7 +74,7 @@ const AuditLog: React.FC = () => {
   const totalPages = Math.ceil(total / PAGE_SIZE);
 
   return (
-    <div className="space-y-5">
+    <div className="admin-readable space-y-5">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

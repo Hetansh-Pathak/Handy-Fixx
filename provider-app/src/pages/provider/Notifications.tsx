@@ -7,14 +7,14 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { motion } from 'framer-motion';
-import { Bell, Briefcase, Star, DollarSign, XCircle, CheckCheck } from 'lucide-react';
+import { Bell, Briefcase, Star, IndianRupee, XCircle, CheckCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const typeIcons: Record<string, any> = {
   new_booking: Briefcase,
   booking_cancelled: XCircle,
   new_review: Star,
-  payment: DollarSign,
+  payment: IndianRupee,
 };
 
 const Notifications: React.FC = () => {

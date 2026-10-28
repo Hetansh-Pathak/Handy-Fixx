@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./AuthContext";
+import { createRequestTimeoutSignal } from "@/lib/requestTimeout";
 
 
 interface Profile {
@@ -52,34 +53,70 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const fetchProfile = async () => {
     if (!user) { setProfile(null); return; }
-    const { data } = await supabase
-    .from("profiles")
-    .select("id, user_id, full_name, avatar_url, phone, pincode, address, city")
-    .eq("user_id", user.id)
-    .single();
-    setProfile(data as Profile | null);
+    const request = createRequestTimeoutSignal();
+    try {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, user_id, full_name, avatar_url, phone, pincode, address, city")
+        .eq("user_id", user.id)
+        .single()
+        .abortSignal(request.signal);
+      if (error) {
+        console.error("Could not load customer profile:", error);
+        return;
+      }
+      setProfile(data as Profile | null);
+    } catch (error) {
+      console.error("Could not load customer profile:", error);
+    } finally {
+      request.clear();
+    }
   };
 
   const refetchBookingsCount = async () => {
     if (!user) { setUpcomingBookingsCount(0); return; }
     const today = new Date().toISOString().split("T")[0];
-    const { count } = await supabase
-      .from("bookings")
-      .select("*", { count: "exact", head: true })
-      .eq("customer_id", user.id)
-      .in("status", ["pending", "confirmed"])
-      .gte("booking_date", today);
-    setUpcomingBookingsCount(count || 0);
+    const request = createRequestTimeoutSignal();
+    try {
+      const { count, error } = await supabase
+        .from("bookings")
+        .select("id", { count: "exact", head: true })
+        .eq("customer_id", user.id)
+        .in("status", ["pending", "confirmed"])
+        .gte("booking_date", today)
+        .abortSignal(request.signal);
+      if (error) {
+        console.error("Could not load upcoming booking count:", error);
+        return;
+      }
+      setUpcomingBookingsCount(count ?? 0);
+    } catch (error) {
+      console.error("Could not load upcoming booking count:", error);
+    } finally {
+      request.clear();
+    }
   };
 
   const refetchNotificationsCount = async () => {
     if (!user) { setUnreadNotificationsCount(0); return; }
-    const { count } = await supabase
-      .from("customer_notifications")
-      .select("*", { count: "exact", head: true })
-      .eq("user_id", user.id)
-      .eq("is_read", false);
-    setUnreadNotificationsCount(count || 0);
+    const request = createRequestTimeoutSignal();
+    try {
+      const { count, error } = await supabase
+        .from("customer_notifications")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", user.id)
+        .eq("is_read", false)
+        .abortSignal(request.signal);
+      if (error) {
+        console.error("Could not load unread notification count:", error);
+        return;
+      }
+      setUnreadNotificationsCount(count ?? 0);
+    } catch (error) {
+      console.error("Could not load unread notification count:", error);
+    } finally {
+      request.clear();
+    }
   };
 
   useEffect(() => { fetchProfile(); }, [user]);
