@@ -4,6 +4,7 @@ import type { ImageSourcePropType } from "react-native";
 const IMAGES: Record<string, ImageSourcePropType> = {
   "ac-service": require("../../../assets/images/services/ac-service.jpg"),
   "appliance-repair": require("../../../assets/images/services/appliance-repair.jpg"),
+  "home-help": require("../../../assets/images/services/home-help.jpg"),
   carpentry: require("../../../assets/images/services/carpentry.jpg"),
   cleaning: require("../../../assets/images/services/cleaning.jpg"),
   electrical: require("../../../assets/images/services/electrical.jpg"),

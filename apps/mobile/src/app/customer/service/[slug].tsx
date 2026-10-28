@@ -1,4 +1,4 @@
-import { formatDuration, formatInr, formatRating, sortProviders, type ProviderSort } from "@handyfix/shared";
+import { formatDuration, formatInr, formatRating, groupSubItems, isCheckupVisit, sortProviders, type ProviderSort } from "@handyfix/shared";
 import { useQuery } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useMemo, useState } from "react";
@@ -26,6 +26,10 @@ export default function ServiceScreen() {
   const serviceId = service.data?.id;
   const subItems = useQuery({ queryKey: ["sub-items", serviceId], queryFn: () => fetchSubItems(serviceId!), enabled: !!serviceId });
   const subItem: SubItemRow | null = subItems.data?.find((s) => s.id === subId) ?? null;
+  const sections = useMemo(() => groupSubItems(subItems.data ?? []), [subItems.data]);
+  const [section, setSection] = useState<string | null>(null);
+  // The tapped section, else the section of the chosen item, else the first one.
+  const currentSection = sections.find((g) => g.section === section) ?? sections.find((g) => g.items.some((i) => i.id === subId)) ?? sections[0];
 
   // Pros come and go as they open and close the app, so the list refreshes itself.
   const providers = useQuery({
@@ -64,15 +68,37 @@ export default function ServiceScreen() {
       ) : null}
 
       {(subItems.data?.length ?? 0) > 0 ? (
-        <View className="gap-2">
-          <Text className="text-lg font-semibold text-fg">What do you need?</Text>
+        <View className="gap-3">
+          {sections.length > 1 ? (
+            <>
+              <Text className="text-lg font-semibold text-fg">Select a service</Text>
+              <View className="flex-row flex-wrap gap-2">
+                {sections.map((g) => {
+                  const selected = g.section === currentSection?.section;
+                  return (
+                    <Pressable key={g.section} accessibilityRole="tab" accessibilityState={{ selected }} accessibilityLabel={`${g.section}, ${g.items.length} options`}
+                      onPress={() => setSection(g.section)}
+                      className={`w-[31%] items-center gap-1 rounded-2xl border-2 px-1 py-3 ${selected ? "border-brand bg-brand-soft" : "border-line bg-card"}`}>
+                      <Text className="text-2xl">{g.items[0]?.icon ?? "🛠️"}</Text>
+                      <Text className="text-center text-xs font-semibold text-fg" numberOfLines={2}>{g.section}</Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </>
+          ) : null}
+          <Text className="text-lg font-semibold text-fg">{sections.length > 1 && currentSection ? currentSection.section : "What do you need?"}</Text>
           <View className="flex-row flex-wrap justify-between gap-y-3">
-            {subItems.data!.map((s) => {
+            {(currentSection?.items ?? []).map((s) => {
               const selected = s.id === subId;
+              const visit = isCheckupVisit(s.name);
               return (
                 <Pressable key={s.id} accessibilityRole="radio" accessibilityState={{ selected }} onPress={() => setSubId(selected ? null : s.id)}
-                  className={`w-[48%] gap-1 rounded-3xl border-2 p-4 ${selected ? "border-brand bg-brand-soft" : "border-line bg-card"}`}>
-                  <Text className="text-3xl">{s.icon ?? "🛠️"}</Text>
+                  className={`w-[48%] gap-1 rounded-3xl border-2 p-4 ${selected ? "border-brand bg-brand-soft" : visit ? "border-dashed border-brand/50 bg-card" : "border-line bg-card"}`}>
+                  <View className="flex-row items-start justify-between">
+                    <Text className="text-3xl">{s.icon ?? "🛠️"}</Text>
+                    {visit ? <Text className="rounded-full bg-brand/15 px-2 py-0.5 text-[10px] font-bold uppercase text-brand">Visit</Text> : null}
+                  </View>
                   <Text className="mt-1 text-base font-semibold text-fg">{s.name}</Text>
                   {s.description ? <Text className="text-xs leading-4 text-muted" numberOfLines={2}>{s.description}</Text> : null}
                   <Text className="mt-1 text-xs text-muted">Starts at</Text>

@@ -21,18 +21,19 @@ export async function fetchServiceBySlug(slug: string): Promise<ServiceRow | nul
 }
 
 /** Sub-items ("Tap repair", "Pipe leak") with catalogue prices. The table is optional: no table means no sub-items. */
+const SUB_ITEM_COLUMNS = "id, service_id, name, description, icon, base_price, duration_minutes";
+
 export async function fetchSubItems(serviceId: string): Promise<SubItemRow[]> {
-  const { data, error } = await getSupabase()
-    .from("service_sub_items")
-    .select("id, service_id, name, description, icon, base_price, duration_minutes")
-    .eq("service_id", serviceId)
-    .eq("is_active", true)
-    .order("sort_order");
+  const query = (columns: string) =>
+    getSupabase().from("service_sub_items").select(columns).eq("service_id", serviceId).eq("is_active", true).order("sort_order");
+  let { data, error } = await query(`${SUB_ITEM_COLUMNS}, section`);
+  // The section column comes with proposal 20261106000000; until then read without it (one flat list).
+  if (error && (error.code === "42703" || /section/i.test(error.message))) ({ data, error } = await query(SUB_ITEM_COLUMNS));
   if (error) {
     if (error.code === "42P01" || error.code === "PGRST205") return [];
     fail(error);
   }
-  return ((data ?? []) as SubItemRow[]).filter((s) => Number(s.base_price) > 0).map((s) => ({ ...s, base_price: Number(s.base_price) }));
+  return ((data ?? []) as unknown as SubItemRow[]).filter((s) => Number(s.base_price) > 0).map((s) => ({ ...s, base_price: Number(s.base_price) }));
 }
 
 type ProviderViewRow = {

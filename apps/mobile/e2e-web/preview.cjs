@@ -4,6 +4,14 @@ const path = require("path");
 const { installMock, installRealtime, db, BASE } = require("./mock-supabase.cjs");
 
 const variant = process.argv[2] || "customer";
+
+// Preview the sectioned catalogue (proposal 20261106000000): sections plus a check-up visit. The test suites keep the
+// unsectioned rows, which is how the app behaves before the column exists.
+for (const s of db.subItems) s.section = s.name === "Tap repair" ? "Tap & mixer" : "Pipes & leaks";
+db.subItems.push(
+  { id: "si-tap-visit", service_id: "s-plumb", name: "Tap & Mixer Check-up Visit", description: "Pro checks the problem and quotes", icon: "🔎", base_price: 129, duration_minutes: 30, section: "Tap & mixer" },
+  { id: "si-flush", service_id: "s-plumb", name: "Flush Tank Repair", description: "Running or weak flush fixed", icon: "🚽", base_price: 149, duration_minutes: 30, section: "Toilet" },
+);
 const OUT = path.join(__dirname, "shots", "preview", variant);
 require("fs").mkdirSync(OUT, { recursive: true });
 
@@ -61,8 +69,9 @@ require("fs").mkdirSync(OUT, { recursive: true });
     db.verified.add(db.users["customer@example.com"].id);
     await page.goto(`${BASE}/customer`, { waitUntil: "networkidle" });
     await L("Plumbing").click();
-    await T("What do you need?", false).waitFor({ state: "visible", timeout: 20000 });
+    await T("Select a service", false).waitFor({ state: "visible", timeout: 20000 });
     await shot("05-service");
+    await L("Pipes & leaks, 1 options").click();
     await T("Pipe leak").click();
     await T("Asha Patel", false).waitFor({ state: "visible", timeout: 20000 });
     await shot("06-pros");

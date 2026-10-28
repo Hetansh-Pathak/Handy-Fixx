@@ -27,6 +27,7 @@ export * from "./provider/avatar";
 export * from "./catalog/availability";
 export * from "./catalog/pricing";
 export * from "./catalog/display";
+export * from "./catalog/sections";
 export * from "./geo/distance";
 export * from "./kyc/kyc";
 export * from "./auth/roles";

@@ -10,10 +10,11 @@ import { useArea } from "@/features/customer/area-context";
 import { BannerCarousel } from "@/features/customer/BannerCarousel";
 import { fetchServices } from "@/features/customer/catalog-api";
 import { ServiceGrid } from "@/features/customer/ServiceGrid";
+import { groupServices } from "@/features/customer/service-groups";
 import { colors } from "@/theme/colors";
 
 const ALL = "All";
-const CATEGORY_LABELS: Record<string, string> = { home: "Home", appliance: "Appliances", beauty: "Beauty" };
+const CATEGORY_LABELS: Record<string, string> = { home: "Home", appliance: "Appliances", beauty: "Beauty", help: "Home help" };
 const categoryLabel = (c: string) => CATEGORY_LABELS[c] ?? c.charAt(0).toUpperCase() + c.slice(1);
 
 export default function AllServices() {
@@ -73,7 +74,17 @@ export default function AllServices() {
         {services.isError ? <Button label="Try again" variant="secondary" onPress={() => void services.refetch()} /> : null}
         {services.isPending ? <Body muted>Loading services…</Body> : null}
         {services.isSuccess && visible.length === 0 ? <Body muted>No services match “{search}”.</Body> : null}
-        <ServiceGrid services={visible} />
+        {/* With no filter, services sit under headings like "Electrician, Plumber & Carpenter"; a search or category shows one grid. */}
+        {category === ALL && !search.trim() ? (
+          groupServices(visible).map((g) => (
+            <View key={g.title} className="gap-3">
+              <Text className="text-xl font-bold text-fg">{g.title}</Text>
+              <ServiceGrid services={g.services} />
+            </View>
+          ))
+        ) : (
+          <ServiceGrid services={visible} />
+        )}
       </ScrollView>
     </SafeAreaView>
   );

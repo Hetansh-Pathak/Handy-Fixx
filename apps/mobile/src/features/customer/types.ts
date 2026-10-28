@@ -19,6 +19,8 @@ export type SubItemRow = {
   icon: string | null;
   base_price: number;
   duration_minutes: number | null;
+  /** Section inside the service ("Fan", "Toilet" …); null until the sections proposal is applied. */
+  section?: string | null;
 };
 
 /** A pro as shown in the list: the shared ranking shape plus what the card displays. */
