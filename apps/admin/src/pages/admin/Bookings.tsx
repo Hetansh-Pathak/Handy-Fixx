@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { Search, ChevronLeft, ChevronRight, Eye, Loader2, MapPin, User, Shield, RefreshCw, XCircle, UserCheck, Phone, Mail, FileText, Volume2 } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight, Eye, Loader2, MapPin, User, Shield, RefreshCw, XCircle, UserCheck, Phone, FileText, Volume2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -42,7 +42,7 @@ interface Booking {
   updated_at: string;
 
   // Joined fields
-  profiles?: { full_name: string | null; phone: string | null; email: string | null } | null;
+  profiles?: { full_name: string | null; phone: string | null } | null;
   service_providers?: { full_name: string; phone: string | null; rating: number | null; kyc_status: string; status: string } | null;
   services?: { name: string; category: string | null } | null;
 }
@@ -110,7 +110,6 @@ const Bookings: React.FC = () => {
         .from('bookings')
         .select(`
           *,
-          profiles:customer_id (full_name, phone, email),
           service_providers:provider_id (full_name, phone, rating, kyc_status, status),
           services:service_id (name, category)
         `, { count: 'exact' });
@@ -118,7 +117,10 @@ const Bookings: React.FC = () => {
       if (statusFilter !== 'all') query = query.eq('status', statusFilter);
       if (cityFilter !== 'all') query = query.eq('city', cityFilter);
       if (search.trim()) {
-        query = query.or(`id.ilike.%${search}%,address.ilike.%${search}%,customer_name.ilike.%${search}%`);
+        // id is a uuid, so ilike on it errors; match it exactly only when a full uuid is typed
+        const term = search.trim().replace(/[,()]/g, ' ');
+        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(term);
+        query = query.or(`address.ilike.%${term}%,customer_name.ilike.%${term}%${isUuid ? `,id.eq.${term}` : ''}`);
       }
 
       const { data, count, error } = await query
@@ -126,7 +128,22 @@ const Bookings: React.FC = () => {
         .range(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE - 1);
 
       if (error) throw error;
-      setBookings((data ?? []) as unknown as Booking[]);
+      // bookings.customer_id references auth.users, not profiles, so it can't be
+      // embedded; look the customer up by profiles.user_id instead.
+      const rows = (data ?? []) as unknown as Booking[];
+      const customerIds = [...new Set(rows.map((b) => b.customer_id).filter((id): id is string => !!id))];
+      if (customerIds.length) {
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('user_id, full_name, phone')
+          .in('user_id', customerIds);
+        const byUser = new Map((profiles ?? []).map((p) => [p.user_id, p]));
+        rows.forEach((b) => {
+          const p = b.customer_id ? byUser.get(b.customer_id) : undefined;
+          b.profiles = p ? { full_name: p.full_name, phone: p.phone } : null;
+        });
+      }
+      setBookings(rows);
       setTotal(count ?? 0);
       setRealtimeAlert(false);
     } catch (err: unknown) {
@@ -490,11 +507,7 @@ const Bookings: React.FC = () => {
                         <User className="h-3.5 w-3.5 text-primary" /> Customer Info
                       </p>
                       <p className="font-semibold text-sm">{selectedBooking.customer_name || selectedBooking.profiles?.full_name || 'Customer'}</p>
-                      <p className="text-muted-foreground flex items-center gap-1"><Phone className="h-3 w-3" /> {selectedBooking.customer_phone || selectedBooking.profiles?.phone || '—'}</p>
-                      {selectedBooking.profiles?.email && (
-                        <p className="text-muted-foreground flex items-center gap-1"><Mail className="h-3 w-3" /> {selectedBooking.profiles.email}</p>
-                      )}
-                    </div>
+                      <p className="text-muted-foreground flex items-center gap-1"><Phone className="h-3 w-3" /> {selectedBooking.customer_phone || selectedBooking.profiles?.phone || '—'}</p>                    </div>
 
                     {/* Provider */}
                     <div className="p-3.5 rounded-xl bg-secondary/40 border border-border space-y-2">

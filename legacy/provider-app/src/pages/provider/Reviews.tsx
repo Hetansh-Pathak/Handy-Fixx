@@ -16,12 +16,24 @@ const Reviews: React.FC = () => {
 
   const fetchReviews = useCallback(async () => {
     if (!provider) return;
+    // reviews.customer_id references auth.users, not profiles, so the customer
+    // name can't be embedded; look it up by profiles.user_id instead.
     const { data } = await supabase
       .from('reviews')
-      .select('*, bookings(services(name)), profiles!reviews_customer_id_fkey(full_name)')
+      .select('*, bookings(services(name))')
       .eq('provider_id', provider.id)
       .order('created_at', { ascending: false });
-    setReviews(data || []);
+    const rows = data || [];
+    const customerIds = [...new Set(rows.map((r) => r.customer_id).filter((id): id is string => !!id))];
+    let names: Record<string, string | null> = {};
+    if (customerIds.length) {
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('user_id, full_name')
+        .in('user_id', customerIds);
+      names = Object.fromEntries((profiles || []).map((p) => [p.user_id, p.full_name]));
+    }
+    setReviews(rows.map((r) => ({ ...r, profiles: { full_name: names[r.customer_id] ?? null } })));
   }, [provider]);
 
   useEffect(() => { fetchReviews(); }, [fetchReviews]);

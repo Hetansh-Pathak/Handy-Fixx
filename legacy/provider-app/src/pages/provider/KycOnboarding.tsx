@@ -305,6 +305,18 @@ const KycOnboarding: React.FC = () => {
         });
 
       if (kycErr) {
+        // aadhaar_hash is UNIQUE: this Aadhaar is already registered to another provider account
+        if (kycErr.code === '23505' && kycErr.message.includes('aadhaar_hash')) {
+          toast({
+            title: 'Aadhaar Already Registered',
+            description: 'This Aadhaar number is already linked to another provider account. Please enter your own Aadhaar number, or contact support if you think this is a mistake.',
+            variant: 'destructive',
+          });
+          setAadhaarNumber('');
+          setStep(3);
+          setSaving(false);
+          return false;
+        }
         if (kycErr.message.includes('relation') || kycErr.message.includes('table') || kycErr.message.includes('schema cache')) {
           toast({
             title: '⚠️ Database Migration Required',
