@@ -121,7 +121,7 @@ export async function updateEta(bookingId: string, providerId: string, minutes: 
 
 // ─── wallet screen ───────────────────────────────────────────────────────────
 
-export type PayoutRow = { id: string; amount: number | string; status: string; created_at: string };
+export type PayoutRow = { id: string; amount: number | string; status: string; requested_at: string };
 
 /** Ledger rows are readable by their own provider (RLS `wallet_tx_provider_read`). */
 export async function fetchLedger(providerId: string, limit = 40): Promise<LedgerEntry[]> {
@@ -134,8 +134,8 @@ export async function fetchLedger(providerId: string, limit = 40): Promise<Ledge
 
 export async function fetchPayouts(providerId: string): Promise<PayoutRow[]> {
   const { data, error } = await getSupabase()
-    .from("payout_requests").select("id, amount, status, created_at")
-    .eq("provider_id", providerId).order("created_at", { ascending: false }).limit(10);
+    .from("payout_requests").select("id, amount, status, requested_at")
+    .eq("provider_id", providerId).order("requested_at", { ascending: false }).limit(10);
   if (error) throw readable(error);
   return (data ?? []) as PayoutRow[];
 }
