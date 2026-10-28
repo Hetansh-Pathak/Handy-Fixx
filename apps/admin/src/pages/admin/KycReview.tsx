@@ -336,7 +336,7 @@ const KycReview: React.FC = () => {
                       <Button
                         disabled={actionLoading || !allChecklistDone}
                         onClick={handleApprove}
-                        className="flex-1 bg-success hover:bg-success/90 text-white font-bold text-xs py-5"
+                        className="flex-1 bg-success hover:bg-success/90 text-success-foreground font-bold text-xs py-5"
                       >
                         {actionLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4 mr-2" />}
                         Approve & Verify

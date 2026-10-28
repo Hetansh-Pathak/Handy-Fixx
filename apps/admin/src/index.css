@@ -5,39 +5,85 @@
 @tailwind utilities;
 
 @layer base {
+  /* apnabanda design (owner decision 2026-10-29), same tokens as apps/mobile src/theme/palettes.ts.
+     Light = "Blue + White". */
   :root {
-    --background: 38 44% 96%;
-    --foreground: 0 0% 11%;
+    --background: 220 100% 98%;          /* #F3F7FF */
+    --foreground: 220 68% 14%;           /* #0B1B3A */
     --card: 0 0% 100%;
-    --card-foreground: 0 0% 11%;
+    --card-foreground: 220 68% 14%;
     --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 11%;
-    --primary: 22 61% 47%;
+    --popover-foreground: 220 68% 14%;
+    --primary: 224 100% 56%;             /* #1F5BFF */
     --primary-foreground: 0 0% 100%;
-    --secondary: 40 32% 91%;
-    --secondary-foreground: 0 0% 11%;
-    --muted: 40 32% 91%;
-    --muted-foreground: 41 10% 33%;
-    --accent: 25 78% 93%;
-    --accent-foreground: 22 61% 47%;
-    --destructive: 0 72% 51%;
+    --secondary: 220 82% 96%;            /* field #EEF3FD */
+    --secondary-foreground: 220 68% 14%;
+    --muted: 220 82% 96%;
+    --muted-foreground: 219 21% 43%;     /* #566684 */
+    --accent: 221 100% 95%;              /* tint #E6EEFF */
+    --accent-foreground: 224 79% 43%;    /* #1745C7 */
+    --destructive: 357 67% 45%;          /* #C0262D */
     --destructive-foreground: 0 0% 100%;
-    --success: 142 71% 45%;
+    --success: 159 85% 26%;              /* #0A7A53 */
     --success-foreground: 0 0% 100%;
-    --warning: 38 92% 50%;
-    --warning-foreground: 0 0% 11%;
-    --border: 40 32% 89%;
-    --input: 40 32% 89%;
-    --ring: 22 61% 47%;
-    --radius: 0.75rem;
+    --warning: 43 100% 51%;              /* hard-hat amber #FFB703 */
+    --warning-foreground: 41 100% 5%;    /* #1A1100 */
+    --border: 221 61% 93%;               /* #E1E8F7 */
+    --input: 221 61% 93%;
+    --ring: 224 100% 56%;
+    --radius: 0.875rem;                  /* 14 px */
     --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 0 0% 11%;
-    --sidebar-primary: 22 61% 47%;
+    --sidebar-foreground: 220 68% 14%;
+    --sidebar-primary: 224 100% 56%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 25 78% 93%;
-    --sidebar-accent-foreground: 22 61% 47%;
-    --sidebar-border: 40 32% 89%;
-    --sidebar-ring: 22 61% 47%;
+    --sidebar-accent: 221 100% 95%;
+    --sidebar-accent-foreground: 224 79% 43%;
+    --sidebar-border: 221 61% 93%;
+    --sidebar-ring: 224 100% 56%;
+    --glow-blue: hsl(224 100% 56% / 0.10);
+    --glow-amber: hsl(43 100% 51% / 0.07);
+    --gradient-from: #3B82F6;           /* white text on this pair passes contrast */
+    --gradient-to: #1D4ED8;
+  }
+
+  /* Dark = "Black + Blur" (the hero theme). The app's see-through colours are given here as their solid
+     equivalent over the canvas, so shadcn's opacity modifiers (bg-card/80 ...) keep working. */
+  .dark {
+    --background: 225 44% 4%;            /* #05070D */
+    --foreground: 223 100% 98%;          /* #F4F7FF */
+    --card: 225 15% 10%;                 /* white 7% over the canvas */
+    --card-foreground: 223 100% 98%;
+    --popover: 224 17% 13%;
+    --popover-foreground: 223 100% 98%;
+    --primary: 220 100% 68%;             /* #5B93FF */
+    --primary-foreground: 213 77% 7%;    /* #04101F: white fails contrast on this blue */
+    --secondary: 225 16% 13%;
+    --secondary-foreground: 223 100% 98%;
+    --muted: 225 16% 13%;
+    --muted-foreground: 221 26% 73%;     /* #A7B3CC */
+    --accent: 222 47% 14%;               /* blue tint 16% */
+    --accent-foreground: 219 100% 83%;   /* #A8C6FF */
+    --destructive: 357 100% 77%;         /* #FF8A8F */
+    --destructive-foreground: 213 77% 7%;
+    --success: 154 71% 62%;              /* #5BE3A8 */
+    --success-foreground: 213 77% 7%;
+    --warning: 42 100% 60%;              /* #FFC233 */
+    --warning-foreground: 41 100% 5%;
+    --border: 225 12% 18%;               /* white 14% */
+    --input: 225 12% 18%;
+    --ring: 220 100% 68%;
+    --sidebar-background: 227 39% 6%;
+    --sidebar-foreground: 223 100% 98%;
+    --sidebar-primary: 220 100% 68%;
+    --sidebar-primary-foreground: 213 77% 7%;
+    --sidebar-accent: 222 47% 14%;
+    --sidebar-accent-foreground: 219 100% 83%;
+    --sidebar-border: 225 12% 18%;
+    --sidebar-ring: 220 100% 68%;
+    --glow-blue: hsl(225 100% 62% / 0.32);
+    --glow-amber: hsl(43 100% 51% / 0.18);
+    --gradient-from: #7AA8FF;           /* dark (#04101F) text on this pair passes contrast */
+    --gradient-to: #4F86F7;
   }
 }
 
@@ -46,6 +92,11 @@
   body {
     @apply bg-background text-foreground font-sans;
     font-family: 'Plus Jakarta Sans', sans-serif;
+    /* Two soft glows behind every page: blue top-left, amber lower-right (stronger in Dark). Never animated. */
+    background-image:
+      radial-gradient(60rem 40rem at 0% 0%, var(--glow-blue), transparent 70%),
+      radial-gradient(50rem 36rem at 100% 100%, var(--glow-amber), transparent 70%);
+    background-attachment: fixed;
   }
 }
 
@@ -53,17 +104,18 @@
   .glass-card {
     @apply bg-card/80 backdrop-blur-xl border border-border/50 rounded-xl shadow-lg;
   }
+  /* Old "gold" class names kept so pages need no change; they are the apnabanda blue now. */
   .gold-gradient {
-    background: linear-gradient(135deg, hsl(22 61% 47%), hsl(22 61% 42%), hsl(22 61% 55%));
+    background: linear-gradient(135deg, var(--gradient-from), var(--gradient-to));
   }
   .gold-text {
-    background: linear-gradient(135deg, hsl(22 61% 47%), hsl(22 61% 42%));
+    background: linear-gradient(135deg, var(--gradient-from), var(--gradient-to));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
   }
   .shadow-gold {
-    box-shadow: 0 0 30px -5px hsl(22 61% 47% / 0.3);
+    box-shadow: 0 0 30px -5px hsl(var(--primary) / 0.3);
   }
   .glass-input {
     @apply bg-secondary/80 border-border/50 focus:border-primary/50 focus:ring-1 focus:ring-primary/30 transition-all;

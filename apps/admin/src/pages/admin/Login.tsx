@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { useAdminAuth } from '@/contexts/AdminAuthContext';
+import { AdminLogo, ThemeSwitch } from '@/components/admin/Brand';
 
 const Login: React.FC = () => {
   const { toast } = useToast();
@@ -59,7 +60,8 @@ const Login: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+    <div className="relative min-h-screen flex items-center justify-center p-4">
+      <div className="absolute right-4 top-4"><ThemeSwitch /></div>
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -67,14 +69,14 @@ const Login: React.FC = () => {
         className="w-full max-w-md"
       >
         {/* Header card */}
-        <div className="glass-card p-8 space-y-6">
+        <div className="glass-card rounded-[28px] p-8 space-y-6">
           {/* Logo + branding */}
           <div className="text-center space-y-3">
-            <div className="mx-auto w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center shadow-gold p-2">
-              <img src="/logo.png" alt="HandyFix" className="w-12 h-12 object-contain" />
+            <div className="flex justify-center">
+              <AdminLogo size={44} />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-foreground">HandyFix Admin</h1>
+              <h1 className="text-2xl font-extrabold tracking-tight text-foreground">Admin panel</h1>
               <p className="text-sm text-muted-foreground mt-1">
                 Secure operations panel — authorised personnel only
               </p>
