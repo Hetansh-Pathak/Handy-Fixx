@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import Constants from "expo-constants";
 import { useRouter } from "expo-router";
 import {
-  Briefcase, Camera, ChevronRight, CircleHelp, Gift, IdCard, Landmark, LogOut, MapPin, ShoppingBag, Wallet, Wrench,
+  Bell, Briefcase, Info, Trash2, CalendarClock, Camera, ChevronRight, CircleHelp, Gift, IdCard, Landmark, LogOut, MapPin, ShoppingBag, Star, Wallet, Wrench,
 } from "lucide-react-native";
 import { Linking, Pressable, ScrollView, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -107,19 +107,23 @@ export default function ProviderProfile() {
         <MenuGroup>
           <MenuRow icon={MapPin} label="Work areas" detail={list(areas, "Add the cities or pincodes you cover")} onPress={edit} />
           <MenuRow icon={Wrench} label="Services I offer" detail={list(serviceNames, "Pick the services you do")} onPress={edit} />
+          <MenuRow icon={CalendarClock} label="Working hours" detail="When customers can book you" onPress={() => router.push("/provider/schedule")} />
           <MenuRow icon={Briefcase} label="My jobs" onPress={() => router.push("/provider/jobs")} />
+          <MenuRow icon={Star} label="My reviews" detail={rating && rating > 0 ? `${formatRating(rating)}★ from customers` : "What customers say about you"} onPress={() => router.push("/provider/reviews")} />
         </MenuGroup>
 
         <Text className="text-sm font-semibold uppercase tracking-wider text-muted">Money</Text>
         <MenuGroup>
           <MenuRow icon={Wallet} label="Wallet & earnings" detail="Top up, fees and withdrawals" onPress={() => router.push("/provider/wallet")} />
-          <MenuRow icon={Landmark} label="Payout details" detail={payout || "Add UPI or bank to withdraw"} onPress={edit} />
+          <MenuRow icon={Landmark} label="Payout details" detail={payout || "Add UPI or bank to withdraw"} onPress={() => router.push("/provider/wallet")} />
         </MenuGroup>
 
         <Text className="text-sm font-semibold uppercase tracking-wider text-muted">Account</Text>
         <MenuGroup>
-          <MenuRow icon={IdCard} label="Identity check" detail={KYC_LABEL[kyc] ?? kyc} onPress={() => router.push("/provider/help")} />
+          <MenuRow icon={IdCard} label="Identity check" detail={KYC_LABEL[kyc] ?? kyc} onPress={() => router.push("/provider/kyc")} />
+          <MenuRow icon={Bell} label="Notifications" onPress={() => router.push("/provider/notifications")} />
           <MenuRow icon={CircleHelp} label="Help & support" detail="Fees, requests and payouts" onPress={() => router.push("/provider/help")} />
+          <MenuRow icon={Info} label="About HandyFix" onPress={() => router.push("/provider/about")} />
           {env.customerAppUrl ? (
             <MenuRow icon={ShoppingBag} label="Book a service for yourself" detail="Get the HandyFix app" onPress={() => void Linking.openURL(env.customerAppUrl)} />
           ) : null}
@@ -127,6 +131,7 @@ export default function ProviderProfile() {
 
         <MenuGroup>
           <MenuRow icon={LogOut} label="Sign out" danger onPress={() => void signOut()} />
+          <MenuRow icon={Trash2} label="Delete account" danger onPress={() => router.push("/provider/delete-account")} />
         </MenuGroup>
 
         <Text className="text-center text-xs text-muted">{email ? `${email} · ` : ""}HandyFix Pro {Constants.expoConfig?.version ?? ""}</Text>

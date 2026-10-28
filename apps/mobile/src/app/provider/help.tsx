@@ -1,12 +1,13 @@
 import { FEE_SLAB_TABLE, formatInr, LAUNCH_PERIOD } from "@handyfix/shared";
 import { useRouter } from "expo-router";
-import { ChevronDown, ChevronUp, Mail } from "lucide-react-native";
+import { ChevronDown, ChevronUp, FileText, Mail, Phone } from "lucide-react-native";
 import { useState } from "react";
 import { Linking, Pressable, View } from "react-native";
 import { MenuGroup, MenuRow } from "@/components/menu";
 import { Text } from "@/components/text";
 import { Body, Screen, ScreenHeader } from "@/components/ui";
 import { useSession } from "@/features/auth/session-provider";
+import { TermsSheet } from "@/features/kyc/components";
 import { env } from "@/lib/env";
 import { colors } from "@/theme/colors";
 
@@ -20,7 +21,7 @@ const FAQ = [
   { q: "How do customers pay me?", a: "Directly, by UPI or cash, after the job. The price is locked at booking and only grows if the customer approves extra work." },
   { q: "Why am I not getting requests?", a: "You must be approved, online, and have the app open. Check that your work areas and services are filled in. Closing the app hides you from customers." },
   { q: "How do I finish a job?", a: "Ask the customer for the 4-digit completion code shown in their app and enter it on the job screen." },
-  { q: "How do I top up or withdraw?", a: "Top up from the Wallet tab. To withdraw, your identity check must be approved and your UPI or bank details saved in your profile." },
+  { q: "How do I top up or withdraw?", a: "Top up from the Wallet tab. To withdraw, your identity check must be approved and your UPI or bank details saved under Payout details on the Wallet tab." },
   { q: "What is the identity check?", a: "HandyFix checks your ID before you can go online. Your name and mobile are matched against it, so contact support to change them after you submit." },
   { q: "What if a customer complains?", a: "Customers can raise a problem within 24 hours of a job (48 hours for repair quality). HandyFix reviews it and decides within 48 hours." },
 ];
@@ -29,6 +30,7 @@ export default function ProviderHelp() {
   const router = useRouter();
   const { provider } = useSession();
   const [open, setOpen] = useState<number | null>(provider?.kyc_status === "approved" ? 0 : FAQ.length - 2);
+  const [terms, setTerms] = useState(false);
   const mail = () => void Linking.openURL(`mailto:${env.supportEmail}?subject=${encodeURIComponent("HandyFix Pro help")}`);
 
   return (
@@ -51,7 +53,10 @@ export default function ProviderHelp() {
       <Text className="text-lg font-semibold text-fg">Still need help?</Text>
       <MenuGroup>
         <MenuRow icon={Mail} label="Email support" detail={`${env.supportEmail} · we reply within 24 hours`} onPress={mail} />
+        {env.supportPhone ? <MenuRow icon={Phone} label="Call support" detail={env.supportPhone} onPress={() => void Linking.openURL(`tel:${env.supportPhone}`)} /> : null}
+        <MenuRow icon={FileText} label="Partner agreement" detail="The terms you accepted" onPress={() => setTerms(true)} />
       </MenuGroup>
+      <TermsSheet visible={terms} onClose={() => setTerms(false)} />
     </Screen>
   );
 }

@@ -22,3 +22,27 @@ export function reviewErrorMessage(error: { code?: string | null; message?: stri
   if (/network request failed|failed to fetch|timeout|offline/i.test(message)) return "No internet connection. Check your internet and try again.";
   return "We could not save your rating right now. Please try again in a little while.";
 }
+
+export type ReviewSummary = { count: number; average: number | null; distribution: Record<1 | 2 | 3 | 4 | 5, number> };
+
+/** The numbers at the top of a pro's reviews list. */
+export function summarizeReviews(rows: readonly { rating: number }[]): ReviewSummary {
+  const distribution: ReviewSummary["distribution"] = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+  let sum = 0;
+  let count = 0;
+  for (const r of rows) {
+    if (!Number.isInteger(r.rating) || r.rating < 1 || r.rating > 5) continue;
+    distribution[r.rating as 1 | 2 | 3 | 4 | 5] += 1;
+    sum += r.rating;
+    count += 1;
+  }
+  return { count, average: count ? Math.round((sum / count) * 10) / 10 : null, distribution };
+}
+
+/** Customers are shown by first name and last initial; an email address is never shown. */
+export function publicReviewerName(name: string | null | undefined): string {
+  const parts = (name ?? "").trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0 || parts[0]!.includes("@")) return "A customer";
+  const cap = (w: string) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
+  return parts.length === 1 ? cap(parts[0]!) : `${cap(parts[0]!)} ${parts[parts.length - 1]!.charAt(0).toUpperCase()}.`;
+}

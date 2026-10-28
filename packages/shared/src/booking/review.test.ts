@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { MAX_REVIEW_COMMENT, canReview, ratingLabel, reviewErrorMessage, validateReview } from "./review";
+import { MAX_REVIEW_COMMENT, canReview, publicReviewerName, ratingLabel, reviewErrorMessage, summarizeReviews, validateReview } from "./review";
 
 describe("validateReview", () => {
   it("accepts 1 to 5 stars with or without a comment", () => {
@@ -48,5 +48,38 @@ describe("reviewErrorMessage", () => {
   });
   it("describes a lost connection", () => {
     expect(reviewErrorMessage({ message: "Network request failed" })).toMatch(/internet/i);
+  });
+});
+
+describe("summarizeReviews", () => {
+  it("is empty for no reviews", () => {
+    expect(summarizeReviews([])).toEqual({ count: 0, average: null, distribution: { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 } });
+  });
+  it("averages to one decimal and counts each star", () => {
+    const s = summarizeReviews([{ rating: 5 }, { rating: 5 }, { rating: 4 }, { rating: 2 }]);
+    expect(s.count).toBe(4);
+    expect(s.average).toBe(4);
+    expect(s.distribution).toEqual({ 5: 2, 4: 1, 3: 0, 2: 1, 1: 0 });
+    expect(summarizeReviews([{ rating: 5 }, { rating: 4 }, { rating: 4 }]).average).toBe(4.3);
+  });
+  it("ignores ratings outside 1 to 5", () => {
+    const s = summarizeReviews([{ rating: 5 }, { rating: 0 }, { rating: 9 }]);
+    expect(s.count).toBe(1);
+    expect(s.average).toBe(5);
+  });
+});
+
+describe("publicReviewerName", () => {
+  it("shows the first name and the last initial only", () => {
+    expect(publicReviewerName("Priya Sharma")).toBe("Priya S.");
+    expect(publicReviewerName("  rahul   kumar  mehta ")).toBe("Rahul M.");
+  });
+  it("keeps a single name and never shows an email", () => {
+    expect(publicReviewerName("Kavya")).toBe("Kavya");
+    expect(publicReviewerName("priya@example.com")).toBe("A customer");
+  });
+  it("falls back for empty values", () => {
+    expect(publicReviewerName(null)).toBe("A customer");
+    expect(publicReviewerName("   ")).toBe("A customer");
   });
 });

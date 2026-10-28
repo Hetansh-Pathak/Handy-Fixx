@@ -37,3 +37,23 @@ export async function submitReview(args: {
   });
   if (error) throw new Error(reviewErrorMessage(error));
 }
+
+export type ProviderReview = {
+  id: string;
+  rating: number;
+  comment: string | null;
+  reviewer_name: string | null;
+  service_name: string | null;
+  created_at: string;
+};
+
+export const providerReviewsKey = (providerId: string) => ["provider-reviews", providerId] as const;
+
+/** What customers said about this pro. Reviews are public to read. */
+export async function fetchProviderReviews(providerId: string): Promise<ProviderReview[]> {
+  const { data, error } = await getSupabase()
+    .from("reviews").select("id, rating, comment, reviewer_name, service_name, created_at")
+    .eq("provider_id", providerId).order("created_at", { ascending: false }).limit(100);
+  if (error) throw new Error("Could not load your reviews. Check your internet and try again.");
+  return (data ?? []) as ProviderReview[];
+}

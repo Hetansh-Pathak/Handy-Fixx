@@ -1,5 +1,5 @@
 import {
-  availableTimes, bookableDates, bookingAddressSchema, bookingScheduleSchema, fieldErrors, formatBookingWhen, formatDateChip, formatDuration,
+  availableTimes, bookableDates, describeDay, restrictToWindows, windowsOn, bookingAddressSchema, bookingScheduleSchema, fieldErrors, formatBookingWhen, formatDateChip, formatDuration,
   formatInr, isValidPincode, newBookingInputSchema, quoteBooking, snapToAvailable, toDateString, toDbTime,
   type BookingSlot,
 } from "@handyfix/shared";
@@ -17,6 +17,7 @@ import { useSession } from "@/features/auth/session-provider";
 import { uploadBookingAttachments, type LocalAttachment, type UploadResult } from "@/features/attachments/api";
 import { AttachmentPicker } from "@/features/attachments/components";
 import { ClockPicker } from "@/features/customer/ClockPicker";
+import { availabilityKey, fetchAvailability } from "@/features/schedule/api";
 import { bookingPauseKey, createBooking, EmailNotVerifiedError, fetchBookingPause } from "@/features/customer/booking-api";
 import { fetchBookingContext } from "@/features/customer/catalog-api";
 import { env } from "@/lib/env";
@@ -36,6 +37,7 @@ export default function BookScreen() {
   });
   const profile = useQuery({ queryKey: ["customer-profile", userId], enabled: !!userId, queryFn: () => loadCustomerProfile(userId!) });
   const verified = useQuery({ queryKey: ["email-verified", userId], enabled: !!userId, queryFn: loadEmailVerified });
+  const hours = useQuery({ queryKey: availabilityKey(providerId ?? ""), enabled: !!providerId, queryFn: () => fetchAvailability(providerId!) });
   const pause = useQuery({ queryKey: bookingPauseKey(userId), enabled: !!userId, queryFn: () => fetchBookingPause(userId!) });
 
   const [step, setStep] = useState<Step>(1);
@@ -56,12 +58,15 @@ export default function BookScreen() {
   const [busy, setBusy] = useState(false);
   const filled = useRef(false);
 
+  /** Start times on a day: the clock rules (8 AM to 8 PM, an hour ahead) cut down to the pro's own working hours. */
+  const slotsFor = (d: Date, at: Date) => restrictToWindows(availableTimes(d, at), windowsOn(hours.data ?? [], d));
+
   // Start on the first day that still has a free slot, and prefill the address from the profile once.
   useEffect(() => {
     if (date) return;
-    const first = dates.find((d) => availableTimes(d, new Date()).length > 0);
+    const first = dates.find((d) => slotsFor(d, new Date()).length > 0);
     if (first) setDate(first);
-  }, [date, dates]);
+  }, [date, dates, hours.data]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (filled.current || !profile.isSuccess) return;
@@ -73,15 +78,15 @@ export default function BookScreen() {
 
   const ctx = context.data;
   const quote = ctx ? quoteBooking(ctx.provider.price) : null;
-  const times = date ? availableTimes(date, now) : [];
+  const times = date ? slotsFor(date, now) : [];
 
   // Keep the clock on a time that is still bookable (a new date, or the clock passing a time while the screen is open).
   useEffect(() => {
     if (!date) return;
-    const options = availableTimes(date, new Date());
+    const options = slotsFor(date, new Date());
     const next = snapToAvailable(slot ?? options[0] ?? "", options);
     if (next !== slot) setSlot(next);
-  }, [date, slot]);
+  }, [date, slot, hours.data]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const back = () => (step > 1 ? setStep((step - 1) as Step) : router.back());
 
@@ -199,10 +204,13 @@ export default function BookScreen() {
           <View className="flex-row flex-wrap gap-2">
             {dates.map((d) => (
               <Chip key={toDateString(d)} label={formatDateChip(d)} selected={!!date && toDateString(d) === toDateString(date)}
-                disabled={availableTimes(d, now).length === 0}
+                disabled={slotsFor(d, now).length === 0}
                 onPress={() => { setDate(d); setErrors({}); }} />
             ))}
           </View>
+          {(hours.data?.length ?? 0) > 0 && date ? (
+            <Text className="text-sm text-muted">{ctx?.provider.fullName.split(" ")[0] ?? "The pro"} works {describeDay(windowsOn(hours.data ?? [], date) ?? [])} on this day.</Text>
+          ) : null}
           <Text className="text-base font-semibold text-fg">Time</Text>
           <ClockPicker options={times} value={slot} onChange={(t) => { setSlot(t); setErrors({}); }} />
           {errors.time || errors.date ? <Text className="text-sm text-danger">{errors.time ?? errors.date}</Text> : null}

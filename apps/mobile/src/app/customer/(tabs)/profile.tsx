@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import Constants from "expo-constants";
 import { useRouter } from "expo-router";
-import { BriefcaseBusiness, CalendarCheck, ChevronRight, CircleHelp, House, LogOut, ShieldCheck, type LucideIcon } from "lucide-react-native";
+import { BriefcaseBusiness, CalendarCheck, ChevronRight, CircleHelp, House, Info, LogOut, ShieldCheck, Trash2, type LucideIcon } from "lucide-react-native";
 import { Linking, Pressable, ScrollView, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MenuGroup, MenuRow } from "@/components/menu";
@@ -69,6 +69,7 @@ function ProfileMenu({ userId }: { userId: string }) {
           <MenuRow icon={House} label="Saved address" detail={address || "Add your home address"} onPress={editProfile} />
           <MenuRow icon={CircleHelp} label="Help & support" onPress={() => router.push("/customer/help")} />
           <MenuRow icon={ShieldCheck} label="Safety" onPress={() => router.push("/customer/safety")} />
+          <MenuRow icon={Info} label="About HandyFix" onPress={() => router.push("/customer/about")} />
         </MenuGroup>
 
         {env.proAppUrl ? (
@@ -79,6 +80,7 @@ function ProfileMenu({ userId }: { userId: string }) {
 
         <MenuGroup>
           <MenuRow icon={LogOut} label="Sign out" danger onPress={() => void signOut()} />
+          <MenuRow icon={Trash2} label="Delete account" danger onPress={() => router.push("/customer/delete-account")} />
         </MenuGroup>
 
         <Text className="text-center text-xs text-muted">HandyFix {Constants.expoConfig?.version ?? ""}</Text>
