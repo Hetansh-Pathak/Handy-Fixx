@@ -58,7 +58,13 @@ export default function BookingStatusScreen() {
     : "waiting";
   const wantsAlternatives = needsAlternatives(outcome) || (outcome === "waiting" && browseOthers);
 
-  const code = useQuery({ queryKey: ["completion-code", id], enabled: !!booking && showsCompletionCode(status), queryFn: () => fetchCompletionCode(id) });
+  const code = useQuery({
+    queryKey: ["completion-code", id],
+    enabled: !!booking && showsCompletionCode(status),
+    queryFn: () => fetchCompletionCode(id),
+    // Keep trying until a code is there (it is created with the booking; a slow trigger or network should not hide it).
+    refetchInterval: (q) => (q.state.data ? false : 10_000),
+  });
   const phone = useQuery({
     queryKey: ["provider-phone", id],
     enabled: !!booking && ["confirmed", "on_the_way", "arrived", "in_progress"].includes(status),
@@ -192,9 +198,17 @@ export default function BookingStatusScreen() {
 
       {showsCompletionCode(status) ? (
         <Card>
-          <Text className="text-sm font-semibold uppercase tracking-widest text-brand">Your code</Text>
+          <Text className="text-sm font-semibold uppercase tracking-widest text-brand">Job completion code (OTP)</Text>
           <Text accessibilityLabel="Completion code" className="text-5xl font-bold tracking-[12px] text-fg">{code.data ?? "····"}</Text>
-          <Text className="text-sm text-muted">Give this code to {pro} only when the work is done and you are happy. It closes the job.</Text>
+          {code.data ? (
+            <Text className="text-sm text-muted">
+              Share this code with {pro} only when the work is done and you are happy. {pro} enters it to close the job. Never share it before.
+            </Text>
+          ) : (
+            <Text className="text-sm text-danger">
+              {code.isError ? "Could not load your code. Check your connection; we keep trying." : "Your code is not ready yet. We keep checking; contact support if it does not appear."}
+            </Text>
+          )}
         </Card>
       ) : null}
 

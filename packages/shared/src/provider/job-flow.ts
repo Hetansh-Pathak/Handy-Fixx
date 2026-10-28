@@ -85,3 +85,28 @@ export function providerStatusLabel(status: BookingStatus): string {
     case "cancelled": return "Cancelled";
   }
 }
+
+/**
+ * Columns a step cannot work without. The live database has a guard trigger (`zz_guard_booking_update`) that refuses
+ * some extra columns from pros ("Providers cannot change these booking fields"); the step itself only needs these.
+ */
+const ESSENTIAL_COLUMNS = ["status", "cancellation_reason", "cancelled_at"] as const;
+
+/** True for the guard trigger's refusal, so the app can retry with fewer columns instead of failing the step. */
+export const isGuardedFieldError = (message: string) => /cannot change (these )?booking fields/i.test(message);
+
+/**
+ * How to apply a patch when the database refuses some columns: first the essential columns together, then a plain
+ * status change, then each extra column on its own (best effort). Tracking extras must never block a job step.
+ */
+export function patchFallbacks(patch: BookingPatch): { essential: BookingPatch[]; extras: BookingPatch[] } {
+  const essential: BookingPatch = {};
+  const extras: BookingPatch[] = [];
+  for (const [key, value] of Object.entries(patch)) {
+    if ((ESSENTIAL_COLUMNS as readonly string[]).includes(key)) essential[key] = value;
+    else extras.push({ [key]: value });
+  }
+  const attempts: BookingPatch[] = [essential];
+  if ("status" in patch && Object.keys(essential).length > 1) attempts.push({ status: patch.status ?? null });
+  return { essential: attempts, extras };
+}

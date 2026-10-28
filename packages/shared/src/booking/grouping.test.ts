@@ -28,8 +28,9 @@ describe("groupBookings", () => {
 });
 
 describe("what the status screen shows", () => {
-  it("shows the code once the pro arrives or starts, never earlier or after", () => {
-    expect(["pending", "confirmed", "on_the_way", "arrived", "in_progress", "completed", "cancelled"].filter(showsCompletionCode)).toEqual(["arrived", "in_progress"]);
+  it("shows the code from acceptance until the job closes, never before or after", () => {
+    expect(["pending", "confirmed", "on_the_way", "arrived", "in_progress", "completed", "cancelled"].filter(showsCompletionCode))
+      .toEqual(["confirmed", "on_the_way", "arrived", "in_progress"]);
   });
   it("shows the live map while the pro travels or is on site", () => {
     expect(["pending", "confirmed", "on_the_way", "arrived", "in_progress", "completed"].filter(showsLiveMap)).toEqual(["on_the_way", "arrived"]);

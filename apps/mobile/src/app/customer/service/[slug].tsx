@@ -2,7 +2,7 @@ import { formatDuration, formatInr, formatRating, sortProviders, type ProviderSo
 import { useQuery } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useMemo, useState } from "react";
-import { Pressable, View } from "react-native";
+import { Image, Pressable, View } from "react-native";
 import { IconTile, ServiceIcon } from "@/components/brand";
 import { Avatar } from "@/components/Avatar";
 import { CitySuggestions } from "@/components/CitySuggestions";
@@ -10,6 +10,7 @@ import { Text } from "@/components/text";
 import { Body, Button, Chip, ErrorBanner, Screen, ScreenHeader, TextField, Title } from "@/components/ui";
 import { useArea } from "@/features/customer/area-context";
 import { fetchServiceBySlug, fetchSubItems, searchProviders } from "@/features/customer/catalog-api";
+import { serviceImage } from "@/features/customer/service-images";
 import type { ProviderListing, SubItemRow } from "@/features/customer/types";
 
 type SortChoice = Extract<ProviderSort, "top_rated" | "cheapest">;
@@ -47,11 +48,16 @@ export default function ServiceScreen() {
       {service.isSuccess && !service.data ? <Body muted>This service is not available.</Body> : null}
       {service.data ? (
         <View className="gap-1">
-          <View className="mb-2 flex-row items-center gap-3"><IconTile size={52}><ServiceIcon name={service.data.icon_name} size={26} /></IconTile></View>
+          {serviceImage(service.data.slug) ? (
+            <Image source={serviceImage(service.data.slug)!} accessibilityIgnoresInvertColors resizeMode="cover"
+              style={{ width: "100%", height: 160, borderRadius: 24, marginBottom: 8 }} />
+          ) : (
+            <View className="mb-2 flex-row items-center gap-3"><IconTile size={52}><ServiceIcon name={service.data.icon_name} size={26} /></IconTile></View>
+          )}
           <Title>{service.data.name}</Title>
           {service.data.description ? <Body muted>{service.data.description}</Body> : null}
           <Text className="text-sm text-brand">
-            {service.data.base_price ? `Starts from ${formatInr(service.data.base_price)}` : ""}
+            {service.data.base_price ? `Starts at ${formatInr(service.data.base_price)}` : ""}
             {service.data.duration_minutes ? `  ·  ~${formatDuration(service.data.duration_minutes)}` : ""}
           </Text>
         </View>
@@ -69,7 +75,8 @@ export default function ServiceScreen() {
                   <Text className="text-3xl">{s.icon ?? "🛠️"}</Text>
                   <Text className="mt-1 text-base font-semibold text-fg">{s.name}</Text>
                   {s.description ? <Text className="text-xs leading-4 text-muted" numberOfLines={2}>{s.description}</Text> : null}
-                  <Text className="mt-1 text-lg font-bold text-brand">{formatInr(s.base_price)}</Text>
+                  <Text className="mt-1 text-xs text-muted">Starts at</Text>
+                  <Text className="text-lg font-bold text-brand">{formatInr(s.base_price)}</Text>
                   {s.duration_minutes ? <Text className="text-xs text-muted">{formatDuration(s.duration_minutes)}</Text> : null}
                 </Pressable>
               );

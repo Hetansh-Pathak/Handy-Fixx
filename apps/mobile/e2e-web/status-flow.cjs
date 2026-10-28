@@ -81,7 +81,8 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
   // ── 2. waiting, then accepted over Realtime ──────────────────────────────────
   await waitBody("Waiting for Asha");
-  check("while waiting, the customer sees the 30 s countdown", /Asha has \d+ seconds to accept/i.test(await body()));
+  check("while waiting, the customer sees the request was sent (no countdown) and can choose another pro",
+    (await has("Request sent to Asha")) && (await has("Choose another pro instead")) && !/seconds to accept/i.test(await body()));
   await sleep(1000); // realtime channel joins
   b1.status = "confirmed";
   const t0 = Date.now();
@@ -90,7 +91,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   check("acceptance reaches the customer over Realtime (no waiting for the 8 s poll)", Date.now() - t0 < 6000, `${Date.now() - t0} ms`);
   await waitBody("Call Asha", 6000).catch(() => undefined);
   check("after acceptance the pro's number can be called and the contact note changes", (await has("Call Asha")) && (await has("shared only for this booking")));
-  check("the code is not shown yet", !(await has("Your code")));
+  check("the completion code (OTP) is shown from acceptance", await has("Job completion code"));
   await shot("41-accepted");
 
   // ── 3. on the way: ETA, distance, live position, stale position ──────────────
@@ -115,7 +116,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   // ── 4. in progress: the code card ────────────────────────────────────────────
   b1.status = "in_progress";
   pushBookingChange(b1, "UPDATE");
-  await waitBody("Your code", 8000);
+  await waitBody("Job completion code", 8000);
   await page.waitForFunction(() => document.querySelector('[aria-label="Completion code"]')?.textContent?.trim() === "4321", null, { timeout: 8000 }).catch(() => undefined);
   const codeText = await L("Completion code").innerText();
   check("once the job starts the customer sees the 4-digit code with a warning to share it only when happy", codeText.trim() === "4321" && (await has("only when the work is done and you are happy")));
@@ -126,17 +127,19 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   b1.status = "completed";
   pushBookingChange(b1, "UPDATE");
   await waitBody("All done. Pay Asha ₹349 directly by UPI or cash", 8000);
-  check("when completed: pay the pro directly, and no cancel button", !(await has("Cancel booking")) && !(await has("Your code")));
+  check("when completed: pay the pro directly, and no cancel button", !(await has("Cancel booking")) && !(await has("Job completion code")));
   await shot("44-done");
 
-  // ── 6. the pro did not answer: next best pros, one tap to rebook ─────────────
-  const b2 = seed({ created_at: new Date(Date.now() - 60000).toISOString() });
+  // ── 6. no countdown: the customer may choose another pro; one tap to rebook ──
+  const b2 = seed({ created_at: new Date(Date.now() - 10 * 60000).toISOString() });
   await open(b2);
-  await waitBody("Asha did not answer");
+  await waitBody("Request sent to Asha");
+  check("an unanswered request keeps waiting (no 30 s timeout)", !(await has("Asha did not answer")) && !(await has("Next best pros")));
+  await T("Choose another pro instead").click();
   await waitBody("Next best pros for the same time");
   await waitBody("Ravi Shah");
   const alt = await body();
-  check("after 30 s of silence the customer is offered other pros: online, same area, similar price",
+  check("choosing another pro offers pros who are online, in the same area, at a similar price",
     alt.includes("Ravi Shah") && !alt.includes("Surat Suresh") && !alt.includes("Offline Oli") && !alt.includes("Stale Sam"));
   check("the pro who did not answer is not offered again", (alt.match(/Asha Patel/g) || []).length <= 1); // appears once in the details card
   check("alternatives show their own price", alt.includes("₹279"));
@@ -149,6 +152,14 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     db.storedBookings.length === before + 1 && rebooked.provider_id === "p-ravi" && rebooked.booking_time === "18:00:00" && rebooked.address === "12 MG Road" &&
     rebooked.special_instructions === "Kitchen tap leaks" && rebooked.provider_amount === 279 && rebooked.platform_fee === 0 && rebooked.status === "pending");
   check("the unanswered request is cancelled", db.storedBookings.find((r) => r.id === b2.id).status === "cancelled");
+
+  // ── 6b. the booked time passed without an answer: alternatives are offered ───
+  const yesterday = new Date(Date.now() - 86400000);
+  const ymd = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, "0")}-${String(yesterday.getDate()).padStart(2, "0")}`;
+  const bPast = seed({ booking_date: ymd });
+  await open(bPast);
+  await waitBody("Asha did not answer");
+  check("a request whose time has passed offers the next best pros", await has("Next best pros for the same time"));
 
   // ── 7. declined ──────────────────────────────────────────────────────────────
   const b3 = seed({ status: "cancelled", cancellation_reason: "Declined by provider" });

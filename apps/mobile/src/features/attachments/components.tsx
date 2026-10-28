@@ -201,9 +201,15 @@ export function AttachmentGallery({ bookingId }: { bookingId: string }) {
   if (!items.length) return null;
   const photos = items.filter((a) => a.type === "image" && a.url);
   const clips = items.filter((a) => a.type === "audio" && a.url);
+  const blocked = items.length - photos.length - clips.length;
   return (
     <View className="gap-2">
       <Text className="text-sm text-muted">Photos and voice note</Text>
+      {blocked ? (
+        <Text className="text-sm text-danger">
+          {blocked} {blocked === 1 ? "file was" : "files were"} attached but cannot be opened yet (the storage permission for pros needs a fix). Ask the customer to describe the problem when you call.
+        </Text>
+      ) : null}
       {photos.length ? (
         <View className="flex-row flex-wrap gap-2">
           {photos.map((p) => (

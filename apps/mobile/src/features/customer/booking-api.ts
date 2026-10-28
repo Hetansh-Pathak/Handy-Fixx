@@ -122,9 +122,10 @@ export async function fetchBooking(id: string): Promise<{ booking: BookingRow; s
 }
 
 /** The 4-digit code the customer gives the pro at the end. Only the booking's own customer can read it (RLS). */
+/** The booking's 4-digit code (customer-only by RLS). Null when the database has no code for this booking. */
 export async function fetchCompletionCode(bookingId: string): Promise<string | null> {
   const { data, error } = await getSupabase().from("booking_completion_codes").select("code").eq("booking_id", bookingId).maybeSingle();
-  if (error) return null;
+  if (error) throw new Error(error.message);
   return (data as { code: string } | null)?.code ?? null;
 }
 

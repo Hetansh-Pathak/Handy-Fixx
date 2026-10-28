@@ -1,5 +1,5 @@
 import {
-  callEdge, friendlyAuthError, interpretPayout, type BookingPatch, type CompletionResult, type LedgerEntry, type PayoutRequestResult, type WalletSummary,
+  callEdge, friendlyAuthError, interpretPayout, isGuardedFieldError, patchFallbacks, type BookingPatch, type CompletionResult, type LedgerEntry, type PayoutRequestResult, type WalletSummary,
 } from "@handyfix/shared";
 import type { CheckoutOrder } from "@/lib/razorpay";
 import { getSupabase } from "@/lib/supabase";
@@ -71,8 +71,23 @@ export async function fetchProviderBooking(id: string): Promise<ProviderBooking 
 }
 
 export async function applyBookingPatch(bookingId: string, providerId: string, patch: BookingPatch): Promise<void> {
-  const { error } = await getSupabase().from("bookings").update(patch).eq("id", bookingId).eq("provider_id", providerId);
-  if (error) throw readable(error);
+  const update = (p: BookingPatch) => getSupabase().from("bookings").update(p).eq("id", bookingId).eq("provider_id", providerId);
+  const { error } = await update(patch);
+  if (!error) return;
+  if (!isGuardedFieldError(error.message)) throw readable(error);
+
+  // The live guard trigger refuses some tracking columns from pros. The step only needs its status change,
+  // so apply that, then the extras one by one (skipped if refused).
+  const { essential, extras } = patchFallbacks(patch);
+  let lastError: { message: string; code?: string } = error;
+  let applied = false;
+  for (const attempt of essential) {
+    const r = await update(attempt);
+    if (!r.error) { applied = true; break; }
+    lastError = r.error;
+  }
+  if (!applied) throw readable(lastError);
+  for (const extra of extras) await update(extra);
 }
 
 /** The only way a job can be completed: the customer's 4-digit code, checked by the database. */

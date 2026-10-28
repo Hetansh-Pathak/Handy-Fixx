@@ -37,8 +37,9 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   const has = async (text) => norm(await body()).includes(norm(text));
   const waitBody = (text, timeout = 15000) =>
     page.waitForFunction((t) => document.body.innerText.replace(/\s+/g, " ").toLowerCase().includes(t), norm(text), { timeout });
-  // The alert is up when its countdown ring is on screen ("New request" also appears in the Home copy).
-  const alertUp = (timeout = 15000) => page.waitForSelector('[aria-label$="seconds left"]', { state: "visible", timeout });
+  // A new request shows a popup (no timer) with "View request"; the decision is made on the request screen.
+  const alertUp = (timeout = 15000) => T("View request").waitFor({ state: "visible", timeout });
+  const openRequest = async () => { await T("View request").click(); await see("Review the problem"); };
   const shot = (n) => page.screenshot({ path: path.join(OUT, n + ".png"), fullPage: true });
   const isDisabled = async (locator) => (await locator.getAttribute("aria-disabled")) === "true" || (await locator.isDisabled().catch(() => false));
 
@@ -100,14 +101,16 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   await alertUp(6000);
   const dt = Date.now() - t0;
   check("a request arrives by Realtime well before the 8 s polling fallback", dt < 6000, `${dt} ms`);
-  const alertText = await body();
-  check("the alert shows the earning and the fee before deciding (fee waived in launch)",
-    alertText.includes("You earn ₹349") && alertText.includes("HandyFix fee ₹15 waived") && alertText.includes("You keep ₹349"), alertText.slice(0, 260));
-  const secs = Number((await page.locator('[aria-label$="seconds left"]:visible').first().getAttribute("aria-label")).split(" ")[0]);
-  check("the countdown starts from the 30 s window", secs <= 30 && secs >= 25, `${secs}s`);
-  check("the customer's phone is not shown on the alert", !alertText.includes("9876500001"));
+  const popupText = await body();
+  check("the popup shows the request and what the pro earns, with no timer",
+    popupText.includes("Kitchen tap leaks") && popupText.includes("You earn ₹349") && popupText.includes("No timer") && !/seconds/i.test(popupText), popupText.slice(0, 260));
   await sleep(700);
-  await shot("32-request-alert");
+  await shot("32-request-popup");
+  await openRequest();
+  const alertText = await body();
+  check("the request screen shows the earning and the fee before deciding (fee waived in launch)",
+    alertText.includes("You earn ₹349") && alertText.includes("HandyFix fee ₹15 waived") && alertText.includes("You keep ₹349"), alertText.slice(0, 260));
+  check("the customer's phone is not shown before accepting", !alertText.includes("9876500001"));
   await T("Accept").click();
   await see("Ready to start");
   check("accepting confirms the booking and opens the job", db.storedBookings.find((b) => b.id === r1.id).status === "confirmed" && (await has("Step 1 of 3")));
@@ -147,8 +150,9 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   const t1 = Date.now();
   await alertUp(14000);
   check("a request is also found by polling if Realtime misses it", Date.now() - t1 < 14000, `${Date.now() - t1} ms`);
+  await openRequest();
   await T("Decline").click();
-  await page.waitForFunction(() => !document.body.innerText.includes("seconds to accept"), null, { timeout: 8000 }).catch(() => undefined);
+  for (let i = 0; i < 20 && db.storedBookings.find((b) => b.id === r2.id).status !== "cancelled"; i += 1) await sleep(250);
   const declined = db.storedBookings.find((b) => b.id === r2.id);
   check("declining cancels with a reason (customer is offered the next pros)", declined.status === "cancelled" && declined.cancellation_reason === "Declined by provider");
 
@@ -163,14 +167,15 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   const r3 = newRequest();
   pushBookingChange(r3);
   await alertUp(6000);
+  await openRequest();
   const blockedText = await body();
-  check("with an empty wallet the alert says to top up and Accept is disabled", blockedText.includes("Wallet below the fee. Top up ₹100 to accept.") && blockedText.includes("HandyFix fee ₹15") && !blockedText.includes("waived"), blockedText.slice(0, 260));
+  check("with an empty wallet the request says to top up and Accept is disabled", blockedText.includes("Wallet below the fee. Top up ₹100 to accept.") && blockedText.includes("HandyFix fee ₹15") && !blockedText.includes("waived"), blockedText.slice(0, 260));
   const acceptBtn = page.locator('[aria-disabled="true"]:visible', { hasText: "Accept" });
   check("Accept is disabled", (await acceptBtn.count()) >= 1);
   await sleep(700);
-  await shot("35-alert-blocked");
+  await shot("35-request-blocked");
   await T("Decline").click();
-  await sleep(800);
+  for (let i = 0; i < 20 && db.storedBookings.find((b) => b.id === r3.id).status !== "cancelled"; i += 1) await sleep(250);
 
   db.wallet = { available: 200, dues: 0 };
   await goHome();
@@ -179,6 +184,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   const r4 = newRequest();
   pushBookingChange(r4);
   await alertUp(6000);
+  await openRequest();
   check("with ₹200 the fee is charged (not waived) and Accept works", (await body()).includes("HandyFix fee ₹15") && !(await body()).includes("waived"));
   await T("Accept").click();
   await see("Ready to start");
@@ -204,6 +210,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   const r5 = newRequest();
   pushBookingChange(r5);
   await alertUp(6000);
+  await openRequest();
   await T("Accept").click();
   await see("Wallet below the fee. Top up Rs 100 to accept.", 8000)
     .then(() => check("a server-side wallet rejection is shown as written", db.storedBookings.find((b) => b.id === r5.id).status === "pending"))
@@ -212,11 +219,16 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   for (let i = 0; i < 20 && db.storedBookings.find((b) => b.id === r5.id).status !== "cancelled"; i += 1) await sleep(250);
 
   // ── 8. jobs list ─────────────────────────────────────────────────────────────
+  await goHome();
+  await see("You're online");
   await T("Jobs", true).click();
   await sleep(2500);
-  await waitBody("Done 5", 15000).then(() => check("the jobs tab counts every job (2 completed, 3 declined)", true)).catch(async () => check("the jobs tab counts every job (2 completed, 3 declined)", false, (await body()).slice(0, 160)));
-  await T("Done 5", false).click();
-  await waitBody("Waiting for you", 3000).catch(() => undefined);
+  const stageCount = (label) => page.locator(`[aria-label="${label}"]:visible`).count();
+  await page.locator('[aria-label="Completed, 2"]:visible').first().waitFor({ timeout: 15000 })
+    .then(async () => check("the jobs tab counts jobs by stage (2 completed, 3 declined)", (await stageCount("Cancelled, 3")) >= 1))
+    .catch(async () => check("the jobs tab counts jobs by stage (2 completed, 3 declined)", false, (await body()).slice(0, 200)));
+  await L("Completed, 2").click();
+  check("each stage has its own tab", (await stageCount("New, 0")) >= 1 && (await stageCount("Started, 0")) >= 1);
   await shot("36-jobs");
 
   check("no uncaught page errors", errors.length === 0, errors.slice(0, 3).join(" | "));

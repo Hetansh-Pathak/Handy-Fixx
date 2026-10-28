@@ -73,6 +73,10 @@ const check = (name, ok, extra = "") => { results.push({ name, ok }); console.lo
   await page.getByText("Profile", { exact: true }).locator("visible=true").last().click();
   await page.waitForSelector("text=Verify your email");
   await shot("07-customer-profile");
+  check("the profile is a menu with the real options only",
+    (await text()).includes("Saved address") && (await text()).includes("Help & support") && (await text()).includes("Safety") && !(await text()).includes("Rewards"));
+  await page.locator('[aria-label$=", edit profile"]:visible').last().click();
+  await page.waitForSelector("text=Edit profile");
   await L("Mobile number").fill("12345");
   await L("Pincode").fill("12");
   await page.getByText("Save changes").last().click();
@@ -83,7 +87,9 @@ const check = (name, ok, extra = "") => { results.push({ name, ok }); console.lo
   await L("City").fill("Gandhinagar");
   await L("Pincode").fill("382010");
   await page.getByText("Save changes").last().click();
-  await page.waitForSelector("text=Profile saved.").then(() => check("profile saves (update→insert fallback)", true)).catch(() => check("profile saves (update→insert fallback)", false));
+  await page.waitForSelector("text=Saved address", { timeout: 10000 })
+    .then(() => check("profile saves (update→insert fallback) and returns to the menu", true))
+    .catch(() => check("profile saves (update→insert fallback) and returns to the menu", false));
   check("saved profile has normalised phone", db.profiles[0]?.phone === "9876543210" && db.profiles[0]?.pincode === "382010", JSON.stringify(db.profiles[0] || {}));
 
   await page.getByText("Send code", { exact: true }).click();
@@ -93,7 +99,9 @@ const check = (name, ok, extra = "") => { results.push({ name, ok }); console.lo
   await page.waitForSelector("text=Invalid code", { timeout: 10000 }).then(() => check("wrong OTP shows server error", true)).catch(() => check("wrong OTP shows server error", false));
   await L("6-digit code").fill("123456");
   await page.getByText("Verify", { exact: true }).locator("visible=true").last().click();
-  await page.waitForSelector("text=Email verified", { timeout: 10000 }).then(() => check("correct OTP marks email verified", true)).catch(() => check("correct OTP marks email verified", false));
+  // Verified: the profile menu drops the verification card and ticks the email.
+  await page.waitForFunction(() => !document.body.innerText.includes("Verify your email"), null, { timeout: 10000 })
+    .then(() => check("correct OTP marks email verified", true)).catch(() => check("correct OTP marks email verified", false));
   await shot("08-profile-verified");
 
   // reload: session persists, goes straight to customer home

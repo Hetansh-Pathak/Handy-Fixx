@@ -173,6 +173,12 @@ export default function JobScreen() {
         <Button label={PROVIDER_ACTION_LABEL[step.action]} loading={busy} onPress={() => void run(step.action as PatchAction)} />
       ) : null}
 
+      {["confirmed", "on_the_way", "arrived"].includes(status) ? (
+        <Text className="text-xs text-muted">
+          To finish, you will need the customer's {COMPLETION_CODE_LENGTH}-digit completion code (OTP). It is on their booking screen; ask for it only when the work is done.
+        </Text>
+      ) : null}
+
       {status === "in_progress" && !settlement ? (
         <Card>
           <Text className="text-lg font-semibold text-fg">Finish the job</Text>

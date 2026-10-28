@@ -51,17 +51,20 @@ const check = (name, ok, extra = "") => {
   // ── 1. services list and search ──────────────────────────────────────────────
   await see("House Cleaning");
   check("services list shows the catalogue", (await count("Plumbing")) >= 1 && (await count("House Cleaning")) >= 1);
-  check("service card shows starting price and duration", (await body()).includes("From ₹299") && (await body()).includes("1 hr"));
+  check("service card shows starting price and duration", (await body()).includes("Starts at ₹299") && (await body()).includes("1 hr"));
+  await T("Services").click();
+  await see("All services");
   await shot("20-services");
+  const plumbingBefore = await count("Plumbing");
   await L("Search services").fill("clean");
-  check("search filters the list", (await count("Plumbing")) === 0 && (await count("House Cleaning")) >= 1);
+  check("search filters the list", (await count("Plumbing")) === plumbingBefore - 1 && (await count("House Cleaning")) >= 1);
   await L("Search services").fill("zzz");
   check("empty search explains itself", (await body()).includes("No services match"));
   await L("Search services").fill("");
 
   // ── 2. service page: sub-items, availability, area, pricing ──────────────────
   await L("Your area").fill("Gandhinagar");
-  await page.locator('[aria-label="Plumbing"]:visible').click();
+  await page.locator('[aria-label="Plumbing"]:visible').last().click();
   await see("What do you need?");
   check("sub-items are listed with catalogue prices", (await body()).includes("Tap repair") && (await body()).includes("₹199") && (await body()).includes("₹349"));
   check("pros are hidden until a sub-item is chosen", (await count("Asha Patel", false)) === 0 && (await body()).includes("Choose what you need above"));
@@ -84,7 +87,7 @@ const check = (name, ok, extra = "") => {
 
   // own-rate pricing + sorting on a service without sub-items
   await page.goBack();
-  await page.locator('[aria-label="House Cleaning"]:visible').click();
+  await page.locator('[aria-label="House Cleaning"]:visible').last().click();
   await see("Asha Patel");
   check("without sub-items each pro shows their own rate", (await body()).includes("₹599") && (await body()).includes("₹449"));
   const ashaFirst = (await yOf("Asha Patel")) < (await yOf("Ravi Shah"));
@@ -97,7 +100,8 @@ const check = (name, ok, extra = "") => {
   // ── 3. booking: unverified email blocks confirm ──────────────────────────────
   await T("Book Asha").click();
   await see("Step 1 of 3");
-  await T("6:00 PM").click();
+  await T("PM").click();
+  await L("6 PM").click();
   await T("Continue").click();
   await see("Step 2 of 3");
   await T("Continue").click();
@@ -127,7 +131,7 @@ const check = (name, ok, extra = "") => {
   // ── 4. confirm (PDF pricing) ─────────────────────────────────────────────────
   await confirmBtn.click();
   await see("Waiting for Asha");
-  check("the status screen says we are waiting for the pro to accept", /Asha has \d+ seconds to accept/i.test(await body()));
+  check("the status screen says the request was sent, with no countdown", (await body()).includes("Request sent to Asha") && !/seconds to accept/i.test(await body()));
   const b1 = db.storedBookings[0];
   check("booking payload: slot, address, price and no sub-item",
     b1 && b1.scheduled_time === "18:00:00" && b1.address === "12 MG Road" && b1.pincode === "382010" && b1.provider_amount === 599 && b1.platform_fee === 0 && b1.sub_item_id === null && b1.status === "pending" && b1.provider_id === "p-asha",
@@ -139,13 +143,14 @@ const check = (name, ok, extra = "") => {
   await T("Back to home").click();
   await see("What do you need fixed today?");
   db.pricingMode = "legacy12";
-  await page.locator('[aria-label="Plumbing"]:visible').click();
+  await page.locator('[aria-label="Plumbing"]:visible').last().click();
   await see("What do you need?");
   await T("Pipe leak").click();
   await see("Asha Patel");
   await T("Book Asha").click();
   await see("Step 1 of 3");
-  await T("6:00 PM").click();
+  await T("PM").click();
+  await L("6 PM").click();
   await T("Continue").click();
   await see("Step 2 of 3");
   await T("Continue").click(); // address prefilled? (only if profile was saved) — fill to be safe

@@ -12,7 +12,12 @@ export function groupBookings<T extends { status: string; created_at: string | n
 }
 
 /** The completion code card shows once the pro has arrived or the job has started (PDF p.10). */
-export const showsCompletionCode = (status: string) => status === "arrived" || status === "in_progress";
+/**
+ * The customer's 4-digit completion code is shown from the moment the pro accepts, so it is ready on the customer's
+ * phone whatever step the pro is at. It only works once the job is in progress (`complete_booking_with_code`).
+ */
+export const showsCompletionCode = (status: string) =>
+  status === "confirmed" || status === "on_the_way" || status === "arrived" || status === "in_progress";
 
 /** The pro's live position is only useful while they travel or are on site. */
 export const showsLiveMap = (status: string) => status === "on_the_way" || status === "arrived";

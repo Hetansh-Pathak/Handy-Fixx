@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { BOOKING_STATUSES, canTransition, type BookingStatus } from "../booking/status";
 import {
-  canDecline, declinePatch, providerStatusLabel, isPatchAction, jobProgress, phoneVisibleToProvider, PROVIDER_ACTION_LABEL, providerActionPatch,
+  canDecline, declinePatch, isGuardedFieldError, patchFallbacks, providerStatusLabel, isPatchAction, jobProgress, phoneVisibleToProvider, PROVIDER_ACTION_LABEL, providerActionPatch,
   sharesLocation,
 } from "./job-flow";
 
@@ -90,5 +90,22 @@ describe("providerStatusLabel", () => {
   });
   it("has a label for every status", () => {
     for (const s of BOOKING_STATUSES) expect(providerStatusLabel(s).length).toBeGreaterThan(0);
+  });
+});
+
+describe("patchFallbacks (guard trigger refuses extra columns)", () => {
+  it("retries a trip start with the status alone, then each extra on its own", () => {
+    const { essential, extras } = patchFallbacks({ status: "on_the_way", provider_departed_at: "t", tracking_active: true });
+    expect(essential).toEqual([{ status: "on_the_way" }]);
+    expect(extras).toEqual([{ provider_departed_at: "t" }, { tracking_active: true }]);
+  });
+  it("keeps the decline reason with the status, with a plain status change as the last resort", () => {
+    const { essential, extras } = patchFallbacks({ status: "cancelled", cancelled_at: "t", cancellation_reason: "Declined by provider" });
+    expect(essential).toEqual([{ status: "cancelled", cancelled_at: "t", cancellation_reason: "Declined by provider" }, { status: "cancelled" }]);
+    expect(extras).toEqual([]);
+  });
+  it("recognises the guard's message", () => {
+    expect(isGuardedFieldError("Providers cannot change these booking fields")).toBe(true);
+    expect(isGuardedFieldError("permission denied for table bookings")).toBe(false);
   });
 });
