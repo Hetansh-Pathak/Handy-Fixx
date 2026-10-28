@@ -7,7 +7,7 @@ import { Copy, Pencil, Plus, Trash2 } from "lucide-react-native";
 import { useState } from "react";
 import { Pressable, ScrollView, Switch, View } from "react-native";
 import { Text } from "@/components/text";
-import { Body, Button, Card, Chip, ErrorBanner, InfoBanner, Screen, ScreenHeader } from "@/components/ui";
+import { Body, Button, Card, Chip, ErrorBanner, InfoBanner, Screen, ScreenHeader, ListSkeleton } from "@/components/ui";
 import { useSession } from "@/features/auth/session-provider";
 import { addWindow, availabilityKey, deleteWindow, fetchAvailability, replaceDays, updateWindow, type ScheduleRow } from "@/features/schedule/api";
 import { colors } from "@/theme/colors";
@@ -82,7 +82,7 @@ function ScheduleScreen({ providerId, approved }: { providerId: string; approved
       {!approved ? <InfoBanner message="You can set your hours now. They apply once your identity check is approved." /> : null}
       <ErrorBanner message={error ?? (rows.isError ? "Could not load your working hours. Check your internet." : null)} />
       {rows.isError ? <Button label="Try again" variant="secondary" onPress={() => void rows.refetch()} /> : null}
-      {rows.isPending ? <Body muted>Loading…</Body> : null}
+      {rows.isPending ? <ListSkeleton rows={4} /> : null}
 
       {rows.isSuccess ? ORDER.map((day) => {
         const date = new Date(2026, 10, 1 + DAY_NAMES.indexOf(day)); // any date on that weekday (1 Nov 2026 is a Sunday)

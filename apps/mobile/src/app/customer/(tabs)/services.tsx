@@ -5,7 +5,7 @@ import { Pressable, ScrollView, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { CitySuggestions } from "@/components/CitySuggestions";
 import { Text } from "@/components/text";
-import { Body, Button, ErrorBanner, Title } from "@/components/ui";
+import { Body, Button, ErrorBanner, Title, ListSkeleton } from "@/components/ui";
 import { useArea } from "@/features/customer/area-context";
 import { BannerCarousel } from "@/features/customer/BannerCarousel";
 import { fetchServices } from "@/features/customer/catalog-api";
@@ -73,7 +73,7 @@ export default function AllServices() {
 
         <ErrorBanner message={services.isError ? loadErrorMessage("services", services.error) : null} />
         {services.isError ? <Button label="Try again" variant="secondary" onPress={() => void services.refetch()} /> : null}
-        {services.isPending ? <Body muted>Loading services…</Body> : null}
+        {services.isPending ? <ListSkeleton rows={4} /> : null}
         {services.isSuccess && visible.length === 0 ? <Body muted>No services match “{search}”.</Body> : null}
         {/* With no filter, services sit under headings like "Electrician, Plumber & Carpenter"; a search or category shows one grid. */}
         {category === ALL && !search.trim() ? (

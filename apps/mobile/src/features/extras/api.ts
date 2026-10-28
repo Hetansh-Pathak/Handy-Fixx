@@ -1,4 +1,4 @@
-import { dbExtraKind, extraWorkErrorMessage, type ExtraRow, type ExtraWorkKind } from "@handyfix/shared";
+import { dbExtraKind, extraWorkErrorMessage, type ExtraRow, type ExtraWorkKind, friendlyDbError } from "@handyfix/shared";
 import { readBytes } from "@/features/attachments/api";
 import { getSupabase } from "@/lib/supabase";
 
@@ -10,7 +10,7 @@ export const extrasKey = (bookingId: string) => ["booking-extras", bookingId] as
 type RpcResult = { ok: boolean; reason?: string; id?: string };
 
 function check(data: unknown, error: { message: string } | null): RpcResult {
-  if (error) throw new Error(error.message);
+  if (error) throw new Error(friendlyDbError(error));
   const result = (data ?? { ok: false }) as RpcResult;
   if (!result.ok) throw new Error(extraWorkErrorMessage(result.reason));
   return result;
@@ -23,7 +23,7 @@ export async function fetchExtras(bookingId: string): Promise<ExtraRow[]> {
     .select("id, title, kind, amount, photo_path, status, created_at")
     .eq("booking_id", bookingId)
     .order("created_at");
-  if (error) throw new Error(error.message);
+  if (error) throw new Error(friendlyDbError(error));
   return (data ?? []) as ExtraRow[];
 }
 

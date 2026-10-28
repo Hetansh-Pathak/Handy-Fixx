@@ -6,7 +6,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { Pressable, ScrollView, View } from "react-native";
 import { Text } from "@/components/text";
-import { Body, ErrorBanner, Screen, Title } from "@/components/ui";
+import { Body, ErrorBanner, Screen, Title, ListSkeleton } from "@/components/ui";
 import { useSession } from "@/features/auth/session-provider";
 import { fetchProviderBookings, serviceNameOf, type ProviderBooking } from "@/features/provider/api";
 
@@ -55,7 +55,7 @@ export default function ProviderJobs() {
       </ScrollView>
 
       <ErrorBanner message={jobs.isError ? "Could not load your jobs." : null} />
-      {jobs.isPending ? <Body muted>Loading…</Body> : null}
+      {jobs.isPending ? <ListSkeleton /> : null}
       {jobs.isSuccess && rows.length === 0 ? <Body muted>{stage.empty}</Body> : null}
 
       {rows.map((b) => {

@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, TextInput, View, type ScrollViewInstance } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Text } from "@/components/text";
-import { Body, ErrorBanner, ScreenHeader } from "@/components/ui";
+import { Body, ErrorBanner, ScreenHeader, ListSkeleton } from "@/components/ui";
 import { useSession } from "@/features/auth/session-provider";
 import { colors } from "@/theme/colors";
 import { chatKey, markRead, sendMessage, unreadKey } from "./api";
@@ -76,7 +76,7 @@ export function ChatScreen({ bookingId, role, status, otherName, onBack }: {
       <KeyboardAvoidingView className="flex-1" behavior={Platform.OS === "ios" ? "padding" : undefined}>
         <View className="px-5 pt-3"><ScreenHeader title={`Chat with ${otherName}`} onBack={onBack} /></View>
         <ScrollView ref={scroller} className="flex-1" contentContainerStyle={{ padding: 20, gap: 10, flexGrow: 1 }} keyboardShouldPersistTaps="handled">
-          {chat.isPending ? <Body muted>Loading messages…</Body> : null}
+          {chat.isPending ? <ListSkeleton rows={2} /> : null}
           {chat.isError ? <ErrorBanner message="Could not load the chat. Check your internet." /> : null}
           {chat.isSuccess && messages.length === 0 ? (
             <View className="flex-1 items-center justify-center gap-2 py-16">

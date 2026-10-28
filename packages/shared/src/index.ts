@@ -47,4 +47,5 @@ export * from "./auth/schemas";
 export * from "./auth/deep-link";
 export * from "./constants/cities";
 export * from "./supabase/client";
+export * from "./supabase/errors";
 export * from "./supabase/edge";

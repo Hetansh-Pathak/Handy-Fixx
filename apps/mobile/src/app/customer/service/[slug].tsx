@@ -8,7 +8,7 @@ import { IconTile, ServiceIcon } from "@/components/brand";
 import { Avatar } from "@/components/Avatar";
 import { CitySuggestions } from "@/components/CitySuggestions";
 import { Text } from "@/components/text";
-import { Body, Button, Chip, ErrorBanner, Screen, ScreenHeader, TextField, Title } from "@/components/ui";
+import { Body, Button, Chip, ErrorBanner, Screen, ScreenHeader, TextField, Title, ListSkeleton } from "@/components/ui";
 import { useArea } from "@/features/customer/area-context";
 import { fetchServiceBySlug, fetchSubItems, searchProviders } from "@/features/customer/catalog-api";
 import { serviceImage } from "@/features/customer/service-images";
@@ -151,7 +151,7 @@ export default function ServiceScreen() {
 
       {needsSubItem ? <Body muted>Choose what you need above to see pros and prices.</Body> : null}
       <ErrorBanner message={providers.isError ? "Could not load pros. Check your connection." : null} />
-      {!needsSubItem && providers.isPending ? <Body muted>Finding pros near you…</Body> : null}
+      {!needsSubItem && providers.isPending ? <ListSkeleton rows={2} /> : null}
       {!needsSubItem && providers.isSuccess && sorted.length === 0 ? (
         <View className="gap-3 rounded-3xl border border-line bg-card p-4">
           <Text className="text-base font-semibold text-fg">No pros online{area.trim() ? ` in ${area.trim()}` : ""} right now</Text>

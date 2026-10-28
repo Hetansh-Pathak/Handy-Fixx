@@ -8,7 +8,7 @@ import { useEffect, useState } from "react";
 import { Linking, View } from "react-native";
 import { Text } from "@/components/text";
 import { TrackingMap } from "@/components/TrackingMap";
-import { Body, Button, Card, ErrorBanner, InfoBanner, Screen, ScreenHeader, Title } from "@/components/ui";
+import { Body, Button, Card, ErrorBanner, InfoBanner, Screen, ScreenHeader, Title, ListSkeleton } from "@/components/ui";
 import { AttachmentGallery } from "@/features/attachments/components";
 import { ChatButton } from "@/features/chat/components";
 import { loadCustomerProfile } from "@/features/auth/api";
@@ -89,7 +89,7 @@ export default function BookingStatusScreen() {
   const profile = useQuery({ queryKey: ["customer-profile", userId], enabled: !!userId, queryFn: () => loadCustomerProfile(userId!) });
   const extras = useExtras(id, status);
 
-  if (query.isPending) return <Screen><Body muted>Loading…</Body></Screen>;
+  if (query.isPending) return <Screen><ScreenHeader title="Booking" onBack={() => router.replace("/customer/bookings")} /><ListSkeleton rows={4} /></Screen>;
   if (query.isError || !query.data || !booking) {
     return (
       <Screen>

@@ -6,10 +6,12 @@ import { Body, Screen, ScreenHeader } from "@/components/ui";
 
 const ACTIVE = ["pending", "confirmed", "on_the_way", "arrived", "in_progress"];
 
+import { useRouter } from "expo-router";
 export default function CustomerDeleteAccount() {
+  const router = useRouter();
   const { userId } = useSession();
   const bookings = useQuery({ queryKey: ["customer-bookings", userId], enabled: !!userId, queryFn: () => fetchCustomerBookings(userId!) });
-  if (bookings.isPending) return <Screen><ScreenHeader title="Delete account" onBack={() => undefined} /><Body muted>Checking your bookings…</Body></Screen>;
+  if (bookings.isPending) return <Screen><ScreenHeader title="Delete account" onBack={() => router.back()} /><Body muted>Checking your bookings…</Body></Screen>;
   const active = (bookings.data ?? []).filter((b) => ACTIVE.includes(b.status)).length;
   return <DeleteAccountScreen role="customer" activeBookings={active} />;
 }

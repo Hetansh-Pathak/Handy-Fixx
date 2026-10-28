@@ -10,7 +10,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { View } from "react-native";
 import { CitySuggestions } from "@/components/CitySuggestions";
 import { Text } from "@/components/text";
-import { Body, Button, Card, Chip, ErrorBanner, InfoBanner, Screen, ScreenHeader, TextField, Title } from "@/components/ui";
+import { Body, Button, Card, Chip, ErrorBanner, InfoBanner, Screen, ScreenHeader, TextField, Title, ListSkeleton } from "@/components/ui";
 import { loadCustomerProfile, loadEmailVerified } from "@/features/auth/api";
 import { EmailVerificationCard } from "@/features/auth/EmailVerificationCard";
 import { useSession } from "@/features/auth/session-provider";
@@ -179,7 +179,7 @@ export default function BookScreen() {
     }
   };
 
-  if (context.isPending) return <Screen><ScreenHeader title="Book" onBack={() => router.back()} /><Body muted>Loading…</Body></Screen>;
+  if (context.isPending) return <Screen><ScreenHeader title="Book" onBack={() => router.back()} /><ListSkeleton rows={3} /></Screen>;
   if (context.isError || !ctx || !quote) {
     return (
       <Screen>

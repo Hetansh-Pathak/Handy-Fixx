@@ -1,4 +1,4 @@
-import { disputeErrorMessage, type DisputeOutcome, type DisputeReason, type DisputeStatus } from "@handyfix/shared";
+import { disputeErrorMessage, type DisputeOutcome, type DisputeReason, type DisputeStatus, friendlyDbError } from "@handyfix/shared";
 import { getSupabase } from "@/lib/supabase";
 
 export const disputeKey = (bookingId: string) => ["booking-dispute", bookingId] as const;
@@ -19,7 +19,7 @@ export type DisputeRow = {
 type RpcResult = { ok: boolean; reason?: string };
 
 function check(data: unknown, error: { message: string } | null): void {
-  if (error) throw new Error(error.message);
+  if (error) throw new Error(friendlyDbError(error));
   const result = (data ?? { ok: false }) as RpcResult;
   if (!result.ok) throw new Error(disputeErrorMessage(result.reason));
 }
@@ -31,7 +31,7 @@ export async function fetchDispute(bookingId: string): Promise<DisputeRow | null
     .select("id, category, details, provider_reply, status, outcome, decision_note, appealed_by, appealed_at, created_at")
     .eq("booking_id", bookingId)
     .maybeSingle();
-  if (error) throw new Error(error.message);
+  if (error) throw new Error(friendlyDbError(error));
   return (data as DisputeRow | null) ?? null;
 }
 

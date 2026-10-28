@@ -7,7 +7,7 @@ import {
 import { useState } from "react";
 import { Pressable, View } from "react-native";
 import { Text } from "@/components/text";
-import { Body, Button, ErrorBanner, Screen, ScreenHeader, TextLink } from "@/components/ui";
+import { Body, Button, ErrorBanner, Screen, ScreenHeader, TextLink, ListSkeleton } from "@/components/ui";
 import { colors } from "@/theme/colors";
 import { markAllNotificationsRead, markNotificationRead, notificationsKey, type NotifRole } from "./api";
 import { useNotifications } from "./use-notifications";
@@ -71,7 +71,7 @@ export function NotificationsScreen({ role }: { role: NotifRole }) {
       <ScreenHeader title="Notifications" onBack={back} />
       <ErrorBanner message={error ?? (list.isError ? "Could not load your notifications. Check your internet." : null)} />
       {list.isError ? <Button label="Try again" variant="secondary" onPress={() => void list.refetch()} /> : null}
-      {list.isPending && !list.isError ? <Body muted>Loading…</Body> : null}
+      {list.isPending && !list.isError ? <ListSkeleton /> : null}
       {list.isSuccess && list.data.length === 0 ? (
         <View className="items-center gap-2 py-16">
           <Bell size={40} color={colors.mutedSoft} />

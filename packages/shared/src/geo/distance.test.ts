@@ -31,7 +31,7 @@ describe("approxPoint", () => {
   });
   it("keeps the point within about 1.5 km of the real one", () => {
     const real = { latitude: 23.0299, longitude: 72.5799 };
-    expect(distanceKm(real, approxPoint(real))).toBeLessThan(1.5);
+    expect(distanceKm(real, approxPoint(real)!)).toBeLessThan(1.5);
   });
   it("returns null for impossible coordinates", () => {
     expect(approxPoint({ latitude: 91, longitude: 0 })).toBeNull();

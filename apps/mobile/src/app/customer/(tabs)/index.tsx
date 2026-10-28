@@ -6,7 +6,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Eyebrow, IconTile, Logo, SectionHeading } from "@/components/brand";
 import { CitySuggestions } from "@/components/CitySuggestions";
 import { Text } from "@/components/text";
-import { Body, Button, ErrorBanner } from "@/components/ui";
+import { Body, Button, ErrorBanner, ListSkeleton } from "@/components/ui";
 import { useSession } from "@/features/auth/session-provider";
 import { NotificationBell } from "@/features/notifications/components";
 import { useArea } from "@/features/customer/area-context";
@@ -122,7 +122,7 @@ export default function CustomerHome() {
           <SectionHeading title="Every home service, one tap away" subtitle="Trusted professionals for every corner of your home" />
           <ErrorBanner message={services.isError ? loadErrorMessage("services", services.error) : null} />
           {services.isError ? <Button label="Try again" variant="secondary" onPress={() => void services.refetch()} /> : null}
-          {services.isPending ? <Body muted>Loading services…</Body> : null}
+          {services.isPending ? <ListSkeleton rows={2} /> : null}
           <ServiceGrid services={popular} />
           {services.isSuccess && services.data.length > popular.length ? (
             <Button label={`See all ${services.data.length} services`} variant="secondary" onPress={() => router.push("/customer/services")} />

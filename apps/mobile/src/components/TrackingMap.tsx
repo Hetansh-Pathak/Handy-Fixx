@@ -37,7 +37,7 @@ function NativeMap({ pro, destination }: { pro: Point | null; destination: Point
         accessibilityLabel="Map showing your pro and your address"
       >
         <Maps.Marker coordinate={destination} title="Your address" pinColor="#2FB36D" />
-        {pro ? <Maps.Marker coordinate={pro} title="Your pro" pinColor="#C16430" /> : null}
+        {pro ? <Maps.Marker coordinate={pro} title="Your pro" pinColor="#B05526" /> : null}
       </MapView>
     </View>
   );

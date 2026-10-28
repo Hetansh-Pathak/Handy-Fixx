@@ -1,11 +1,11 @@
-import { isProviderAvailable, offersService, readPoint, resolveListedPrice, servesArea } from "@handyfix/shared";
+import { isProviderAvailable, offersService, readPoint, resolveListedPrice, servesArea, friendlyDbError } from "@handyfix/shared";
 import { getSupabase } from "@/lib/supabase";
 import type { ProviderListing, ServiceRow, SubItemRow } from "./types";
 
 const SERVICE_COLUMNS = "id, name, slug, description, icon_name, base_price, duration_minutes, category";
 
-function fail(error: { message: string }): never {
-  throw new Error(error.message);
+function fail(error: { message: string; code?: string }): never {
+  throw new Error(friendlyDbError(error));
 }
 
 export async function fetchServices(): Promise<ServiceRow[]> {

@@ -26,7 +26,7 @@ export async function openCheckout(order: CheckoutOrder): Promise<CheckoutResult
       name: "HandyFix",
       description: "Wallet top-up",
       prefill: order.prefill,
-      theme: { color: "#C16430" },
+      theme: { color: "#B05526" },
     });
     return { status: "paid" };
   } catch (e) {

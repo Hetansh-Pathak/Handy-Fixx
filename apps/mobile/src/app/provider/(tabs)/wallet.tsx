@@ -5,7 +5,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { View } from "react-native";
 import { Text } from "@/components/text";
-import { Body, Button, Card, Chip, ErrorBanner, InfoBanner, Screen, TextField, Title } from "@/components/ui";
+import { Body, Button, Card, Chip, ErrorBanner, InfoBanner, Screen, TextField, Title, ListSkeleton } from "@/components/ui";
 import { useSession } from "@/features/auth/session-provider";
 import {
   createTopUpOrder, fetchLedger, fetchMinPayout, fetchPayouts, fetchProviderBookings, requestPayout,
@@ -178,7 +178,7 @@ export default function WalletScreen() {
 
       <Card>
         <Text className="text-lg font-semibold text-fg">History</Text>
-        {ledger.isPending ? <Body muted>Loading…</Body> : null}
+        {ledger.isPending ? <ListSkeleton rows={2} /> : null}
         {ledger.isError ? <ErrorBanner message="Could not load your wallet history." /> : null}
         {ledger.data && ledger.data.length === 0 ? <Body muted>No wallet activity yet.</Body> : null}
         {(ledger.data ?? []).map((entry) => {

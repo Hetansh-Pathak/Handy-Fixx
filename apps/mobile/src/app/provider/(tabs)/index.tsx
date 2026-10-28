@@ -65,7 +65,7 @@ export default function ProviderHome() {
             value={rt.online}
             disabled={!rt.canGoOnline || rt.toggling}
             onValueChange={() => void rt.toggleOnline()}
-            trackColor={{ false: "#D9D2C4", true: "#C16430" }}
+            trackColor={{ false: "#D9D2C4", true: "#B05526" }}
             thumbColor="#FFFFFF"
           />
         </View>

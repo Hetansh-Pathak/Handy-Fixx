@@ -1,4 +1,4 @@
-import { attachmentStoragePath, checkAttachment, type AttachmentType } from "@handyfix/shared";
+import { attachmentStoragePath, checkAttachment, type AttachmentType, friendlyDbError } from "@handyfix/shared";
 import { Platform } from "react-native";
 import { getSupabase } from "@/lib/supabase";
 
@@ -99,7 +99,7 @@ export async function fetchBookingAttachments(bookingId: string): Promise<Bookin
     .order("created_at");
   if (error) {
     if (error.code === "42P01" || error.code === "PGRST205") return [];
-    throw new Error(error.message);
+    throw new Error(friendlyDbError(error));
   }
   const rows = (data ?? []) as AttachmentRow[];
   if (!rows.length) return [];

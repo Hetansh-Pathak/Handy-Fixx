@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { useState, type ComponentProps } from "react";
-import { ActivityIndicator, Pressable, ScrollView, TextInput, View } from "react-native";
+import { useEffect, useRef } from "react";
+import { ActivityIndicator, Animated, Pressable, ScrollView, TextInput, View } from "react-native";
 import { Text } from "@/components/text";
 import { ArrowLeft } from "lucide-react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -61,7 +62,7 @@ export function TextField({
       <TextInput
         {...input}
         accessibilityLabel={label}
-        placeholderTextColor="#8A857C"
+        placeholderTextColor="#6B665D"
         onFocus={(e) => { setFocused(true); input.onFocus?.(e); }}
         onBlur={(e) => { setFocused(false); input.onBlur?.(e); }}
         style={{ fontFamily: "PlusJakartaSans_400Regular" }}
@@ -82,7 +83,7 @@ export const ErrorBanner = ({ message }: { message: string | null }) =>
 export const InfoBanner = ({ message }: { message: string | null }) =>
   message ? (
     <View className="rounded-xl border border-brand/40 bg-brand/10 p-3">
-      <Text className="text-sm text-brand">{message}</Text>
+      <Text className="text-sm text-brand-dark">{message}</Text>
     </View>
   ) : null;
 
@@ -129,5 +130,34 @@ export function Chip({ label, selected = false, disabled = false, onPress }: { l
     >
       <Text className={`text-sm font-semibold ${selected ? "text-white" : "text-fg"}`}>{label}</Text>
     </Pressable>
+  );
+}
+
+/** A grey placeholder block that gently pulses while real content loads (better than a blank screen or "Loading…"). */
+export function Skeleton({ height = 16, width = "100%", radius = 12 }: { height?: number; width?: number | `${number}%`; radius?: number }) {
+  const pulse = useRef(new Animated.Value(0.45)).current;
+  useEffect(() => {
+    const loop = Animated.loop(Animated.sequence([
+      Animated.timing(pulse, { toValue: 1, duration: 700, useNativeDriver: true }),
+      Animated.timing(pulse, { toValue: 0.45, duration: 700, useNativeDriver: true }),
+    ]));
+    loop.start();
+    return () => loop.stop();
+  }, [pulse]);
+  return <Animated.View accessibilityElementsHidden importantForAccessibility="no" style={{ height, width, borderRadius: radius, opacity: pulse, backgroundColor: "#E4DDD0" }} />;
+}
+
+/** A few card-shaped placeholders for a list that is loading. */
+export function ListSkeleton({ rows = 3 }: { rows?: number }) {
+  return (
+    <View accessibilityRole="progressbar" accessibilityLabel="Loading" className="gap-3">
+      {Array.from({ length: rows }, (_, i) => (
+        <View key={i} className="gap-2 rounded-2xl border border-line bg-card p-4">
+          <Skeleton height={18} width="60%" />
+          <Skeleton height={14} width="90%" />
+          <Skeleton height={14} width="40%" />
+        </View>
+      ))}
+    </View>
   );
 }

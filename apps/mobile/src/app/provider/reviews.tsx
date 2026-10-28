@@ -4,7 +4,7 @@ import { useRouter } from "expo-router";
 import { Star } from "lucide-react-native";
 import { View } from "react-native";
 import { Text } from "@/components/text";
-import { Body, Button, Card, ErrorBanner, Screen, ScreenHeader } from "@/components/ui";
+import { Body, Button, Card, ErrorBanner, Screen, ScreenHeader, ListSkeleton } from "@/components/ui";
 import { useSession } from "@/features/auth/session-provider";
 import { fetchProviderReviews, providerReviewsKey } from "@/features/reviews/api";
 import { Stars } from "@/features/reviews/components";
@@ -24,7 +24,7 @@ export default function ProviderReviews() {
       <ScreenHeader title="My reviews" onBack={back} />
       <ErrorBanner message={reviews.isError ? "Could not load your reviews. Check your internet." : null} />
       {reviews.isError ? <Button label="Try again" variant="secondary" onPress={() => void reviews.refetch()} /> : null}
-      {reviews.isPending ? <Body muted>Loading…</Body> : null}
+      {reviews.isPending ? <ListSkeleton /> : null}
 
       {reviews.isSuccess && list.length === 0 ? (
         <View className="items-center gap-2 py-16">

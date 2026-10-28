@@ -2,6 +2,7 @@ import {
   LATE_CANCEL_WINDOW_DAYS, cancellationReasonFor, instantBookingPause, lateCancellationTimes, pauseMessage,
   isBookingTime, isSlotAvailable, nextBestPros, parseDateString, quoteBooking, reconcileQuote, toDateString, toDbTime,
   type BookingQuote, type BookingSlot, type NewBookingInput, type QuoteCheck, type StoredTotals,
+  friendlyDbError,
 } from "@handyfix/shared";
 import { copyBookingAttachments } from "@/features/attachments/api";
 import { getSupabase } from "@/lib/supabase";
@@ -72,7 +73,7 @@ export async function createBooking(args: {
 
   if (error) {
     if (error.code === "42501" || /row-level security/i.test(error.message)) throw new EmailNotVerifiedError();
-    throw new Error(error.message);
+    throw new Error(friendlyDbError(error));
   }
   const row = data as { id: string } & StoredTotals;
   return { id: row.id, stored: row, check: reconcileQuote(quote, row) };
@@ -108,7 +109,7 @@ const BOOKING_COLUMNS =
 export async function fetchBooking(id: string): Promise<{ booking: BookingRow; serviceName: string | null; serviceSlug: string | null; providerName: string | null } | null> {
   const supabase = getSupabase();
   const { data, error } = await supabase.from("bookings").select(BOOKING_COLUMNS).eq("id", id).maybeSingle();
-  if (error) throw new Error(error.message);
+  if (error) throw new Error(friendlyDbError(error));
   if (!data) return null;
   const booking = data as BookingRow;
 
@@ -128,7 +129,7 @@ export async function fetchBooking(id: string): Promise<{ booking: BookingRow; s
 /** The booking's 4-digit code (customer-only by RLS). Null when the database has no code for this booking. */
 export async function fetchCompletionCode(bookingId: string): Promise<string | null> {
   const { data, error } = await getSupabase().from("booking_completion_codes").select("code").eq("booking_id", bookingId).maybeSingle();
-  if (error) throw new Error(error.message);
+  if (error) throw new Error(friendlyDbError(error));
   return (data as { code: string } | null)?.code ?? null;
 }
 
@@ -172,7 +173,7 @@ export async function fetchCustomerBookings(userId: string): Promise<CustomerBoo
     .eq("customer_id", userId)
     .order("created_at", { ascending: false })
     .limit(100);
-  if (error) throw new Error(error.message);
+  if (error) throw new Error(friendlyDbError(error));
   type Row = Omit<CustomerBookingListItem, "serviceName" | "providerName"> & { provider_id: string | null; services: { name: string } | { name: string }[] | null };
   const rows = (data ?? []) as Row[];
 
@@ -258,7 +259,7 @@ export async function cancelBooking(id: string, late = false) {
     .from("bookings")
     .update({ status: "cancelled", cancelled_at: new Date().toISOString(), cancellation_reason: cancellationReasonFor(late) })
     .eq("id", id);
-  if (error) throw new Error(error.message);
+  if (error) throw new Error(friendlyDbError(error));
 }
 
 export const bookingPauseKey = (userId: string | null) => ["booking-pause", userId] as const;

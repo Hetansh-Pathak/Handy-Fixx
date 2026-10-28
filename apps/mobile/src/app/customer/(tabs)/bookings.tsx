@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { Pressable, View } from "react-native";
 import { Text } from "@/components/text";
-import { Body, ErrorBanner, Screen, Title } from "@/components/ui";
+import { Body, ErrorBanner, Screen, Title, ListSkeleton } from "@/components/ui";
 import { useSession } from "@/features/auth/session-provider";
 import { fetchCustomerBookings, type CustomerBookingListItem } from "@/features/customer/booking-api";
 
@@ -22,7 +22,7 @@ export default function CustomerBookings() {
     <Screen>
       <Title>Your bookings</Title>
       <ErrorBanner message={query.isError ? "Could not load your bookings." : null} />
-      {query.isPending ? <Body muted>Loading…</Body> : null}
+      {query.isPending ? <ListSkeleton /> : null}
       {query.isSuccess && (query.data?.length ?? 0) === 0 ? <Body muted>No bookings yet. Pick a service on Home to book your first pro.</Body> : null}
       {groups.active.length > 0 ? <Text className="text-lg font-semibold text-fg">In progress</Text> : null}
       {groups.active.map((b) => <Row key={b.id} b={b} onPress={() => router.push({ pathname: "/customer/booking/[id]", params: { id: b.id } })} />)}

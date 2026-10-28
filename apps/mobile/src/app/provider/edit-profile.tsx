@@ -5,7 +5,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { View } from "react-native";
 import { CitySuggestions } from "@/components/CitySuggestions";
 import { Text } from "@/components/text";
-import { Body, Button, Card, Chip, ErrorBanner, InfoBanner, Screen, ScreenHeader, TextField } from "@/components/ui";
+import { Body, Button, Card, Chip, ErrorBanner, InfoBanner, Screen, ScreenHeader, TextField, ListSkeleton } from "@/components/ui";
 import { providerRowKey, useSession } from "@/features/auth/session-provider";
 import { fetchServices } from "@/features/customer/catalog-api";
 import { loadErrorMessage } from "@/lib/load-error";
@@ -103,7 +103,7 @@ function EditForm({ providerId }: { providerId: string }) {
     }
   };
 
-  if (profile.isPending) return <Screen><ScreenHeader title="Edit profile" onBack={() => router.back()} /><Body muted>Loading…</Body></Screen>;
+  if (profile.isPending) return <Screen><ScreenHeader title="Edit profile" onBack={() => router.back()} /><ListSkeleton rows={4} /></Screen>;
 
   return (
     <Screen>

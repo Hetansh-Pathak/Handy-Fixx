@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import type { ExpoConfig } from "expo/config";
 
-const GOLD = "#C16430"; // brand terracotta (notification accent)
+const GOLD = "#B05526"; // brand terracotta (notification accent)
 const BLACK = "#0A0A0A"; // launcher icon background (the logo tile is dark)
 const CANVAS = "#FAF6EF"; // app background, same as the old HandyFix sites
 const MIC_REASON = "HandyFix uses the microphone so you can record a voice note describing the problem for your pro.";

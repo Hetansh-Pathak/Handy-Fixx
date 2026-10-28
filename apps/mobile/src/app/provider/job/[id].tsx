@@ -8,7 +8,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { Linking, View } from "react-native";
 import { Text } from "@/components/text";
-import { Body, Button, Card, ErrorBanner, InfoBanner, Screen, ScreenHeader, TextField, Title } from "@/components/ui";
+import { Body, Button, Card, ErrorBanner, InfoBanner, Screen, ScreenHeader, TextField, Title, ListSkeleton } from "@/components/ui";
 import { AttachmentGallery } from "@/features/attachments/components";
 import { ChatButton } from "@/features/chat/components";
 import { useSession } from "@/features/auth/session-provider";
@@ -56,7 +56,7 @@ export default function JobScreen() {
     // The database writes the record as the job closes; retry briefly if it is not there yet.
     refetchInterval: (q) => (q.state.data || q.state.dataUpdateCount > 6 ? false : 5_000),
   });
-  if (query.isPending) return <Screen><ScreenHeader title="Job" onBack={() => router.back()} /><Body muted>Loading…</Body></Screen>;
+  if (query.isPending) return <Screen><ScreenHeader title="Job" onBack={() => router.back()} /><ListSkeleton rows={4} /></Screen>;
   if (query.isError || !booking || !providerId) {
     return (
       <Screen>
