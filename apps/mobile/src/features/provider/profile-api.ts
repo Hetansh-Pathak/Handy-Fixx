@@ -1,4 +1,4 @@
-import { AVATAR_BUCKET, avatarPathFromUrl, avatarStoragePath, checkAvatar, friendlyAuthError, type ProviderProfilePatch } from "@handyfix/shared";
+import { AVATAR_BUCKET, avatarPathFromUrl, avatarStoragePath, checkAvatar, friendlyAuthError, type PayoutPatch, type ProviderProfilePatch } from "@handyfix/shared";
 import { readBytes } from "@/features/attachments/api";
 import { getSupabase } from "@/lib/supabase";
 
@@ -41,6 +41,13 @@ export async function saveProviderProfile(providerId: string, patch: ProviderPro
   const { data, error } = await getSupabase().from("service_providers").update(patch).eq("id", providerId).select("id").maybeSingle();
   if (error) throw readable(error);
   if (!data) throw new Error("Your profile could not be saved. Sign out and in again, then retry.");
+}
+
+/** Saves only the four payout columns (the wallet screen), leaving the rest of the profile alone. */
+export async function savePayoutDetails(providerId: string, patch: PayoutPatch): Promise<void> {
+  const { data, error } = await getSupabase().from("service_providers").update(patch).eq("id", providerId).select("id").maybeSingle();
+  if (error) throw readable(error);
+  if (!data) throw new Error("Your payout details could not be saved. Sign out and in again, then retry.");
 }
 
 /** The `avatars` bucket comes from a proposal; until it is applied uploads fail with "Bucket not found". */

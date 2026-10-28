@@ -1,5 +1,5 @@
 import {
-  describeLedgerEntry, earningsSummary, formatInr, launchLine, topUpChoices, validateTopUp,
+  describeLedgerEntry, earningsSummary, formatInr, launchLine, payoutSummary, topUpChoices, validateTopUp,
 } from "@handyfix/shared";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
@@ -10,6 +10,8 @@ import { useSession } from "@/features/auth/session-provider";
 import {
   createTopUpOrder, fetchLedger, fetchMinPayout, fetchPayouts, fetchProviderBookings, requestPayout,
 } from "@/features/provider/api";
+import { PayoutCard } from "@/features/provider/PayoutCard";
+import { fetchProviderProfile, providerProfileKey } from "@/features/provider/profile-api";
 import { useProviderRuntime } from "@/features/provider/provider-runtime";
 import { openCheckout } from "@/lib/razorpay";
 
@@ -23,6 +25,7 @@ export default function WalletScreen() {
 
   const ledger = useQuery({ queryKey: ["wallet-ledger", providerId], enabled: !!providerId, queryFn: () => fetchLedger(providerId as string) });
   const payouts = useQuery({ queryKey: ["wallet-payouts", providerId], enabled: !!providerId, queryFn: () => fetchPayouts(providerId as string) });
+  const profile = useQuery({ queryKey: providerProfileKey(providerId ?? ""), enabled: !!providerId, queryFn: () => fetchProviderProfile(providerId as string) });
   const minPayout = useQuery({ queryKey: ["wallet-min-payout"], queryFn: fetchMinPayout });
   const bookings = useQuery({ queryKey: ["provider-bookings", providerId], enabled: !!providerId, queryFn: () => fetchProviderBookings(providerId as string) });
 
@@ -95,7 +98,16 @@ export default function WalletScreen() {
   };
 
   const earnings = earningsSummary(bookings.data ?? [], new Date());
-  const canWithdraw = rt.wallet.balance > 0 && rt.wallet.due === 0;
+  const payoutReady = profile.data ? payoutSummary(profile.data).ready : false;
+  const approved = provider?.kyc_status === "approved";
+  const canWithdraw = rt.wallet.balance > 0 && rt.wallet.due === 0 && payoutReady && approved;
+  const withdrawBlocked = !approved
+    ? "Withdrawals open once your identity check is approved."
+    : rt.wallet.due > 0
+      ? "Clear your dues first. Withdrawals open once the balance is positive."
+      : !payoutReady
+        ? "Add your payout details below, then you can withdraw."
+        : "Nothing to withdraw yet.";
 
   return (
     <Screen>
@@ -144,7 +156,7 @@ export default function WalletScreen() {
             <Button label="Request withdrawal" variant="secondary" loading={withdrawing} onPress={() => void withdrawNow()} />
           </>
         ) : (
-          <Body muted>{rt.wallet.due > 0 ? "Clear your dues first. Withdrawals open once the balance is positive." : "Nothing to withdraw yet."}</Body>
+          <Body muted>{withdrawBlocked}</Body>
         )}
         {(payouts.data ?? []).map((p) => (
           <View key={p.id} className="flex-row justify-between">
@@ -153,6 +165,8 @@ export default function WalletScreen() {
           </View>
         ))}
       </Card>
+
+      {providerId ? <PayoutCard providerId={providerId} /> : null}
 
       <Card>
         <Text className="text-lg font-semibold text-fg">Earnings</Text>

@@ -2,6 +2,7 @@ import { z } from "zod";
 import { fullNameSchema } from "../auth/schemas";
 import { isValidPincode, phoneSchema } from "../booking/validation";
 import { GUJARAT_CITIES } from "../constants/cities";
+import { checkBankGroup, upiIdField } from "./payout";
 
 /**
  * The pro's editable profile (`service_providers` row). Customers find a pro through two lists on
@@ -49,10 +50,6 @@ export function suggestCities(query: string, exclude: readonly string[] = [], li
 const optionalText = (max: number) =>
   z.string().trim().max(max, "Too long").transform((v) => (v === "" ? null : v));
 
-const UPI_REGEX = /^[a-zA-Z0-9.\-_]{2,256}@[a-zA-Z][a-zA-Z0-9]{1,63}$/;
-const IFSC_REGEX = /^[A-Z]{4}0[A-Z0-9]{6}$/;
-const ACCOUNT_REGEX = /^\d{9,18}$/;
-
 export const providerProfileSchema = z
   .object({
     fullName: fullNameSchema,
@@ -82,28 +79,12 @@ export const providerProfileSchema = z
       .min(1, "Add at least one city or pincode you cover")
       .max(MAX_SERVICE_AREAS, `You can cover up to ${MAX_SERVICE_AREAS} areas`),
     serviceIds: z.array(z.string().uuid()).min(1, "Pick at least one service you offer"),
-    upiId: z.string().trim().transform((v, ctx) => {
-      if (v === "") return null;
-      if (!UPI_REGEX.test(v)) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Enter a UPI ID like name@bank" });
-        return z.NEVER;
-      }
-      return v;
-    }),
+    upiId: upiIdField,
     bankAccountName: optionalText(100),
     bankAccountNumber: z.string().transform((v) => v.replace(/\s/g, "")),
     bankIfsc: z.string().transform((v) => v.trim().toUpperCase()),
   })
-  .superRefine((v, ctx) => {
-    // Bank details are all-or-nothing: a half-filled account cannot receive a payout.
-    const anyBank = !!v.bankAccountName || v.bankAccountNumber !== "" || v.bankIfsc !== "";
-    if (!anyBank) return;
-    if (!v.bankAccountName) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["bankAccountName"], message: "Enter the account holder's name" });
-    if (!ACCOUNT_REGEX.test(v.bankAccountNumber)) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["bankAccountNumber"], message: "Enter the 9-18 digit account number" });
-    }
-    if (!IFSC_REGEX.test(v.bankIfsc)) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["bankIfsc"], message: "Enter an 11-character IFSC like SBIN0001234" });
-  });
+  .superRefine(checkBankGroup);
 
 export type ProviderProfileInput = z.input<typeof providerProfileSchema>;
 export type ProviderProfile = z.output<typeof providerProfileSchema>;

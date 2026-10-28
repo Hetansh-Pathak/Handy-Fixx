@@ -24,6 +24,7 @@ export * from "./provider/job-stages";
 export * from "./provider/wallet-view";
 export * from "./provider/wallet-ledger";
 export * from "./provider/profile";
+export * from "./provider/payout";
 export * from "./provider/avatar";
 export * from "./catalog/availability";
 export * from "./catalog/pricing";
