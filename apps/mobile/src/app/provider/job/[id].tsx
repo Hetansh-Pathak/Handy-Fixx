@@ -10,6 +10,7 @@ import { Linking, View } from "react-native";
 import { Text } from "@/components/text";
 import { Body, Button, Card, ErrorBanner, InfoBanner, Screen, ScreenHeader, TextField, Title } from "@/components/ui";
 import { AttachmentGallery } from "@/features/attachments/components";
+import { ChatButton } from "@/features/chat/components";
 import { useSession } from "@/features/auth/session-provider";
 import { ProviderDispute } from "@/features/disputes/components";
 import { ProviderExtras } from "@/features/extras/components";
@@ -249,6 +250,7 @@ function CustomerCard({ booking, status }: { booking: ProviderBooking; status: B
       ) : (
         <Text className="text-xs text-muted">{status === "pending" ? "The customer's phone number appears after you accept." : ""}</Text>
       )}
+      <ChatButton bookingId={booking.id} role="provider" status={status} otherName={booking.customer_name?.split(" ")[0] ?? "customer"} />
       {active ? (
         <Button label="Navigate" variant="secondary" onPress={() => {
           const dest = booking.latitude != null && booking.longitude != null

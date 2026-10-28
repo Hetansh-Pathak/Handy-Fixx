@@ -10,6 +10,7 @@ import { Text } from "@/components/text";
 import { TrackingMap } from "@/components/TrackingMap";
 import { Body, Button, Card, ErrorBanner, InfoBanner, Screen, ScreenHeader, Title } from "@/components/ui";
 import { AttachmentGallery } from "@/features/attachments/components";
+import { ChatButton } from "@/features/chat/components";
 import { loadCustomerProfile } from "@/features/auth/api";
 import { useSession } from "@/features/auth/session-provider";
 import {
@@ -223,9 +224,11 @@ export default function BookingStatusScreen() {
       {["confirmed", "on_the_way", "arrived", "in_progress"].includes(status) ? (
         <Card>
           {phone.data ? <Button label={`Call ${pro}`} variant="secondary" onPress={() => void Linking.openURL(`tel:${phone.data}`)} /> : null}
+          {booking.provider_id ? <ChatButton bookingId={booking.id} role="customer" status={status} otherName={pro} /> : null}
           <Text className="text-xs text-muted">{phone.data ? "Your pro's number is shared only for this booking." : "Calling and chat open once your pro is confirmed."}</Text>
         </Card>
       ) : null}
+      {["completed", "cancelled"].includes(status) && booking.provider_id ? <ChatButton bookingId={booking.id} role="customer" status={status} otherName={pro} /> : null}
 
       <Card>
         <Line label="Service" value={booking.sub_item_name ?? serviceName ?? "Service"} />

@@ -6,6 +6,7 @@ import { Text } from "@/components/text";
 import { useRouter } from "expo-router";
 import { Body, Button, Card, ErrorBanner, InfoBanner, Screen, Title } from "@/components/ui";
 import { useSession } from "@/features/auth/session-provider";
+import { NotificationBell } from "@/features/notifications/components";
 import { fetchProviderBookings } from "@/features/provider/api";
 import { useProviderRuntime } from "@/features/provider/provider-runtime";
 import { colors } from "@/theme/colors";
@@ -35,7 +36,7 @@ export default function ProviderHome() {
 
   return (
     <Screen>
-      <View className="flex-row items-center justify-between"><Logo size={36} /><Text className="text-sm font-semibold text-brand">PRO</Text></View>
+      <View className="flex-row items-center justify-between"><Logo size={36} /><View className="flex-row items-center gap-3"><Text className="text-sm font-semibold text-brand">PRO</Text><NotificationBell role="provider" /></View></View>
       <View className="flex-row items-center gap-2">
         <Title>Hi{fullName ? `, ${fullName.split(" ")[0]}` : ""}</Title>
         {provider?.kyc_status === "approved" ? <CircleCheck size={22} color={colors.ok} accessibilityLabel="Verified pro" /> : null}

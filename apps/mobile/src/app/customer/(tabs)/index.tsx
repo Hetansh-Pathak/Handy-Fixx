@@ -8,6 +8,7 @@ import { CitySuggestions } from "@/components/CitySuggestions";
 import { Text } from "@/components/text";
 import { Body, Button, ErrorBanner } from "@/components/ui";
 import { useSession } from "@/features/auth/session-provider";
+import { NotificationBell } from "@/features/notifications/components";
 import { useArea } from "@/features/customer/area-context";
 import { fetchServices } from "@/features/customer/catalog-api";
 import { loadErrorMessage } from "@/lib/load-error";
@@ -58,7 +59,10 @@ export default function CustomerHome() {
       <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: 32 }}>
         <View className="flex-row items-center justify-between px-5 py-3">
           <Logo />
-          {fullName ? <Text className="text-sm font-medium text-muted">Hi, {fullName.split(" ")[0]}</Text> : null}
+          <View className="flex-row items-center gap-3">
+            {fullName ? <Text className="text-sm font-medium text-muted">Hi, {fullName.split(" ")[0]}</Text> : null}
+            <NotificationBell role="customer" />
+          </View>
         </View>
 
         {/* Hero */}
