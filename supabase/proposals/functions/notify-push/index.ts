@@ -7,8 +7,8 @@ import { dedupeKey, isExpoPushToken, pushMessageFor } from "./shared-push.js";
 
 declare const Deno: { env: { get: (name: string) => string | undefined } };
 
-// PROPOSAL, NOT DEPLOYED. Sends a phone notification (through Expo's free push service) whenever HandyFix writes a row into
-// provider_notifications or customer_notifications. It is called by two Supabase Database Webhooks (see docs/PUSH_SETUP.md).
+// DEPLOYED 2026-10-29 (version 1, verify_jwt off). Sends a phone notification (through Expo's free push service) whenever HandyFix writes a row into
+// provider_notifications or customer_notifications. It is called by a database trigger (proposal 20261121, see docs/PUSH_SETUP.md).
 //
 // What it does, in order
 //   1. Checks the shared secret header. Anything without it is refused, so nobody can trigger alerts from outside.
@@ -18,11 +18,11 @@ declare const Deno: { env: { get: (name: string) => string | undefined } };
 //   4. Finds that person's phones (push_tokens) and sends the alert. A phone Expo says no longer exists is removed.
 // It never reads or sends anything else, and it never throws back at the webhook (a failed alert must not block a booking).
 //
-// Secrets: PUSH_WEBHOOK_SECRET (you choose a long random value; the same value goes into both webhooks).
+// Secrets: PUSH_WEBHOOK_SECRET (you choose a long random value and type it in the dashboard; the same value goes into the vault as push_webhook_secret).
 //          SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are provided by Supabase. EXPO_ACCESS_TOKEN is optional (only if you
 //          turned on "enhanced push security" in your Expo account).
 // Deploy with:  supabase functions deploy notify-push --no-verify-jwt
-// (A Database Webhook does not send a Supabase login. Security = the secret header below.)
+// (The trigger does not send a Supabase login. Security = the secret header below.)
 
 const EXPO_PUSH_URL = "https://exp.host/--/api/v2/push/send";
 const TTL_SECONDS = 3600;

@@ -2,9 +2,9 @@
 
 **What you get:** a pro whose app is shut still gets a loud "New job request" alert on the phone. A customer gets "Your pro accepted", "on the way", "started the job", "completed" and chat messages. Tapping an alert opens that booking.
 
-**How it works (one paragraph):** HandyFix already writes a row into a notifications table for every booking event. A Supabase *Database Webhook* calls the small `notify-push` function each time a row appears; the function looks up the person's phone and sends the alert through **Expo's free push service**, which hands it to Google's Firebase Cloud Messaging (FCM). It sends each event **once** (the live database writes several rows per event; the function removes the repeats).
+**How it works (one paragraph):** HandyFix already writes a row into a notifications table for every booking event. A database trigger (using the `pg_net` extension) calls the small `notify-push` function each time a row appears; the function looks up the person's phone and sends the alert through **Expo's free push service**, which hands it to Google's Firebase Cloud Messaging (FCM). It sends each event **once** (the live database writes several rows per event; the function removes the repeats).
 
-Everything in the code is built and tested (793 tests, including the real function run against fakes). What is left is the accounts and keys that only you can create, then three switches on my side. **Nothing is sent until all of it is in place, and until then the apps work exactly as before.**
+Everything in the code is built and tested (793 tests, including the real function run against fakes). What is left is the accounts and keys that only you can create, then the steps in Part B. **Nothing is sent until all of it is in place, and until then the apps work exactly as before.**
 
 ---
 
@@ -45,22 +45,19 @@ It asks you to log in to your Expo account and create the project, then prints a
 
 ---
 
-## Part B: what I do, when you say "go" (each step is small and safe)
+## Part B: the server side (Claude did the code; you do the secret and the SQL)
 
-| # | Step | Where | Notes |
+| # | Step | Who | Notes |
 |---|---|---|---|
-| 1 | Apply the database proposal `20261120` (push tokens and the repeat filter) | you paste `supabase\dryrun\19_push_notifications_DRYRUN.sql`, then `apply_19_push_notifications_COMMIT.sql` in Supabase > SQL Editor | tested on a throwaway database, 15 cases. Prints `true, true, true` on the dry run. |
-| 2 | Deploy the function `notify-push` | I deploy it when you say "deploy" (or you: `supabase functions deploy notify-push --no-verify-jwt`) | code: `supabase\proposals\functions\notify-push` |
-| 3 | Set the function's secret `PUSH_WEBHOOK_SECRET` | Supabase > Edge Functions > notify-push > Secrets | a long random value you choose; keep a copy, it goes in step 4 too |
-| 4 | Create the **two Database Webhooks** | Supabase > Database > **Webhooks** > Create a new hook | see below |
+| 1 | Deploy the function `notify-push` | **Done** (2026-10-29, version 1, live project) | Code: `supabase\proposals\functions\notify-push`. It refuses every call without the secret, so it does nothing until step 3 and step 5. |
+| 2 | Apply the database proposal `20261120` (push tokens and the repeat filter) | you paste `supabase\dryrun\19_push_notifications_DRYRUN.sql` (prints `true, true, true`), then `apply_19_push_notifications_COMMIT.sql` in Supabase > SQL Editor | Tested on a throwaway database, 15 cases. |
+| 3 | Set the function's secret `PUSH_WEBHOOK_SECRET` | **you, in the dashboard**: Supabase > Edge Functions > Secrets > add | Make up a long random value (30+ letters and digits). **Type it yourself; do not send it to me.** Keep a copy for step 4. |
+| 4 | Store the same value in the database vault | you, SQL Editor, run once: `SELECT vault.create_secret('PASTE THE SAME VALUE', 'push_webhook_secret');` | The database reads it from the vault when it calls the function. It is never in a file. |
+| 5 | Apply the database proposal `20261121` (the push webhooks) | you paste `supabase\dryrun\20_push_webhooks_DRYRUN.sql` (check it prints `true`), then `apply_20_push_webhooks_COMMIT.sql` | Turns on the `pg_net` extension and adds one trigger on each notification table. It cannot block a booking: any failure is swallowed. If the vault secret is missing it does nothing. |
 
-**The two webhooks** (identical except the table):
-- Name: `notify-push-provider` / `notify-push-customer`
-- Table: `provider_notifications` / `customer_notifications`
-- Events: **Insert** only
-- Type: **HTTP Request**, method **POST**
-- URL: `https://jviwwhjwtyneqrguumro.supabase.co/functions/v1/notify-push`
-- HTTP Headers: keep `Content-Type: application/json` and **add** `x-webhook-secret` with the same secret as step 3.
+There is **no need to click Database Webhooks in the dashboard**: step 5 does the same job in SQL (the dashboard feature was never enabled on this project).
+
+**To switch push off again:** `DROP TRIGGER push_webhook ON public.provider_notifications; DROP TRIGGER push_webhook ON public.customer_notifications;` (ask me and I give you the exact text).
 
 ## Part C: test it on a real phone
 
@@ -84,8 +81,8 @@ It asks you to log in to your Expo account and create the project, then prints a
 
 | What you see | Likely reason |
 |---|---|
-| Nothing arrives, ever | A webhook or the secret is missing (Supabase > Edge Functions > notify-push > Logs shows calls and `401` means the secret differs). Or the phone never registered: Pro app needs the Pro Expo project id (A4). |
-| "forbidden" / `401` in the function logs | The `x-webhook-secret` header in the webhook is not exactly the same as `PUSH_WEBHOOK_SECRET`. |
-| `skipped: no phone registered` | The phone did not register: notifications not allowed, no `google-services.json` in that build, or the database proposal 20261120 not applied. |
+| Nothing arrives, ever | The trigger (proposal 20261121), the vault secret or the function secret is missing (Supabase > Edge Functions > notify-push > Logs shows calls and `401` means the secret differs). Or the phone never registered: Pro app needs the Pro Expo project id (A4). |
+| "forbidden" / `401` in the function logs | The vault value (`push_webhook_secret`) is not exactly the same as the function secret `PUSH_WEBHOOK_SECRET`. |
+| `skipped: no phone registered` | The phone did not register: notifications not allowed, no `google-services.json` in that build, or the database proposal 20261120 not applied (check the SQL files 19 and 20 are both applied). |
 | Alert arrives only when the app is open | The FCM key was not uploaded to Expo for that project (A3). |
 | Two alerts for one request | Tell me the time and I check the function log. One event should always produce one alert. |

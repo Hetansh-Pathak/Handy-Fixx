@@ -41,6 +41,8 @@ Not verified (cannot be, without a phone): real sounds, GPS, camera, Razorpay, G
 | `20261110` chat hardening | Closes a hole: anyone could post into any chat. |
 | `20261114` fee 3%, fee held at accept, 24 h auto-close | Without it the live database still charges the old slabs while the apps show 3%. Apply the same day as the new Pro build. |
 | `20261115` launch = 10 jobs or 1 month | Otherwise the database keeps the 3-month rule while the apps say 1 month. |
+| `20261120` + `20261121` push tokens and webhooks | Push to a closed app (also needs the Firebase steps and the vault secret). |
+| `20261118` requests stay open | Replaces the 30-minute auto-cancel (item 4 below). |
 | `20261111` delete account (+ its function) | Play requires in-app account deletion to work. |
 | `20261112` late-cancel limit | Makes the rule impossible to dodge. |
 | `20261103` Call button, `20261109` Nearest, `20261113000002` pro jobs and rates | Features; apps work without them (the feature is simply hidden). |
@@ -59,7 +61,7 @@ Not verified (cannot be, without a phone): real sounds, GPS, camera, Razorpay, G
 | Google sign-in | "Continue with Google" | Android OAuth client per package with the **release** SHA-1; `docs\GOOGLE_SIGNIN_SETUP.md`. |
 | Razorpay **live** keys and webhook | wallet recharge | `docs\PAYMENTS_SETUP.md`. Keys live only in Edge Function secrets. Deploy the pack-only `create-wallet-topup-order` function from `supabase\proposals\functions`. |
 | Google Maps key (optional) | embedded live map | `GOOGLE_MAPS_API_KEY` as an EAS secret plus `EXPO_PUBLIC_MAPS_ENABLED=1`; without it the screen shows ETA and "Open in Google Maps". |
-| Firebase project | push to a closed app | **Built; needs your Firebase steps: `docs\PUSH_SETUP.md`** (Firebase project, `google-services.json`, FCM key into Expo, then I apply the database proposal `20261120`, deploy `notify-push` and you create two webhooks). Without it a closed Pro app gets no request. |
+| Firebase project | push to a closed app | **Built; needs your Firebase steps: `docs\PUSH_SETUP.md`** (Firebase project, `google-services.json`, FCM key into Expo; `notify-push` is already deployed; you type the secret in the dashboard, store it with `vault.create_secret`, then apply `20261120` and `20261121`). Without it a closed Pro app gets no request. |
 | New app icon and splash (apnabanda) | store listing | The icon files in the app are still the old ones (see PROGRESS.md follow-ups). |
 
 ## D. Values to set in the build (expo.dev > project > Environment variables, for the production profile of **each** app)
