@@ -5,15 +5,19 @@ const valid = (n: number | null | undefined): n is number => typeof n === "numbe
 
 /**
  * The price shown for one pro on one service.
- * - A chosen sub-item (e.g. "Tap repair") has a fixed catalogue price for every pro.
+ * - A chosen sub-item (e.g. "Tap repair"): the pro's own rate for that job (inside the admin band,
+ *   see pro-offers.ts), else its catalogue price.
  * - Otherwise the pro's own rate for the service, falling back to the service's starting price.
  * Returns null when no usable price exists, so the card can hide "Book" instead of showing ₹0.
+ * Mirrors the `enforce_booking_price` trigger, which has the final say.
  */
 export function resolveListedPrice(input: {
+  proSubItemPrice?: number | null;
   subItemPrice?: number | null;
   customPrice?: number | null;
   basePrice?: number | null;
 }): Rupees | null {
+  if (valid(input.subItemPrice) && valid(input.proSubItemPrice)) return input.proSubItemPrice;
   if (valid(input.subItemPrice)) return input.subItemPrice;
   if (valid(input.customPrice)) return input.customPrice;
   if (valid(input.basePrice)) return input.basePrice;

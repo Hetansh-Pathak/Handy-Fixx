@@ -35,7 +35,7 @@ export default function CustomerBookings() {
 function Row({ b, onPress }: { b: CustomerBookingListItem; onPress: () => void }) {
   return (
     <Pressable accessibilityRole="button" accessibilityLabel={`Booking ${b.sub_item_name ?? b.serviceName ?? ""}`} onPress={onPress}
-      className="gap-1 rounded-2xl border border-line bg-card p-4 active:opacity-80">
+      className="gap-1 rounded-tile border border-line bg-card p-4 active:opacity-80">
       <View className="flex-row justify-between gap-3">
         <Text className="flex-1 text-lg font-semibold text-fg">{b.sub_item_name ?? b.serviceName ?? "Service"}</Text>
         <Text className="text-lg font-bold text-brand">{formatInr(b.total_amount ?? 0)}</Text>

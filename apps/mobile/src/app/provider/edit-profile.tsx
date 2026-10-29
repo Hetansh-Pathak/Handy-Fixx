@@ -5,7 +5,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { View } from "react-native";
 import { CitySuggestions } from "@/components/CitySuggestions";
 import { Text } from "@/components/text";
-import { Body, Button, Card, Chip, ErrorBanner, InfoBanner, Screen, ScreenHeader, TextField, ListSkeleton } from "@/components/ui";
+import { Body, Button, Card, ErrorBanner, InfoBanner, Screen, ScreenHeader, TextField, ListSkeleton } from "@/components/ui";
 import { providerRowKey, useSession } from "@/features/auth/session-provider";
 import { fetchServices } from "@/features/customer/catalog-api";
 import { loadErrorMessage } from "@/lib/load-error";
@@ -76,9 +76,6 @@ function EditForm({ providerId }: { providerId: string }) {
     });
   };
 
-  const toggleService = (id: string) =>
-    set("serviceIds")(values.serviceIds.includes(id) ? values.serviceIds.filter((s) => s !== id) : [...values.serviceIds, id]);
-
   const save = async () => {
     const r = providerProfileSchema.safeParse(values);
     if (!r.success) {
@@ -90,7 +87,9 @@ function EditForm({ providerId }: { providerId: string }) {
     setBusy(true);
     setError(null);
     try {
-      await saveProviderProfile(providerId, toProviderProfilePatch(r.data, locked));
+      // Services are saved on the My services screen; leaving them out here never undoes a newer choice made there.
+      const { service_ids: _services, ...patch } = toProviderProfilePatch(r.data, locked);
+      await saveProviderProfile(providerId, patch);
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: providerProfileKey(providerId) }),
         queryClient.invalidateQueries({ queryKey: providerRowKey(userId) }),
@@ -131,13 +130,12 @@ function EditForm({ providerId }: { providerId: string }) {
           onCityFound={(city) => { if (!values.city.trim()) set("city")(city); }} />
       </Section>
 
-      <Section title="Services you offer" hint="You only get requests for the services you pick." error={errors.serviceIds}>
+      <Section title="Services you offer" hint="You only get requests for the services and jobs you pick." error={errors.serviceIds}>
         {services.isError ? <Body muted>{loadErrorMessage("services", services.error)}</Body> : null}
-        <View className="flex-row flex-wrap gap-2">
-          {(services.data ?? []).map((s) => (
-            <Chip key={s.id} label={s.name} selected={values.serviceIds.includes(s.id)} onPress={() => toggleService(s.id)} />
-          ))}
-        </View>
+        <Body muted>
+          {values.serviceIds.map((id) => services.data?.find((s) => s.id === id)?.name).filter(Boolean).join(", ") || "None picked yet."}
+        </Body>
+        <Button label="Choose services and jobs" variant="secondary" onPress={() => router.push("/provider/services")} />
       </Section>
 
       <Section title="Payout details" hint="Where HandyFix sends your wallet withdrawals. Fill UPI, bank, or both.">

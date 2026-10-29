@@ -1,3 +1,29 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Defaults before the theme provider mounts (Dark, the hero theme). src/theme/theme.tsx sets the live values. */
+:root {
+  --canvas: 5 7 13;
+  --fg: 244 247 255;
+  --muted: 167 179 204;
+  --brand: 91 147 255;
+  --onbrand: 4 16 31;
+  --tintfg: 168 198 255;
+  --price: 143 180 255;
+  --accent: 255 194 51;
+  --onaccent: 26 17 0;
+  --ok: 91 227 168;
+  --warn: 255 210 122;
+  --danger: 255 138 143;
+  --onstrip: 244 247 255;
+  --card: rgba(255, 255, 255, 0.07);
+  --field: rgba(255, 255, 255, 0.06);
+  --line: rgba(255, 255, 255, 0.14);
+  --tint: rgba(91, 147, 255, 0.16);
+  --okbg: rgba(91, 227, 168, 0.14);
+  --warnbg: rgba(255, 194, 51, 0.14);
+  --dangerbg: rgba(255, 138, 143, 0.14);
+  --strip: rgba(255, 255, 255, 0.1);
+  --nav: rgba(12, 16, 28, 0.72);
+}

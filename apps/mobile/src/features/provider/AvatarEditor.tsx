@@ -7,7 +7,7 @@ import { ActivityIndicator, Pressable, View } from "react-native";
 import { Avatar } from "@/components/Avatar";
 import { Text } from "@/components/text";
 import { providerRowKey } from "@/features/auth/session-provider";
-import { colors } from "@/theme/colors";
+import { useThemeColors } from "@/theme/theme";
 import { providerProfileKey, removeProviderAvatar, uploadProviderAvatar } from "./profile-api";
 
 const PICK: ImagePicker.ImagePickerOptions = { mediaTypes: ["images"], allowsEditing: true, aspect: [1, 1], quality: 0.6 };
@@ -15,9 +15,10 @@ const PICK: ImagePicker.ImagePickerOptions = { mediaTypes: ["images"], allowsEdi
 function Action({ label, icon: Icon, onPress, disabled, danger = false }: {
   label: string; icon: typeof Camera; onPress: () => void; disabled: boolean; danger?: boolean;
 }) {
+  const colors = useThemeColors();
   return (
     <Pressable accessibilityRole="button" disabled={disabled} onPress={onPress}
-      className={`min-h-[44px] flex-row items-center gap-2 rounded-xl border border-line bg-card px-3 ${disabled ? "opacity-40" : "active:opacity-80"}`}>
+      className={`min-h-[44px] flex-row items-center gap-2 rounded-tile border border-line bg-card px-3 ${disabled ? "opacity-40" : "active:opacity-80"}`}>
       <Icon size={16} color={danger ? colors.danger : colors.brand} />
       <Text className={`text-sm font-semibold ${danger ? "text-danger" : "text-fg"}`}>{label}</Text>
     </Pressable>
@@ -26,6 +27,7 @@ function Action({ label, icon: Icon, onPress, disabled, danger = false }: {
 
 /** Profile photo with gallery / camera / remove. Saves straight away (it is not part of the profile form). */
 export function AvatarEditor({ userId, providerId, name, url }: { userId: string; providerId: string; name: string; url: string | null }) {
+  const colors = useThemeColors();
   const queryClient = useQueryClient();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -66,7 +68,7 @@ export function AvatarEditor({ userId, providerId, name, url }: { userId: string
       <View>
         <Avatar name={name} url={url} size={96} />
         {busy ? (
-          <View className="absolute inset-0 items-center justify-center rounded-full bg-fg/40"><ActivityIndicator color={colors.white} /></View>
+          <View className="absolute inset-0 items-center justify-center rounded-full bg-black/50"><ActivityIndicator color={colors.white} /></View>
         ) : null}
       </View>
       <View className="flex-row flex-wrap justify-center gap-2">

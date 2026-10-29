@@ -9,7 +9,6 @@ import {
 } from "@expo-google-fonts/plus-jakarta-sans";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
 import { variantAllowsRole } from "@handyfix/shared";
 import { Linking } from "react-native";
@@ -18,10 +17,12 @@ import { SessionProvider, useSession } from "@/features/auth/session-provider";
 import { Button, FullScreenMessage } from "@/components/ui";
 import { env } from "@/lib/env";
 import { queryClient } from "@/lib/query-client";
+import { ThemeProvider, useThemeColors } from "@/theme/theme";
 
 void SplashScreen.preventAutoHideAsync();
 
 function Navigator() {
+  const colors = useThemeColors();
   const { status, role, errorMessage, refresh, signOut } = useSession();
   const [fontsLoaded, fontError] = useFonts({
     PlusJakartaSans_400Regular, PlusJakartaSans_500Medium, PlusJakartaSans_600SemiBold, PlusJakartaSans_700Bold, PlusJakartaSans_800ExtraBold,
@@ -64,7 +65,7 @@ function Navigator() {
     );
   }
   return (
-    <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: "#FAF6EF" } }}>
+    <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.canvas } }}>
       <Stack.Protected guard={!signedIn}>
         <Stack.Screen name="(auth)" />
       </Stack.Protected>
@@ -89,12 +90,13 @@ function Navigator() {
 export default function RootLayout() {
   return (
     <SafeAreaProvider>
-      <StatusBar style="dark" />
-      <QueryClientProvider client={queryClient}>
-        <SessionProvider>
-          <Navigator />
-        </SessionProvider>
-      </QueryClientProvider>
+      <ThemeProvider>
+        <QueryClientProvider client={queryClient}>
+          <SessionProvider>
+            <Navigator />
+          </SessionProvider>
+        </QueryClientProvider>
+      </ThemeProvider>
     </SafeAreaProvider>
   );
 }

@@ -2,16 +2,25 @@ import { formatInr } from "../money/money";
 import { launchStatus, type LaunchStatus } from "../money/launch";
 import type { AcceptCheck, WalletState } from "../money/wallet";
 
-/** The shape of the `get_wallet_summary()` reply that matters here. `balance` is the signed ledger sum. */
-export type WalletSummary = { balance: number; dues: number; available: number };
+/**
+ * The shape of the `get_wallet_summary()` reply that matters here. `balance` is the signed ledger sum;
+ * `held` (proposal 20261114000000) is fees reserved for accepted jobs and is already taken out of `available`.
+ */
+export type WalletSummary = { balance: number; dues: number; available: number; held?: number };
+
+const num = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : Number(v) || 0);
 
 /**
- * The live ledger is one signed number: money you have is `available`, money you owe is `dues`. That is the
- * same {balance, due} pair the fee rules use (a top-up clears dues first), so no conversion is needed.
+ * The live ledger is one signed number: money you can spend is `available`, money you owe is `dues`. That is
+ * the same {balance, due} pair the fee rules use (a recharge clears dues first), so no conversion is needed.
  */
 export function walletStateFromSummary(s: Partial<WalletSummary> | null | undefined): WalletState {
-  const n = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : Number(v) || 0);
-  return { balance: Math.max(0, n(s?.available)), due: Math.max(0, n(s?.dues)) };
+  return { balance: Math.max(0, num(s?.available)), due: Math.max(0, num(s?.dues)) };
+}
+
+/** Fees reserved for accepted jobs ("₹12 reserved for your current job"); 0 before holds exist. */
+export function heldFromSummary(s: Partial<WalletSummary> | null | undefined): number {
+  return Math.max(0, num(s?.held));
 }
 
 /**
@@ -28,11 +37,17 @@ export function providerLaunchStatus(
   );
 }
 
-/** Text for the blocked Accept button. */
+/** Text under the disabled Accept button. */
 export function acceptBlockMessage(check: Extract<AcceptCheck, { ok: false }>): string {
   return check.reason === "due_outstanding"
-    ? `You have dues to clear. Top up ${formatInr(check.suggestedTopUp)} to accept new jobs.`
-    : `Wallet below the fee. Top up ${formatInr(check.suggestedTopUp)} to accept.`;
+    ? `Recharge ${formatInr(check.suggestedTopUp)} to clear ${formatInr(Math.max(0, check.shortfall - check.fee))} you owe and accept new jobs.`
+    : `Recharge ${formatInr(check.suggestedTopUp)} to accept. Your wallet is below the ${formatInr(check.fee)} fee.`;
+}
+
+/** "Covers about 8 more jobs" for the wallet headline. */
+export function jobsCoveredLine(jobs: number): string {
+  if (jobs <= 0) return "Recharge to accept new jobs";
+  return `Covers about ${jobs} more ${jobs === 1 ? "job" : "jobs"}`;
 }
 
 /** "₹15 waived · 2 months left" style line for the launch strip. */

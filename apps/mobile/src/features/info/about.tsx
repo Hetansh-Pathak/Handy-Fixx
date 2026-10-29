@@ -7,7 +7,7 @@ import { MenuGroup, MenuRow } from "@/components/menu";
 import { Text } from "@/components/text";
 import { Body, Card, Screen, ScreenHeader } from "@/components/ui";
 import { env } from "@/lib/env";
-import { colors } from "@/theme/colors";
+import { useThemeColors } from "@/theme/theme";
 
 const POINTS = [
   { icon: ShieldCheck, title: "Checked pros", text: "Every pro passes an identity check (Aadhaar, PAN and a selfie) reviewed by our team before taking jobs." },
@@ -17,6 +17,7 @@ const POINTS = [
 ] as const;
 
 export function AboutScreen({ role }: { role: "customer" | "provider" }) {
+  const colors = useThemeColors();
   const router = useRouter();
   const version = Constants.expoConfig?.version ?? "";
   return (

@@ -1,8 +1,21 @@
 import { describe, expect, it } from "vitest";
 import { checkCanAccept } from "../money/wallet";
-import { acceptBlockMessage, launchLine, providerLaunchStatus, walletStateFromSummary } from "./wallet-view";
+import { acceptBlockMessage, heldFromSummary, jobsCoveredLine, launchLine, providerLaunchStatus, walletStateFromSummary } from "./wallet-view";
 
 const now = new Date("2026-12-15T00:00:00Z");
+
+describe("heldFromSummary and jobsCoveredLine", () => {
+  it("reads the held fees, 0 before holds exist", () => {
+    expect(heldFromSummary({ balance: 60, available: 48, dues: 0, held: 12 })).toBe(12);
+    expect(heldFromSummary({ balance: 60, available: 60, dues: 0 })).toBe(0);
+    expect(heldFromSummary(null)).toBe(0);
+  });
+  it("words the wallet headline", () => {
+    expect(jobsCoveredLine(8)).toBe("Covers about 8 more jobs");
+    expect(jobsCoveredLine(1)).toBe("Covers about 1 more job");
+    expect(jobsCoveredLine(0)).toBe("Recharge to accept new jobs");
+  });
+});
 
 describe("walletStateFromSummary (live get_wallet_summary → fee rules)", () => {
   it("maps available and dues", () => {
@@ -33,12 +46,12 @@ describe("providerLaunchStatus", () => {
 });
 
 describe("messages", () => {
-  it("explains a blocked accept with the amount to top up", () => {
+  it("explains a blocked accept with the pack to recharge", () => {
     const low = checkCanAccept({ wallet: { balance: 5, due: 0 }, estimatedServiceBill: 349, launchActive: false });
     const due = checkCanAccept({ wallet: { balance: 0, due: 45 }, estimatedServiceBill: 349, launchActive: false });
     if (low.ok || due.ok) throw new Error("expected blocked");
-    expect(acceptBlockMessage(low)).toBe("Wallet below the fee. Top up ₹100 to accept.");
-    expect(acceptBlockMessage(due)).toBe("You have dues to clear. Top up ₹100 to accept new jobs.");
+    expect(acceptBlockMessage(low)).toBe("Recharge ₹49 to accept. Your wallet is below the ₹10 fee.");
+    expect(acceptBlockMessage(due)).toBe("Recharge ₹99 to clear ₹45 you owe and accept new jobs.");
   });
   it("describes the launch period, singular and plural", () => {
     expect(launchLine({ active: true, endsAt: now, jobsLeft: 6, daysLeft: 48 })).toBe("Fee-free launch: 6 jobs or 2 months left");

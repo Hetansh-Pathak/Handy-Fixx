@@ -36,6 +36,7 @@ export * from "./catalog/availability";
 export * from "./catalog/pricing";
 export * from "./catalog/display";
 export * from "./catalog/sections";
+export * from "./catalog/pro-offers";
 export * from "./geo/distance";
 export * from "./kyc/kyc";
 export * from "./kyc/sha256";

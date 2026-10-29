@@ -31,7 +31,7 @@ export function openRequests<T extends RequestRow>(rows: readonly T[], now: Date
 export type RequestEconomics = {
   /** What the pro earns from the customer. */
   earning: Rupees;
-  /** The real slab fee for this job. */
+  /** The fee for this job (3%, min ₹5, max ₹50). */
   fee: Rupees;
   /** True during the fee-free launch period: the fee is shown as "waived". */
   feeWaived: boolean;

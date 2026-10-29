@@ -9,7 +9,7 @@ import { Camera, ImagePlus, Mic, Pause, Play, Square, Trash2, X } from "lucide-r
 import { useEffect, useRef, useState } from "react";
 import { Image, Linking, Platform, Pressable, View } from "react-native";
 import { Text } from "@/components/text";
-import { colors } from "@/theme/colors";
+import { useThemeColors } from "@/theme/theme";
 import { attachmentsKey, fetchBookingAttachments, type LocalAttachment } from "./api";
 
 const newKey = () => `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -17,9 +17,10 @@ const newKey = () => `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 function SmallButton({ label, icon: Icon, onPress, disabled = false }: {
   label: string; icon: typeof Camera; onPress: () => void; disabled?: boolean;
 }) {
+  const colors = useThemeColors();
   return (
     <Pressable accessibilityRole="button" disabled={disabled} onPress={onPress}
-      className={`min-h-[48px] flex-1 flex-row items-center justify-center gap-2 rounded-xl border border-line bg-card px-3 ${disabled ? "opacity-40" : "active:opacity-80"}`}>
+      className={`min-h-[48px] flex-1 flex-row items-center justify-center gap-2 rounded-tile border border-line bg-card px-3 ${disabled ? "opacity-40" : "active:opacity-80"}`}>
       <Icon size={18} color={colors.brand} />
       <Text className="text-sm font-semibold text-fg">{label}</Text>
     </Pressable>
@@ -28,6 +29,7 @@ function SmallButton({ label, icon: Icon, onPress, disabled = false }: {
 
 /** Play/pause for one clip (a local recording or a signed URL). */
 export function AudioClip({ uri, durationSeconds, onRemove }: { uri: string; durationSeconds: number | null; onRemove?: () => void }) {
+  const colors = useThemeColors();
   const player = useAudioPlayer(uri);
   const status = useAudioPlayerStatus(player);
 
@@ -38,10 +40,10 @@ export function AudioClip({ uri, durationSeconds, onRemove }: { uri: string; dur
   const toggle = () => (status.playing ? player.pause() : player.play());
   const total = status.duration || durationSeconds || 0;
   return (
-    <View className="flex-row items-center gap-3 rounded-xl border border-line bg-field p-2">
+    <View className="flex-row items-center gap-3 rounded-tile border border-line bg-field p-2">
       <Pressable accessibilityRole="button" accessibilityLabel={status.playing ? "Pause voice note" : "Play voice note"} onPress={toggle}
         className="h-11 w-11 items-center justify-center rounded-full bg-brand active:opacity-80">
-        {status.playing ? <Pause size={18} color={colors.white} /> : <Play size={18} color={colors.white} />}
+        {status.playing ? <Pause size={18} color={colors.onBrand} /> : <Play size={18} color={colors.onBrand} />}
       </Pressable>
       <View className="flex-1">
         <Text className="text-sm font-semibold text-fg">Voice note</Text>
@@ -58,6 +60,7 @@ export function AudioClip({ uri, durationSeconds, onRemove }: { uri: string; dur
 
 /** Records one voice note, up to two minutes, then hands it back. */
 function VoiceRecorder({ onDone, onError }: { onDone: (a: LocalAttachment) => void; onError: (message: string) => void }) {
+  const colors = useThemeColors();
   const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const state = useAudioRecorderState(recorder, 250);
   const seconds = state.durationMillis / 1000;
@@ -102,15 +105,15 @@ function VoiceRecorder({ onDone, onError }: { onDone: (a: LocalAttachment) => vo
 
   if (!state.isRecording) return <SmallButton label="Record voice note" icon={Mic} onPress={() => void start()} />;
   return (
-    <View className="flex-row items-center gap-3 rounded-xl border border-danger bg-danger/10 p-2">
+    <View className="flex-row items-center gap-3 rounded-tile border border-danger bg-danger/10 p-2">
       <View className="h-3 w-3 rounded-full bg-danger" />
       <Text className="flex-1 text-sm font-semibold text-danger">
         Recording {formatClipDuration(seconds)} / {formatClipDuration(ATTACHMENT_LIMITS.maxAudioSeconds)}
       </Text>
       <Pressable accessibilityRole="button" accessibilityLabel="Stop recording" onPress={() => void stop()}
         className="min-h-[44px] flex-row items-center gap-1 rounded-lg bg-danger px-3 active:opacity-80">
-        <Square size={14} color={colors.white} fill={colors.white} />
-        <Text className="text-sm font-semibold text-white">Stop</Text>
+        <Square size={14} color={colors.onBrand} fill={colors.onBrand} />
+        <Text className="text-sm font-semibold text-onbrand">Stop</Text>
       </Pressable>
     </View>
   );
@@ -118,6 +121,7 @@ function VoiceRecorder({ onDone, onError }: { onDone: (a: LocalAttachment) => vo
 
 /** Up to 5 photos (gallery or camera) and one voice note, shown with the problem description. */
 export function AttachmentPicker({ value, onChange }: { value: LocalAttachment[]; onChange: (next: LocalAttachment[]) => void }) {
+  const colors = useThemeColors();
   const [error, setError] = useState<string | null>(null);
   const photos = value.filter((a) => a.type === "image");
   const voice = value.find((a) => a.type === "audio");
@@ -160,10 +164,10 @@ export function AttachmentPicker({ value, onChange }: { value: LocalAttachment[]
       {photos.length ? (
         <View className="flex-row flex-wrap gap-2">
           {photos.map((p) => (
-            <View key={p.key} className="h-20 w-20 overflow-hidden rounded-xl border border-line">
+            <View key={p.key} className="h-20 w-20 overflow-hidden rounded-tile border border-line">
               <Image source={{ uri: p.uri }} className="h-full w-full" resizeMode="cover" accessibilityLabel="Problem photo" />
               <Pressable accessibilityRole="button" accessibilityLabel="Remove photo" onPress={() => remove(p.key)} hitSlop={6}
-                className="absolute right-1 top-1 h-6 w-6 items-center justify-center rounded-full bg-fg/70">
+                className="absolute right-1 top-1 h-6 w-6 items-center justify-center rounded-full bg-black/70">
                 <X size={14} color={colors.white} />
               </Pressable>
             </View>
@@ -214,7 +218,7 @@ export function AttachmentGallery({ bookingId }: { bookingId: string }) {
         <View className="flex-row flex-wrap gap-2">
           {photos.map((p) => (
             <Pressable key={p.id} accessibilityRole="imagebutton" accessibilityLabel="Open photo" onPress={() => void Linking.openURL(p.url!)}
-              className="h-20 w-20 overflow-hidden rounded-xl border border-line active:opacity-80">
+              className="h-20 w-20 overflow-hidden rounded-tile border border-line active:opacity-80">
               <Image source={{ uri: p.url! }} className="h-full w-full" resizeMode="cover" />
             </Pressable>
           ))}

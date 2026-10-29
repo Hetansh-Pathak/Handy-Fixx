@@ -12,7 +12,7 @@ describe("computeBill", () => {
     expect(bill.serviceBill).toBe(449);
     expect(bill.customerTotal).toBe(449);
     expect(bill.customerPlatformFee).toBe(0);
-    expect(feeForServiceBill(bill.serviceBill)).toBe(15);
+    expect(feeForServiceBill(bill.serviceBill)).toBe(13); // 3% of ₹449
   });
 
   it("ignores pending and declined extras but reports pending ones", () => {
@@ -24,7 +24,7 @@ describe("computeBill", () => {
     expect(bill.pendingTotal).toBe(100);
   });
 
-  it("keeps parts out of the service bill (so they never change the fee slab)", () => {
+  it("keeps parts out of the service bill (so they never change the fee)", () => {
     const bill = computeBill({
       rate: 450,
       extras: [item({ kind: "part", amount: 300, billPhotoPath: "bill.jpg" })],
@@ -32,13 +32,13 @@ describe("computeBill", () => {
     expect(bill.serviceBill).toBe(450);
     expect(bill.partsTotal).toBe(300);
     expect(bill.customerTotal).toBe(750);
-    expect(feeForServiceBill(bill.serviceBill)).toBe(15); // would be 30 if parts were counted
+    expect(feeForServiceBill(bill.serviceBill)).toBe(14); // 3% of ₹450; would be ₹23 if parts were counted
   });
 
-  it("extras can push the bill into the next slab", () => {
+  it("approved extras raise the fee", () => {
     const bill = computeBill({ rate: 450, extras: [item({ amount: 100 })] });
     expect(bill.serviceBill).toBe(550);
-    expect(feeForServiceBill(bill.serviceBill)).toBe(30);
+    expect(feeForServiceBill(bill.serviceBill)).toBe(17); // 3% of ₹550
   });
 
   it("works with no extras", () => {

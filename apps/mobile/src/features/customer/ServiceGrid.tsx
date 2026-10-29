@@ -16,7 +16,7 @@ export function ServiceGrid({ services }: { services: readonly ServiceRow[] }) {
         return (
           <Pressable key={s.id} accessibilityRole="button" accessibilityLabel={s.name}
             onPress={() => router.push({ pathname: "/customer/service/[slug]", params: { slug: s.slug } })}
-            className="w-[48%] gap-2 overflow-hidden rounded-3xl border border-line bg-card p-4 active:opacity-80">
+            className="w-[48%] gap-2 overflow-hidden rounded-panel border border-line bg-card p-4 active:opacity-80">
             {image ? (
               // Edge to edge across the top of the card (the card has 16 px padding). The wrapper stretches; the
               // image fills it with explicit sizes (web does not size an Image from flex alone).

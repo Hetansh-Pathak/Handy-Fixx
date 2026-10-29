@@ -12,23 +12,32 @@ export type CheckoutOrder = {
   prefill?: { name?: string; email?: string; contact?: string };
 };
 
-export type CheckoutResult = { status: "paid" } | { status: "cancelled" } | { status: "failed"; message: string };
+/** What Razorpay hands back after a successful payment (checked on the server by verify-wallet-payment). */
+export type CheckoutPayment = { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string };
+
+export type CheckoutResult =
+  | { status: "paid"; payment: CheckoutPayment | null }
+  | { status: "cancelled" }
+  | { status: "failed"; message: string };
 
 export async function openCheckout(order: CheckoutOrder): Promise<CheckoutResult> {
   if (Platform.OS === "web") throw new Error("Top-up works in the HandyFix phone app.");
   const { default: RazorpayCheckout } = await import("react-native-razorpay");
   try {
-    await RazorpayCheckout.open({
+    const data: Partial<CheckoutPayment> = await RazorpayCheckout.open({
       key: order.key_id,
       order_id: order.order_id,
       amount: order.amount_paise,
       currency: "INR",
       name: "HandyFix",
-      description: "Wallet top-up",
+      description: "Wallet recharge",
       prefill: order.prefill,
       theme: { color: "#C16430" },
     });
-    return { status: "paid" };
+    const payment = data?.razorpay_payment_id && data.razorpay_signature
+      ? { razorpay_order_id: data.razorpay_order_id ?? order.order_id, razorpay_payment_id: data.razorpay_payment_id, razorpay_signature: data.razorpay_signature }
+      : null;
+    return { status: "paid", payment };
   } catch (e) {
     const err = e as { code?: number | string; description?: string; error?: { description?: string; reason?: string } };
     // Razorpay reports a closed sheet as code 0 / "Payment cancelled by user".

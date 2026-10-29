@@ -12,13 +12,15 @@ import { fetchServices } from "@/features/customer/catalog-api";
 import { loadErrorMessage } from "@/lib/load-error";
 import { ServiceGrid } from "@/features/customer/ServiceGrid";
 import { groupServices } from "@/features/customer/service-groups";
-import { colors } from "@/theme/colors";
+import { useThemeColors } from "@/theme/theme";
+import { ScreenBackground } from "@/components/screen-background";
 
 const ALL = "All";
 const CATEGORY_LABELS: Record<string, string> = { home: "Home", appliance: "Appliances", beauty: "Beauty", help: "Home help" };
 const categoryLabel = (c: string) => CATEGORY_LABELS[c] ?? c.charAt(0).toUpperCase() + c.slice(1);
 
 export default function AllServices() {
+  const colors = useThemeColors();
   const { area, setArea } = useArea();
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState(ALL);
@@ -39,20 +41,20 @@ export default function AllServices() {
   }, [services.data, search, category]);
 
   return (
-    <SafeAreaView className="flex-1 bg-canvas" edges={["top"]}>
+    <ScreenBackground><SafeAreaView className="flex-1" edges={["top"]}>
       <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ padding: 20, paddingBottom: 32, gap: 20 }}>
         <Title>All services</Title>
         <BannerCarousel availableSlugs={slugs} />
 
         <View className="gap-3">
-          <View className="flex-row items-center gap-2 rounded-2xl border border-line bg-field px-3">
+          <View className="flex-row items-center gap-2 rounded-tile border border-line bg-field px-3">
             <MapPin size={18} color={colors.muted} />
             <TextInput accessibilityLabel="Your area" value={area} onChangeText={setArea} placeholder="Your city or 6-digit pincode"
               placeholderTextColor={colors.mutedSoft} autoCapitalize="words" style={{ fontFamily: "PlusJakartaSans_400Regular" }}
               className="min-h-[48px] flex-1 text-base text-fg" />
           </View>
           <CitySuggestions query={area} onPick={setArea} />
-          <View className="flex-row items-center gap-2 rounded-2xl border border-line bg-card px-3">
+          <View className="flex-row items-center gap-2 rounded-tile border border-line bg-card px-3">
             <Search size={18} color={colors.muted} />
             <TextInput accessibilityLabel="Search services" value={search} onChangeText={setSearch} placeholder="Plumbing, cleaning…"
               placeholderTextColor={colors.mutedSoft} autoCapitalize="none" style={{ fontFamily: "PlusJakartaSans_400Regular" }}
@@ -64,8 +66,8 @@ export default function AllServices() {
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
             {categories.map((c) => (
               <Pressable key={c} accessibilityRole="button" accessibilityState={{ selected: category === c }} onPress={() => setCategory(c)}
-                className={`min-h-[44px] justify-center rounded-xl px-4 ${category === c ? "bg-brand" : "bg-field"}`}>
-                <Text className={`text-sm font-semibold ${category === c ? "text-white" : "text-muted"}`}>{c === ALL ? "All services" : categoryLabel(c)}</Text>
+                className={`min-h-[44px] justify-center rounded-tile px-4 ${category === c ? "bg-brand" : "bg-field"}`}>
+                <Text className={`text-sm font-semibold ${category === c ? "text-onbrand" : "text-tint-fg"}`}>{c === ALL ? "All services" : categoryLabel(c)}</Text>
               </Pressable>
             ))}
           </ScrollView>
@@ -87,6 +89,6 @@ export default function AllServices() {
           <ServiceGrid services={visible} />
         )}
       </ScrollView>
-    </SafeAreaView>
+    </SafeAreaView></ScreenBackground>
   );
 }

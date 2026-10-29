@@ -14,14 +14,14 @@ describe("extra work from the database", () => {
     expect(dbExtraKind("service")).toBe("labour");
   });
 
-  it("rebuilds the PDF example: ₹349 + ₹100 approved = ₹449, fee ₹15", () => {
+  it("rebuilds the PDF example: ₹349 + ₹100 approved = ₹449, fee ₹13", () => {
     // provider_amount already includes the approved ₹100 (decide_booking_extra adds it).
     const bill = billFromBooking({ provider_amount: 449 }, [row({ status: "approved" }), row({ id: "p", amount: 50 })]);
     expect(bill.rate).toBe(349);
     expect(bill.serviceBill).toBe(449);
     expect(bill.customerTotal).toBe(449);
     expect(bill.pendingTotal).toBe(50);
-    expect(feeForServiceBill(bill.serviceBill)).toBe(15);
+    expect(feeForServiceBill(bill.serviceBill)).toBe(13);
   });
 
   it("keeps parts out of the fee base", () => {

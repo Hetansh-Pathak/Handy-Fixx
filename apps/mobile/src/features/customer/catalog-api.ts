@@ -1,4 +1,7 @@
-import { isProviderAvailable, offersService, readPoint, resolveListedPrice, servesArea, friendlyDbError } from "@handyfix/shared";
+import {
+  groupProOffers, isProviderAvailable, offersService, offersSubItem, ownSubItemRate, readPoint, resolveListedPrice, servesArea, friendlyDbError,
+  type ProSubItemRow,
+} from "@handyfix/shared";
 import { getSupabase } from "@/lib/supabase";
 import type { ProviderListing, ServiceRow, SubItemRow } from "./types";
 
@@ -26,9 +29,9 @@ const SUB_ITEM_COLUMNS = "id, service_id, name, description, icon, base_price, d
 export async function fetchSubItems(serviceId: string): Promise<SubItemRow[]> {
   const query = (columns: string) =>
     getSupabase().from("service_sub_items").select(columns).eq("service_id", serviceId).eq("is_active", true).order("sort_order");
-  let { data, error } = await query(`${SUB_ITEM_COLUMNS}, section`);
-  // The section column comes with proposal 20261106000000; until then read without it (one flat list).
-  if (error && (error.code === "42703" || /section/i.test(error.message))) ({ data, error } = await query(SUB_ITEM_COLUMNS));
+  let { data, error } = await query(`${SUB_ITEM_COLUMNS}, section, price_min, price_max`);
+  // section and the band come with proposals 20261106000000 / 20261101; until then read without them (one flat list).
+  if (error && (error.code === "42703" || /section|price_m/i.test(error.message))) ({ data, error } = await query(SUB_ITEM_COLUMNS));
   if (error) {
     if (error.code === "42P01" || error.code === "PGRST205") return [];
     fail(error);
@@ -74,12 +77,16 @@ type ProviderSearchArgs = { service: ServiceRow; subItem: SubItemRow | null; are
  */
 export async function searchProviders(args: ProviderSearchArgs): Promise<{ listings: ProviderListing[]; offlineCount: number }> {
   const supabase = getSupabase();
-  const [providers, rates] = await Promise.all([
+  const [providers, rates, jobs] = await Promise.all([
     supabase.from("public_providers").select("*"),
     supabase.from("provider_services").select("provider_id, custom_price").eq("service_id", args.service.id),
+    supabase.from("provider_sub_items").select("provider_id, sub_item_id, custom_price").eq("service_id", args.service.id),
   ]);
   if (providers.error) fail(providers.error);
   if (rates.error) fail(rates.error);
+  // The job table comes with proposal 20261113000002; without it every pro does every job at the catalogue price.
+  if (jobs.error && !["42P01", "PGRST205"].includes(jobs.error.code)) fail(jobs.error);
+  const offers = groupProOffers(jobs.error ? [] : ((jobs.data ?? []) as ProSubItemRow[]));
 
   const customPrice = new Map<string, number>();
   for (const r of (rates.data ?? []) as { provider_id: string | null; custom_price: number | null }[]) {
@@ -91,11 +98,13 @@ export async function searchProviders(args: ProviderSearchArgs): Promise<{ listi
   for (const p of (providers.data ?? []) as ProviderViewRow[]) {
     if (!offersService(p.service_ids, args.service.id)) continue;
     if (!servesArea(p.pincodes, args.area)) continue;
+    if (!offersSubItem(offers, p.id, args.subItem?.id)) continue;
     if (!isProviderAvailable({ isOnline: p.is_online, updatedAt: p.updated_at }, args.now)) {
       offlineCount += 1;
       continue;
     }
     const price = resolveListedPrice({
+      proSubItemPrice: ownSubItemRate(offers, p.id, args.subItem?.id, { min: args.subItem?.price_min, max: args.subItem?.price_max }),
       subItemPrice: args.subItem?.base_price,
       customPrice: customPrice.get(p.id),
       basePrice: args.service.base_price,

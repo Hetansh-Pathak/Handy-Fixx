@@ -5,10 +5,12 @@ import {
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
+import { CircleCheck } from "lucide-react-native";
 import { Linking, View } from "react-native";
 import { Text } from "@/components/text";
 import { TrackingMap } from "@/components/TrackingMap";
-import { Body, Button, Card, ErrorBanner, InfoBanner, Screen, ScreenHeader, Title, ListSkeleton } from "@/components/ui";
+import { Body, Button, Card, ErrorBanner, HeroCard, InfoBanner, Screen, ScreenHeader, Title, ListSkeleton } from "@/components/ui";
+import { useThemeColors } from "@/theme/theme";
 import { AttachmentGallery } from "@/features/attachments/components";
 import { ChatButton } from "@/features/chat/components";
 import { loadCustomerProfile } from "@/features/auth/api";
@@ -26,6 +28,7 @@ import { RateYourPro } from "@/features/reviews/components";
 const FINISHED = ["completed", "cancelled"];
 
 export default function BookingStatusScreen() {
+  const colors = useThemeColors();
   const router = useRouter();
   const queryClient = useQueryClient();
   const { userId, fullName } = useSession();
@@ -163,13 +166,23 @@ export default function BookingStatusScreen() {
   return (
     <Screen>
       <ScreenHeader title="Booking" onBack={() => router.replace("/customer/bookings")} />
-      <Text className="text-sm font-semibold uppercase tracking-widest text-brand">{serviceName ?? "Service"}</Text>
-      <Title>{title}</Title>
+      {status === "completed" ? (
+        <View className="items-center gap-2 rounded-hero border border-ok/30 bg-ok-bg p-6">
+          <CircleCheck size={44} color={colors.ok} />
+          <Text className="text-sm font-semibold uppercase tracking-widest text-ok">{serviceName ?? "Service"}</Text>
+          <Title>{title}</Title>
+        </View>
+      ) : (
+        <HeroCard>
+          <Text className="text-sm font-semibold uppercase tracking-widest text-brand">{serviceName ?? "Service"}</Text>
+          <Title>{title}</Title>
+        </HeroCard>
+      )}
       <ErrorBanner message={error} />
       <InfoBanner message={notice} />
 
       {!check.matches ? (
-        <View accessibilityRole="alert" className="gap-2 rounded-2xl border border-danger bg-danger/10 p-4">
+        <View accessibilityRole="alert" className="gap-2 rounded-tile border border-danger bg-danger/10 p-4">
           <Text className="text-base font-semibold text-danger">The saved price is different</Text>
           <Text className="text-sm text-danger">
             You were shown {formatInr(check.expectedTotal)}, but this booking was saved at {formatInr(check.storedTotal)}
@@ -206,9 +219,22 @@ export default function BookingStatusScreen() {
       <CustomerExtras bookingId={booking.id} status={status} pro={pro} total={Number(booking.total_amount ?? 0)} />
 
       {showsCompletionCode(status) ? (
-        <Card>
+        <HeroCard>
           <Text className="text-sm font-semibold uppercase tracking-widest text-brand">Job completion code (OTP)</Text>
-          <Text accessibilityLabel="Completion code" className="text-5xl font-bold tracking-[12px] text-fg">{code.data ?? "····"}</Text>
+          {/* The four boxes show the digits but are hidden from screen readers; the transparent text on top is the code they
+              read (and what is copied), as one number. */}
+          <View className="self-start">
+            <View className="flex-row gap-2" accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+              {(code.data ?? "····").padEnd(4, "·").slice(0, 4).split("").map((d, i) => (
+                <View key={i} className="h-16 w-14 items-center justify-center rounded-tile border-2 border-brand/50 bg-tint">
+                  <Text className="text-3xl font-extrabold text-fg">{d}</Text>
+                </View>
+              ))}
+            </View>
+            <Text accessibilityLabel="Completion code" className="absolute inset-0 text-3xl font-extrabold" style={{ color: "transparent" }}>
+              {code.data ?? "····"}
+            </Text>
+          </View>
           {code.data ? (
             <Text className="text-sm text-muted">
               Share this code with {pro} only when the work is done and you are happy. {pro} enters it to close the job. Never share it before.
@@ -218,7 +244,7 @@ export default function BookingStatusScreen() {
               {code.isError ? "Could not load your code. Check your connection; we keep trying." : "Your code is not ready yet. We keep checking; contact support if it does not appear."}
             </Text>
           )}
-        </Card>
+        </HeroCard>
       ) : null}
 
       {["confirmed", "on_the_way", "arrived", "in_progress"].includes(status) ? (
@@ -302,7 +328,7 @@ function Alternatives({
         </Card>
       ) : null}
       {pros.map((p) => (
-        <View key={p.id} className="gap-2 rounded-2xl border border-line bg-card p-4">
+        <View key={p.id} className="gap-2 rounded-tile border border-line bg-card p-4">
           <View className="flex-row items-start justify-between gap-3">
             <View className="flex-1">
               <Text className="text-lg font-semibold text-fg">{p.fullName}{p.isVerified ? "  ✓" : ""}</Text>

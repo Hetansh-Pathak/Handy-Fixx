@@ -5,10 +5,11 @@ import { useState } from "react";
 import { Pressable, View } from "react-native";
 import { Text } from "@/components/text";
 import { Body, Button, Card, ErrorBanner, TextField } from "@/components/ui";
-import { colors } from "@/theme/colors";
+import { useThemeColors } from "@/theme/theme";
 import { fetchMyReview, myReviewKey, submitReview } from "./api";
 
 export function Stars({ value, size = 20, onPick }: { value: number; size?: number; onPick?: (stars: number) => void }) {
+  const colors = useThemeColors();
   return (
     <View className="flex-row gap-1" accessibilityRole={onPick ? "radiogroup" : "image"} accessibilityLabel={`${value} out of 5 stars`}>
       {[1, 2, 3, 4, 5].map((n) => {

@@ -3,7 +3,8 @@ import { BadgeIndianRupee, MapPin, Snowflake, Sparkles, Wrench, type LucideIcon 
 import { useEffect, useRef, useState } from "react";
 import { AccessibilityInfo, Pressable, ScrollView, View, type NativeScrollEvent, type NativeSyntheticEvent, type ScrollViewInstance } from "react-native";
 import { Text } from "@/components/text";
-import { colors } from "@/theme/colors";
+import type { Palette } from "@/theme/palettes";
+import { useThemeColors } from "@/theme/theme";
 
 type Banner = {
   key: string;
@@ -13,22 +14,24 @@ type Banner = {
   /** Service to open; the button is hidden when that service is not in the live catalogue. */
   slug?: string;
   cta?: string;
-  bg: string;
+  /** Dark banners use fixed deep blues with white text in both themes; light ones follow the theme. */
+  bg: (c: Palette) => string;
   dark: boolean;
 };
 
 // Copy follows the business model: no booking fee, price shown up front, pay the pro directly. No % discounts.
 const BANNERS: Banner[] = [
-  { key: "ac", title: "Beat the heat", body: "AC service at home by verified technicians. See the price before you book.", icon: Snowflake, slug: "ac-service", cta: "Book AC service", bg: colors.brand, dark: true },
-  { key: "fee", title: "₹0 booking fee", body: "You pay only the pro's price, by UPI or cash, after the job is done.", icon: BadgeIndianRupee, bg: "#1C1C1C", dark: true },
-  { key: "clean", title: "A spotless home", body: "Deep cleaning by trusted local pros, at a time that suits you.", icon: Sparkles, slug: "cleaning", cta: "Book cleaning", bg: "#A24F22", dark: true },
-  { key: "track", title: "Track your pro live", body: "Watch your pro on the way, then share a 4-digit code to finish the job.", icon: MapPin, bg: colors.brandSoft, dark: false },
-  { key: "fix", title: "Leaks and sparks, fixed", body: "Plumbers and electricians near you, ready today.", icon: Wrench, slug: "plumbing", cta: "Book a plumber", bg: colors.fg, dark: true },
+  { key: "ac", title: "Beat the heat", body: "AC service at home by verified technicians. See the price before you book.", icon: Snowflake, slug: "ac-service", cta: "Book AC service", bg: () => "#1F5BFF", dark: true },
+  { key: "fee", title: "₹0 booking fee", body: "You pay only the pro's price, by UPI or cash, after the job is done.", icon: BadgeIndianRupee, bg: () => "#0B1B3A", dark: true },
+  { key: "clean", title: "A spotless home", body: "Deep cleaning by trusted local pros, at a time that suits you.", icon: Sparkles, slug: "cleaning", cta: "Book cleaning", bg: () => "#1745C7", dark: true },
+  { key: "track", title: "Track your pro live", body: "Watch your pro on the way, then share a 4-digit code to finish the job.", icon: MapPin, bg: (c) => c.tint, dark: false },
+  { key: "fix", title: "Leaks and sparks, fixed", body: "Plumbers and electricians near you, ready today.", icon: Wrench, slug: "plumbing", cta: "Book a plumber", bg: () => "#14213D", dark: true },
 ];
 
 const AUTOPLAY_MS = 4500;
 
 export function BannerCarousel({ availableSlugs }: { availableSlugs: ReadonlySet<string> }) {
+  const colors = useThemeColors();
   const router = useRouter();
   const scroller = useRef<ScrollViewInstance>(null);
   const [width, setWidth] = useState(0);
@@ -74,14 +77,14 @@ export function BannerCarousel({ availableSlugs }: { availableSlugs: ReadonlySet
           onScrollBeginDrag={() => setPaused(true)}
           onMomentumScrollEnd={onScrollEnd}
           scrollEventThrottle={16}
-          className="rounded-3xl"
+          className="rounded-panel"
         >
           {BANNERS.map((b) => {
             const Icon = b.icon;
             const canBook = !!b.slug && availableSlugs.has(b.slug);
             const fg = b.dark ? "text-white" : "text-fg";
             return (
-              <View key={b.key} style={{ width, backgroundColor: b.bg }} className="min-h-[176px] flex-row gap-4 rounded-3xl p-5">
+              <View key={b.key} style={{ width, backgroundColor: b.bg(colors) }} className="min-h-[176px] flex-row gap-4 rounded-panel p-5">
                 <View className="flex-1 justify-between gap-3">
                   <View className="gap-1.5">
                     <Text className={`text-2xl font-extrabold ${fg}`}>{b.title}</Text>
@@ -89,19 +92,19 @@ export function BannerCarousel({ availableSlugs }: { availableSlugs: ReadonlySet
                   </View>
                   {canBook ? (
                     <Pressable accessibilityRole="button" onPress={() => router.push({ pathname: "/customer/service/[slug]", params: { slug: b.slug! } })}
-                      className={`min-h-[44px] self-start justify-center rounded-xl px-4 active:opacity-80 ${b.dark ? "bg-white" : "bg-brand"}`}>
-                      <Text className={`text-sm font-semibold ${b.dark ? "text-fg" : "text-white"}`}>{b.cta}</Text>
+                      className={`min-h-[44px] self-start justify-center rounded-tile px-4 active:opacity-80 ${b.dark ? "bg-white" : "bg-brand"}`}>
+                      <Text className={`text-sm font-semibold ${b.dark ? "text-[#0B1B3A]" : "text-onbrand"}`}>{b.cta}</Text>
                     </Pressable>
                   ) : null}
                 </View>
-                <View className={`h-16 w-16 items-center justify-center rounded-2xl ${b.dark ? "bg-white/15" : "bg-brand/15"}`}>
+                <View className={`h-16 w-16 items-center justify-center rounded-tile ${b.dark ? "bg-white/15" : "bg-brand/15"}`}>
                   <Icon size={32} color={b.dark ? colors.white : colors.brand} />
                 </View>
               </View>
             );
           })}
         </ScrollView>
-      ) : <View className="min-h-[176px] rounded-3xl bg-field" />}
+      ) : <View className="min-h-[176px] rounded-panel bg-field" />}
       <View className="flex-row justify-center gap-1">
         {BANNERS.map((b, i) => (
           <Pressable key={b.key} accessibilityRole="button" accessibilityLabel={`Show offer ${i + 1} of ${BANNERS.length}`} hitSlop={8}

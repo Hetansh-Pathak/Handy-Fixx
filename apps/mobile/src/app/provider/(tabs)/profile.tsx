@@ -15,7 +15,9 @@ import { useSession } from "@/features/auth/session-provider";
 import { fetchServices } from "@/features/customer/catalog-api";
 import { fetchProviderProfile, providerProfileKey } from "@/features/provider/profile-api";
 import { env } from "@/lib/env";
-import { colors } from "@/theme/colors";
+import { useThemeColors } from "@/theme/theme";
+import { ScreenBackground } from "@/components/screen-background";
+import { AppearancePicker } from "@/components/appearance-picker";
 
 const KYC_LABEL: Record<string, string> = {
   approved: "Verified",
@@ -30,6 +32,7 @@ const toNumber = (v: number | string | null | undefined): number | null => {
 };
 
 export default function ProviderProfile() {
+  const colors = useThemeColors();
   const router = useRouter();
   const { provider, email, signOut } = useSession();
   const profile = useQuery({
@@ -61,19 +64,19 @@ export default function ProviderProfile() {
     items.length ? (items.length > 3 ? `${items.slice(0, 3).join(", ")} +${items.length - 3} more` : items.join(", ")) : empty;
 
   return (
-    <SafeAreaView className="flex-1 bg-canvas" edges={["top"]}>
+    <ScreenBackground><SafeAreaView className="flex-1" edges={["top"]}>
       <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 32, gap: 16 }}>
         <Title>Profile</Title>
         <ErrorBanner message={profile.isError ? "Could not load your profile." : null} />
 
         {/* Who you are + how you are doing */}
-        <View className="overflow-hidden rounded-3xl border border-line bg-card">
+        <View className="overflow-hidden rounded-panel border border-line bg-card">
           <Pressable accessibilityRole="button" accessibilityLabel={`${name}, edit profile`} onPress={edit}
             className="flex-row items-center gap-4 p-4 active:bg-field">
             <View>
               <Avatar name={name} url={p?.avatar_url} size={64} />
               <View className="absolute -bottom-0.5 -right-0.5 h-6 w-6 items-center justify-center rounded-full border-2 border-card bg-brand">
-                <Camera size={12} color={colors.white} />
+                <Camera size={12} color={colors.onBrand} />
               </View>
             </View>
             <View className="flex-1 gap-0.5">
@@ -94,7 +97,7 @@ export default function ProviderProfile() {
 
         <InfoBanner message={missing ? "Add your work areas and services so customers can find you." : null} />
         {launch.active ? (
-          <View className="flex-row items-center gap-3 rounded-2xl border border-brand/30 bg-brand-soft p-4">
+          <View className="flex-row items-center gap-3 rounded-tile border border-brand/30 bg-brand-soft p-4">
             <Gift size={22} color={colors.brand} />
             <Text className="flex-1 text-sm text-fg">
               <Text className="font-bold text-brand">Fee-free launch: </Text>
@@ -106,7 +109,7 @@ export default function ProviderProfile() {
         <Text className="text-sm font-semibold uppercase tracking-wider text-muted">Your work</Text>
         <MenuGroup>
           <MenuRow icon={MapPin} label="Work areas" detail={list(areas, "Add the cities or pincodes you cover")} onPress={edit} />
-          <MenuRow icon={Wrench} label="Services I offer" detail={list(serviceNames, "Pick the services you do")} onPress={edit} />
+          <MenuRow icon={Wrench} label="Services I offer" detail={list(serviceNames, "Pick the services and jobs you do")} onPress={() => router.push("/provider/services")} />
           <MenuRow icon={CalendarClock} label="Working hours" detail="When customers can book you" onPress={() => router.push("/provider/schedule")} />
           <MenuRow icon={Briefcase} label="My jobs" onPress={() => router.push("/provider/jobs")} />
           <MenuRow icon={Star} label="My reviews" detail={rating && rating > 0 ? `${formatRating(rating)}★ from customers` : "What customers say about you"} onPress={() => router.push("/provider/reviews")} />
@@ -129,6 +132,8 @@ export default function ProviderProfile() {
           ) : null}
         </MenuGroup>
 
+        <AppearancePicker />
+
         <MenuGroup>
           <MenuRow icon={LogOut} label="Sign out" danger onPress={() => void signOut()} />
           <MenuRow icon={Trash2} label="Delete account" danger onPress={() => router.push("/provider/delete-account")} />
@@ -136,15 +141,15 @@ export default function ProviderProfile() {
 
         <Text className="text-center text-xs text-muted">{email ? `${email} · ` : ""}HandyFix Pro {Constants.expoConfig?.version ?? ""}</Text>
       </ScrollView>
-    </SafeAreaView>
+    </SafeAreaView></ScreenBackground>
   );
 }
 
 function Stat({ value, label }: { value: string; label: string }) {
   return (
     <View className="flex-1 items-center gap-0.5">
-      <Text className="text-xl font-extrabold text-white">{value}</Text>
-      <Text className="text-xs text-white/70">{label}</Text>
+      <Text className="text-xl font-extrabold text-strip-fg">{value}</Text>
+      <Text className="text-xs text-strip-fg opacity-80">{label}</Text>
     </View>
   );
 }

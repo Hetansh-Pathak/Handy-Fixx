@@ -13,7 +13,7 @@ export function Avatar({ name, url, size = 64 }: { name: string | null | undefin
         <Image source={{ uri: url }} style={{ width: size, height: size }} resizeMode="cover"
           accessibilityLabel={`Photo of ${name ?? "pro"}`} onError={() => setFailed(url)} />
       ) : (
-        <Text style={{ fontSize: size * 0.38 }} className="font-bold text-white">{nameInitials(name)}</Text>
+        <Text style={{ fontSize: size * 0.38 }} className="font-bold text-onbrand">{nameInitials(name)}</Text>
       )}
     </View>
   );

@@ -4,7 +4,7 @@ import { Linking, View } from "react-native";
 import { IconTile } from "@/components/brand";
 import { Text } from "@/components/text";
 import { Button, Screen, ScreenHeader } from "@/components/ui";
-import { colors } from "@/theme/colors";
+import { useThemeColors } from "@/theme/theme";
 
 const POINTS: { icon: LucideIcon; title: string; body: string }[] = [
   { icon: ShieldCheck, title: "Verified pros", body: "Every pro passes an identity check before they can take a job." },
@@ -15,12 +15,13 @@ const POINTS: { icon: LucideIcon; title: string; body: string }[] = [
 ];
 
 export default function Safety() {
+  const colors = useThemeColors();
   const router = useRouter();
   return (
     <Screen>
       <ScreenHeader title="Safety" onBack={() => router.back()} />
       {POINTS.map(({ icon: Icon, title, body }) => (
-        <View key={title} className="flex-row items-start gap-4 rounded-3xl border border-line bg-card p-4">
+        <View key={title} className="flex-row items-start gap-4 rounded-panel border border-line bg-card p-4">
           <IconTile size={48}><Icon size={22} color={colors.brand} /></IconTile>
           <View className="flex-1 gap-1">
             <Text className="text-base font-bold text-fg">{title}</Text>
@@ -28,12 +29,12 @@ export default function Safety() {
           </View>
         </View>
       ))}
-      <View className="gap-2 rounded-3xl bg-strip p-5">
+      <View className="gap-2 rounded-panel bg-strip p-5">
         <View className="flex-row items-center gap-2">
-          <Phone size={18} color={colors.white} />
-          <Text className="text-base font-bold text-white">In an emergency</Text>
+          <Phone size={18} color={colors.onStrip} />
+          <Text className="text-base font-bold text-strip-fg">In an emergency</Text>
         </View>
-        <Text className="text-sm leading-5 text-white/70">If you ever feel unsafe, call the national emergency number right away.</Text>
+        <Text className="text-sm leading-5 text-strip-fg opacity-80">If you ever feel unsafe, call the national emergency number right away.</Text>
         <Button label="Call 112" variant="danger" onPress={() => void Linking.openURL("tel:112")} />
       </View>
     </Screen>

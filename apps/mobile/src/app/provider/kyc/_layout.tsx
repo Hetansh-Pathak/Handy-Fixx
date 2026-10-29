@@ -2,10 +2,11 @@ import { Stack } from "expo-router";
 import { ActivityIndicator, View } from "react-native";
 import { Body, Button, Screen, ScreenHeader } from "@/components/ui";
 import { KycWizardProvider } from "@/features/kyc/wizard-context";
-import { colors } from "@/theme/colors";
+import { useThemeColors } from "@/theme/theme";
 import { useRouter } from "expo-router";
 
 export default function KycLayout() {
+  const colors = useThemeColors();
   const router = useRouter();
   const goHome = () => (router.canGoBack() ? router.back() : router.replace("/provider"));
   return (

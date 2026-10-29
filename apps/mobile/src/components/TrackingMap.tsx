@@ -27,7 +27,7 @@ function NativeMap({ pro, destination }: { pro: Point | null; destination: Point
   }, [pro?.latitude, pro?.longitude, destination.latitude, destination.longitude]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <View className="h-64 overflow-hidden rounded-2xl border border-line">
+    <View className="h-64 overflow-hidden rounded-tile border border-line">
       <MapView
         ref={ref}
         style={{ flex: 1 }}
@@ -36,8 +36,8 @@ function NativeMap({ pro, destination }: { pro: Point | null; destination: Point
         toolbarEnabled={false}
         accessibilityLabel="Map showing your pro and your address"
       >
-        <Maps.Marker coordinate={destination} title="Your address" pinColor="#2FB36D" />
-        {pro ? <Maps.Marker coordinate={pro} title="Your pro" pinColor="#C16430" /> : null}
+        <Maps.Marker coordinate={destination} title="Your address" pinColor="#0A7A53" />
+        {pro ? <Maps.Marker coordinate={pro} title="Your pro" pinColor="#1F5BFF" /> : null}
       </MapView>
     </View>
   );
@@ -46,7 +46,7 @@ function NativeMap({ pro, destination }: { pro: Point | null; destination: Point
 function MapFallback({ pro, destination }: { pro: Point | null; destination: Point | null }) {
   const target = pro ?? destination;
   return (
-    <View className="gap-2 rounded-2xl border border-line bg-card p-4">
+    <View className="gap-2 rounded-tile border border-line bg-card p-4">
       <Text className="text-base font-semibold text-fg">{pro ? "Your pro is on the way" : "Waiting for your pro's location"}</Text>
       <Text className="text-sm text-muted">The in-app map needs the phone app with maps enabled. You can follow your pro in Google Maps.</Text>
       {target ? (

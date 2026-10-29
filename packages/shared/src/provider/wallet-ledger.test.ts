@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { describeLedgerEntry, earningsSummary, interpretPayout, payoutErrorMessage, topUpChoices } from "./wallet-ledger";
+import { describeLedgerEntry, earningsSummary, interpretPayout, payoutErrorMessage } from "./wallet-ledger";
 
 describe("describeLedgerEntry", () => {
   it("shows a fee as a red minus with a readable label", () => {
@@ -43,11 +43,4 @@ describe("earningsSummary", () => {
   it("handles a booking with no date", () => {
     expect(earningsSummary([{ status: "completed", provider_amount: 50 }], now)).toMatchObject({ jobs: 1, total: 50, monthJobs: 0 });
   });
-});
-
-describe("topUpChoices", () => {
-  it("offers round steps with no dues", () => { expect(topUpChoices(0)).toEqual([100, 300, 500, 1000]); });
-  it("starts at the dues rounded up", () => { expect(topUpChoices(250)).toEqual([300, 500, 1000]); });
-  it("adds the exact need when it is not a preset", () => { expect(topUpChoices(1250)).toEqual([1300]); });
-  it("ignores negative dues", () => { expect(topUpChoices(-5)).toEqual([100, 300, 500, 1000]); });
 });
