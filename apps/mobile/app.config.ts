@@ -17,9 +17,9 @@ const VARIANT: "customer" | "provider" | "both" = requested === "customer" || re
 const isPro = VARIANT === "provider";
 const isCustomer = VARIANT === "customer";
 const IDENTITY = {
-  customer: { name: "HandyFix", slug: "handyfix", scheme: "handyfix", pkg: "in.handyfix.app" },
-  provider: { name: "HandyFix Pro", slug: "handyfix-pro", scheme: "handyfixpro", pkg: "in.handyfix.pro" },
-  both: { name: "HandyFix (dev)", slug: "handyfix", scheme: "handyfix", pkg: "in.handyfix.app" },
+  customer: { name: "apnabanda", slug: "handyfix", scheme: "handyfix", pkg: "in.handyfix.app" },
+  provider: { name: "apnabanda Pro", slug: "handyfix-pro", scheme: "handyfixpro", pkg: "in.handyfix.pro" },
+  both: { name: "apnabanda (dev)", slug: "handyfix", scheme: "handyfix", pkg: "in.handyfix.app" },
 }[VARIANT];
 // A customer build must not carry the provider's background-location and foreground-service permissions
 // (Play reviews these closely, and customers never need them).
@@ -48,6 +48,8 @@ const config: ExpoConfig = {
   orientation: "portrait",
   userInterfaceStyle: "automatic", // Profile > Appearance offers Light / Dark / System; System needs this
   icon: "./assets/images/icon.png",
+  // Browser tab icon for the web builds (the phone app icon files are a separate follow-up).
+  web: { favicon: "./assets/brand/apnabanda-favicon.png" },
   backgroundColor: CANVAS,
   android: {
     // Placeholder: must match your Firebase app, Google OAuth Android client and Play listing.
