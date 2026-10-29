@@ -80,6 +80,7 @@ const check = (name, ok, extra = "") => {
     (await count("Asha Patel", false)) >= 1 && (await count("Ravi Shah", false)) >= 1 &&
     (await count("Offline Oli", false)) === 0 && (await count("Stale Sam", false)) === 0 && (await count("Surat Suresh", false)) === 0);
   const priced = await page.locator("text=/^₹199$/").locator("visible=true").count();
+  check("a job with an admin band shows its price range before booking", (await body()).includes("Range ₹249–₹449"), (await body()).slice(0, 200));
   check("a sub-item has one catalogue price for every pro (₹199 on the item and on both cards)", priced >= 3, `count=${priced}`);
   check("verified pros are marked and ratings shown", (await body()).includes("Asha Patel  ✓") || (await body()).includes("Asha Patel ✓"), "");
   await shot("21-service-subitem");

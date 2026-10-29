@@ -1,4 +1,4 @@
-import { distanceKm, formatDistance, formatDuration, formatInr, formatRating, formatResponseTime, groupSubItems, isCheckupVisit, sortProviders, type LatLng, type ProviderSort } from "@handyfix/shared";
+import { distanceKm, formatDistance, formatDuration, formatInr, formatRating, formatResponseTime, groupSubItems, priceRangeLabel, isCheckupVisit, sortProviders, type LatLng, type ProviderSort } from "@handyfix/shared";
 import { useQuery } from "@tanstack/react-query";
 import * as Location from "expo-location";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -135,6 +135,7 @@ export default function ServiceScreen() {
                   {s.description ? <Text className="text-xs leading-4 text-muted" numberOfLines={2}>{s.description}</Text> : null}
                   <Text className="mt-1 text-xs text-muted">Starts at</Text>
                   <Text className="text-lg font-bold text-brand">{formatInr(s.base_price)}</Text>
+                  {priceRangeLabel(s.price_min, s.price_max) ? <Text className="text-xs text-muted">Range {priceRangeLabel(s.price_min, s.price_max)}</Text> : null}
                   {s.duration_minutes ? <Text className="text-xs text-muted">{formatDuration(s.duration_minutes)}</Text> : null}
                 </Pressable>
               );
