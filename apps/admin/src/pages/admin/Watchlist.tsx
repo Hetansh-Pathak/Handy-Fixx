@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { AlertTriangle, Clock, Loader2, RefreshCw } from 'lucide-react';
 import {
-  flaggedProviders, minutesWaiting, pendingWatchCutoff, summariseProviderActivity, PENDING_WATCH_MINUTES,
+  flaggedProviders, isRequestOpen, minutesWaiting, pendingWatchCutoff, summariseProviderActivity, PENDING_WATCH_MINUTES,
   type ActivityRow, type ProviderActivity, type ProviderFlag,
 } from '@handyfix/shared';
 import { supabase } from '@/integrations/supabase/client';
@@ -13,7 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { cn, shortId } from '@/lib/utils';
 
 type Waiting = {
-  id: string; created_at: string; city: string | null; customer_name: string | null;
+  id: string; created_at: string; booking_date: string | null; booking_time: string | null; city: string | null; customer_name: string | null;
   service_providers: { full_name: string | null; phone: string | null } | null;
   services: { name: string } | null;
 };
@@ -44,13 +44,14 @@ const AdminWatchlist: React.FC = () => {
       const now = new Date();
       const { data: pending, error: pendingError } = await supabase
         .from('bookings')
-        .select('id, created_at, city, customer_name, service_providers:provider_id (full_name, phone), services:service_id (name)')
+        .select('id, created_at, booking_date, booking_time, city, customer_name, service_providers:provider_id (full_name, phone), services:service_id (name)')
         .eq('status', 'pending')
         .lt('created_at', pendingWatchCutoff(now))
         .order('created_at', { ascending: true })
         .limit(100);
       if (pendingError) throw pendingError;
-      setWaiting((pending ?? []) as unknown as Waiting[]);
+      // A request whose booked time has already passed is not "waiting" any more: it is missed (the database closes it).
+      setWaiting(((pending ?? []) as unknown as Waiting[]).filter((w) => isRequestOpen({ status: 'pending', bookingDate: w.booking_date, bookingTime: w.booking_time }, now)));
 
       const since = new Date(now.getTime() - WINDOW_DAYS * 86_400_000).toISOString();
       const rows: ActivityRow[] = [];

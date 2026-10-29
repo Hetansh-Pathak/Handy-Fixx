@@ -9,6 +9,11 @@ export type RequestOutcome =
   | "completed";
 
 export const DECLINED_REASON = "Declined by provider";
+/**
+ * Written by the database when a request is still unanswered after its booked time has passed (proposal 20261118).
+ * It never closes a request just because it is old: a request stays open until a pro accepts it.
+ */
+export const MISSED_REQUEST_REASON = "Booked time passed without an answer";
 
 /**
  * Where a customer's request stands. Owner decision: there is no accept countdown. The pro gets a notification,
@@ -25,7 +30,8 @@ export function requestOutcome(
       return startsAt && now.getTime() >= startsAt.getTime() ? "expired" : "waiting";
     }
     case "cancelled":
-      return input.cancellationReason === DECLINED_REASON ? "declined" : "cancelled";
+      if (input.cancellationReason === DECLINED_REASON) return "declined";
+      return input.cancellationReason === MISSED_REQUEST_REASON ? "expired" : "cancelled";
     case "completed":
       return "completed";
     default:

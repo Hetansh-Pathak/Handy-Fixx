@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DECLINED_REASON, needsAlternatives, requestOutcome } from "./request-outcome";
+import { DECLINED_REASON, MISSED_REQUEST_REASON, needsAlternatives, requestOutcome } from "./request-outcome";
 
 // Local-time constructor keeps these tests timezone-independent.
 const now = new Date(2026, 10, 10, 11, 30);
@@ -31,5 +31,20 @@ describe("needsAlternatives", () => {
     expect(needsAlternatives("expired")).toBe(true);
     expect(needsAlternatives("declined")).toBe(true);
     for (const o of ["waiting", "accepted", "cancelled", "completed"] as const) expect(needsAlternatives(o)).toBe(false);
+  });
+});
+
+describe("a request stays open until a pro answers it (owner decision 2026-10-29)", () => {
+  it("is never closed for being old: an old request for a future time is still waiting", () => {
+    expect(requestOutcome({ status: "pending", bookingDate: "2026-11-20", bookingTime: "10:00:00" }, now)).toBe("waiting");
+  });
+  it("a request the database closed after its booked time passed reads as missed, and offers the next best pros", () => {
+    const o = requestOutcome({ status: "cancelled", cancellationReason: MISSED_REQUEST_REASON }, now);
+    expect(o).toBe("expired");
+    expect(needsAlternatives(o)).toBe(true);
+  });
+  it("other cancellations stay cancellations", () => {
+    expect(requestOutcome({ status: "cancelled", cancellationReason: "Cancelled by customer" }, now)).toBe("cancelled");
+    expect(requestOutcome({ status: "cancelled", cancellationReason: null }, now)).toBe("cancelled");
   });
 });
