@@ -1,5 +1,5 @@
 import {
-  Bug, Hammer, MapPin, PaintBucket, Settings, Sparkles, Thermometer, Truck, Wind, Wrench, Zap, Scissors, type LucideIcon,
+  Bug, Hammer, MapPin, PaintBucket, Settings, Sparkles, Thermometer, Truck, Users, Wind, Wrench, Zap, Scissors, type LucideIcon,
 } from "lucide-react-native";
 import type { ReactNode } from "react";
 import { ScrollView, View } from "react-native";
@@ -20,7 +20,7 @@ export function Logo({ size = 40, pro }: { size?: number; pro?: boolean }) {
 }
 
 /** `services.icon_name` holds a lucide icon name (the old sites used the same names). */
-const ICONS: Record<string, LucideIcon> = { Wrench, Zap, Sparkles, PaintBucket, Wind, Hammer, Bug, Settings, Scissors, Thermometer, MapPin, Truck };
+const ICONS: Record<string, LucideIcon> = { Wrench, Zap, Sparkles, PaintBucket, Wind, Hammer, Bug, Settings, Scissors, Thermometer, MapPin, Truck, Users };
 
 export function ServiceIcon({ name, size = 28, color }: { name: string | null | undefined; size?: number; color?: string }) {
   const colors = useThemeColors();
