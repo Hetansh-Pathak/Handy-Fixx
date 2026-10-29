@@ -14,6 +14,7 @@ import { variantAllowsRole } from "@handyfix/shared";
 import { Linking } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { SessionProvider, useSession } from "@/features/auth/session-provider";
+import { PushHandler } from "@/features/push/push-handler";
 import { Button, FullScreenMessage } from "@/components/ui";
 import { env } from "@/lib/env";
 import { queryClient } from "@/lib/query-client";
@@ -65,6 +66,8 @@ function Navigator() {
     );
   }
   return (
+    <>
+    {signedIn && role ? <PushHandler /> : null}
     <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.canvas } }}>
       <Stack.Protected guard={!signedIn}>
         <Stack.Screen name="(auth)" />
@@ -84,6 +87,7 @@ function Navigator() {
       {/* Opened from the emailed link, whether or not anyone is signed in. */}
       <Stack.Screen name="reset-password" />
     </Stack>
+    </>
   );
 }
 

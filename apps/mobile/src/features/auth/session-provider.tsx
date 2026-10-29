@@ -6,6 +6,7 @@ import type { Session } from "@supabase/supabase-js";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { AppState } from "react-native";
 import { googleSignOut } from "@/lib/google-auth";
+import { unregisterPush } from "@/lib/push";
 import { getSupabase } from "@/lib/supabase";
 
 export type ProviderRow = {
@@ -124,6 +125,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, [client, queryClient, userId]);
 
   const signOut = useCallback(async () => {
+    await unregisterPush(); // while the sign-in still works, so this phone stops getting this account's alerts
     await googleSignOut();
     await client?.auth.signOut();
     setSession(null);

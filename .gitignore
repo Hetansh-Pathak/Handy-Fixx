@@ -59,3 +59,7 @@ supabase/.temp/
 *.jks
 *.p12
 *.keystore
+
+# Firebase / Google service-account private keys (never commit; upload them to Expo instead)
+*firebase-adminsdk*.json
+*service-account*.json

@@ -19,6 +19,7 @@ import { uploadBookingAttachments, type LocalAttachment, type UploadResult } fro
 import { AttachmentPicker } from "@/features/attachments/components";
 import { ClockPicker } from "@/features/customer/ClockPicker";
 import { availabilityKey, fetchAvailability } from "@/features/schedule/api";
+import { registerPush } from "@/lib/push";
 import { bookingPauseKey, createBooking, EmailNotVerifiedError, fetchBookingPause } from "@/features/customer/booking-api";
 import { fetchBookingContext } from "@/features/customer/catalog-api";
 import { env } from "@/lib/env";
@@ -162,6 +163,7 @@ export default function BookScreen() {
         setUploading(true);
         upload = await uploadBookingAttachments(userId, created.id, attachments);
       }
+      void registerPush("customer", { ask: true }); // a good moment to ask: they are waiting for an answer from their pro
       router.replace({
         pathname: "/customer/booking/[id]",
         params: {

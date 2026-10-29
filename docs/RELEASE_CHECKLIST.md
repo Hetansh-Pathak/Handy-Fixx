@@ -59,7 +59,7 @@ Not verified (cannot be, without a phone): real sounds, GPS, camera, Razorpay, G
 | Google sign-in | "Continue with Google" | Android OAuth client per package with the **release** SHA-1; `docs\GOOGLE_SIGNIN_SETUP.md`. |
 | Razorpay **live** keys and webhook | wallet recharge | `docs\PAYMENTS_SETUP.md`. Keys live only in Edge Function secrets. Deploy the pack-only `create-wallet-topup-order` function from `supabase\proposals\functions`. |
 | Google Maps key (optional) | embedded live map | `GOOGLE_MAPS_API_KEY` as an EAS secret plus `EXPO_PUBLIC_MAPS_ENABLED=1`; without it the screen shows ETA and "Open in Google Maps". |
-| Firebase project (later) | push to a closed app | Without it a closed Pro app gets no request. Tell testers to keep the app open or recently used. |
+| Firebase project | push to a closed app | **Built; needs your Firebase steps: `docs\PUSH_SETUP.md`** (Firebase project, `google-services.json`, FCM key into Expo, then I apply the database proposal `20261120`, deploy `notify-push` and you create two webhooks). Without it a closed Pro app gets no request. |
 | New app icon and splash (apnabanda) | store listing | The icon files in the app are still the old ones (see PROGRESS.md follow-ups). |
 
 ## D. Values to set in the build (expo.dev > project > Environment variables, for the production profile of **each** app)
@@ -111,7 +111,7 @@ npm run build:provider:release
 
 ## F. Known limits at launch (be honest in the closed test)
 
-- No push to a closed app (needs Firebase): pros must have the app open or recently used.
+- Push to a closed app works only after the setup in `docs\PUSH_SETUP.md` (Android only for now; a request is announced loudly even when the pro's wallet cannot cover the fee).
 - Hiding the customer's street address before a pro accepts is on the screen only (server-side needs a database change).
 - No in-app customer payment: customers pay the pro directly by UPI or cash (decision pending on Razorpay Payouts and the refund rule).
 - No masked calling: numbers are shared only after acceptance.

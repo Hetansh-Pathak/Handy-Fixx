@@ -38,6 +38,9 @@ const check = (name, ok, extra = "") => {
   };
   const shot = (n) => page.screenshot({ path: path.join(OUT, n + ".png"), fullPage: true });
   const body = async () => (await page.locator("body").innerText()).replace(/\s+/g, " ");
+  // Pick TOMORROW so the test passes at any hour (a slot less than an hour away today is correctly disabled).
+  const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"], MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const pickTomorrow = async () => { const d = new Date(Date.now() + 86400000); await T(`${DAYS[d.getDay()]}, ${d.getDate()} ${MONTHS[d.getMonth()]}`).click(); };
   const yOf = async (text) => (await T(text, false).boundingBox())?.y ?? Infinity;
 
   // ── sign up as a customer ────────────────────────────────────────────────────
@@ -121,6 +124,7 @@ const check = (name, ok, extra = "") => {
   // ── 3. booking: unverified email blocks confirm ──────────────────────────────
   await T("Book Asha").click();
   await see("Step 1 of 3");
+  await pickTomorrow();
   await T("PM").click();
   await L("6 PM").click();
   await T("Continue").click();
@@ -170,6 +174,7 @@ const check = (name, ok, extra = "") => {
   await see("Asha Patel");
   await T("Book Asha").click();
   await see("Step 1 of 3");
+  await pickTomorrow();
   await T("PM").click();
   await L("6 PM").click();
   await T("Continue").click();

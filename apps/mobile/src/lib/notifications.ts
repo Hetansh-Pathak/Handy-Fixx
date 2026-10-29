@@ -8,12 +8,19 @@ export const LOCKED_REQUEST_CHANNEL = "requests_locked";
 /** Foreground behaviour: show the banner and play the sound even while the app is open. */
 export function configureNotificationHandler() {
   Notifications.setNotificationHandler({
-    handleNotification: async (n) => ({
-      shouldShowBanner: true,
-      shouldShowList: true,
-      shouldPlaySound: n.request.content.data?.locked !== true,
-      shouldSetBadge: false,
-    }),
+    handleNotification: async (n) => {
+      const data = n.request.content.data;
+      // A server push about a NEW REQUEST while the app is open: the in-app popup (and the local notification) already
+      // tell the pro, so showing this one too would be a duplicate.
+      // (Only the server push carries `kind`; the app's own local notification does not.)
+      const duplicateOfPopup = data?.kind === "new_request";
+      return {
+        shouldShowBanner: !duplicateOfPopup,
+        shouldShowList: !duplicateOfPopup,
+        shouldPlaySound: !duplicateOfPopup && data?.locked !== true,
+        shouldSetBadge: false,
+      };
+    },
   });
 }
 
@@ -47,7 +54,39 @@ async function ensureLockedChannel() {
   });
 }
 
+export const UPDATES_CHANNEL = "updates";
+
+/** Quiet normal-priority channel for booking updates. Channels must exist before a push for them arrives. */
+async function ensureUpdatesChannel() {
+  if (Platform.OS !== "android") return;
+  await Notifications.setNotificationChannelAsync(UPDATES_CHANNEL, {
+    name: "Booking updates",
+    importance: Notifications.AndroidImportance.DEFAULT,
+    lockscreenVisibility: Notifications.AndroidNotificationVisibility.PRIVATE,
+  });
+}
+
+/** Creates the Android channels a push for this role can use (the Pro app also gets the loud new-request one). */
+export async function ensurePushChannels(role: "customer" | "provider") {
+  await ensureUpdatesChannel();
+  if (role === "provider") {
+    await ensureRequestChannel();
+    await ensureLockedChannel();
+  }
+}
+
 let permission: Promise<boolean> | null = null;
+
+/**
+ * Whether notifications are allowed. With `ask = false` it only looks (never shows the system prompt), so the app can
+ * register quietly when the person already agreed; with `ask = true` it asks once per app run.
+ */
+export async function hasNotificationPermission(ask: boolean): Promise<boolean> {
+  if (!ask) {
+    try { return (await Notifications.getPermissionsAsync()).granted; } catch { return false; }
+  }
+  return ensurePermission();
+}
 
 /** Asks once per app run; later calls reuse the answer. */
 function ensurePermission(): Promise<boolean> {
