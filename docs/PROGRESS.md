@@ -44,9 +44,11 @@ and proposes a short plan. No need to explain the project again.
 
 - **Commission plan v2, phases 0-1 (2026-10-29):** launch period is now the first 10 jobs or 1 month (`LAUNCH_PERIOD`), Partner Agreement v1.2 states the 3% fee, hold at accept and the new launch, Help copy follows the constant. DB: proposal `20261115` (dry run `14_launch_one_month_DRYRUN.sql`, then `apply_14_launch_one_month_COMMIT.sql`; NOT applied, run it after or independent of `20261114`). Plan: `docs/PLAN_COMMISSION_PHASES.md` section 0.
 
+- **Commission plan v2, phase 2 (2026-10-29):** `PLATFORM_RULES` + `feePreview` in `packages/shared/src/money/platform-config.ts` (built from the fee/launch/wallet constants, frozen, 8 tests) and a read-only admin page **Fees & rules** (`/fees`: rules in force + bill calculator with parts and launch waiver). Editing the numbers from the admin app needs a database config table: not built, ask first (it would also need the SQL twins to read it).
+
 ## NEXT (in this order)
 
-Commission plan v2 (owner, 2026-10-29): **Phase 2** one config for fee/launch/wallet numbers + admin "Fees & tiers" page; **Phase 3** locked requests ("Top up ₹X to accept", lock = balance cannot cover the held fee); **Phase 4** in-app customer payment + same-day payout (deferred: needs Razorpay Payouts + refund rule from the owner). Then the A2-A7 list below.
+Commission plan v2 (owner, 2026-10-29): **Phase 3** locked requests ("Top up ₹X to accept", lock = balance cannot cover the held fee); **Phase 4** in-app customer payment + same-day payout (deferred: needs Razorpay Payouts + refund rule from the owner). Then the A2-A7 list below.
 
 Owner plan of 2026-10-29 ("first release, do all the things"), one slice at a time:
 - **A2 "Not sure what's wrong?" check-up visit**: 27 check-up/visit items already exist in 7 services (none in HVAC; skip Salon, Cleaning, Home Help). Friendly names, a catalogue flag, shown first on each service. **Owner: priced per service; the visit fee is always charged** (repair added as extra work on top).

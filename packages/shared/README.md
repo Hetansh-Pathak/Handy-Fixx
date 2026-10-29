@@ -19,6 +19,7 @@ Time-dependent functions take `now: Date` as an argument. Never call `new Date()
 | `money/price-band` | Admin band check, clamp, inclusive bounds | PDF p.3 |
 | `money/bill` | Final bill, approved-only extras, parts excluded from fee, extra-work validation and approve/decline | PDF p.3, p.5 |
 | `money/launch` | Fee-free launch: first 10 jobs or first 1 month | PDF p.6 |
+| `money/platform-config` | `PLATFORM_RULES` (every fee/launch/wallet number in one frozen object) and `feePreview` (worked example of one job) | owner 2026-10-29 |
 | `money/wallet` | Recharge packs ₹49/₹99/₹199, "covers about N jobs", accept check ("Recharge ₹49 to accept"), job settlement with a fee held at accept (charge / release / waive; old dues only for jobs accepted before holds) | PDF p.7–8, owner 2026-10-29 |
 | `money/money` | `formatInr` with Indian grouping (no `Intl` dependency) | legacy `inr()` |
 | `booking/status` | Lifecycle, who may transition, provider primary button per step, customer buttons per state | PDF p.5, p.7, p.10 |

@@ -13,6 +13,7 @@ import Providers from '@/pages/admin/Providers';
 import Bookings from '@/pages/admin/Bookings';
 import AuditLog from '@/pages/admin/AuditLog';
 import Wallets from '@/pages/admin/Wallets';
+import FeesRules from '@/pages/admin/FeesRules';
 import Pricing from '@/pages/admin/Pricing';
 import Disputes from '@/pages/admin/Disputes';
 
@@ -46,6 +47,7 @@ export default function App() {
               <Route path="/bookings" element={<Bookings />} />
               <Route path="/wallets" element={<Wallets />} />
               <Route path="/pricing" element={<Pricing />} />
+              <Route path="/fees" element={<FeesRules />} />
               <Route path="/disputes" element={<Disputes />} />
               <Route path="/audit" element={<AuditLog />} />
             </Route>

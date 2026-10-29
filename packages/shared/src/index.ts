@@ -4,6 +4,7 @@ export * from "./money/price-band";
 export * from "./money/bill";
 export * from "./money/launch";
 export * from "./money/wallet";
+export * from "./money/platform-config";
 export * from "./booking/status";
 export * from "./booking/schedule";
 export * from "./booking/validation";
