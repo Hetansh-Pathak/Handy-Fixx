@@ -4,6 +4,7 @@ import { useState } from "react";
 import { signUpWithEmail } from "@/features/auth/api";
 import { AuthShell } from "@/components/brand";
 import { env } from "@/lib/env";
+import { LegalAgreementLinks } from "@/features/legal/legal-screen";
 import { Body, Button, ErrorBanner, InfoBanner, TextField, TextLink, Title } from "@/components/ui";
 import { useZodForm } from "@/lib/use-form";
 
@@ -45,6 +46,7 @@ export default function SignUp() {
       <TextField label="Confirm password" value={form.values.confirmPassword} onChangeText={form.set("confirmPassword")} error={form.errors.confirmPassword}
         secureTextEntry autoCapitalize="none" autoComplete="new-password" textContentType="newPassword" onSubmitEditing={() => void submit()} />
       <Button label="Create account" loading={busy} onPress={() => void submit()} />
+      <LegalAgreementLinks />
       <TextLink label="Already have an account? Sign in" onPress={() => router.replace("/sign-in")} />
     </AuthShell>
   );

@@ -6,6 +6,7 @@ export * from "./money/launch";
 export * from "./money/wallet";
 export * from "./money/platform-config";
 export * from "./money/refund-policy";
+export * from "./legal";
 export * from "./booking/status";
 export * from "./booking/schedule";
 export * from "./booking/validation";

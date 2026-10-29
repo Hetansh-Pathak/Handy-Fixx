@@ -12,6 +12,10 @@ export const env = {
   /** Optional. Shown on Help only when set, so the app never displays a placeholder number. */
   supportPhone: process.env.EXPO_PUBLIC_SUPPORT_PHONE ?? "",
   /** Hosted pages. The stores require a privacy policy link; the rows only appear when these are set. */
+  /** Company details for the privacy policy and terms; left out of the text when empty. */
+  legalEntity: process.env.EXPO_PUBLIC_LEGAL_ENTITY ?? "",
+  legalAddress: process.env.EXPO_PUBLIC_LEGAL_ADDRESS ?? "",
+  grievanceOfficer: process.env.EXPO_PUBLIC_GRIEVANCE_OFFICER ?? "",
   privacyUrl: process.env.EXPO_PUBLIC_PRIVACY_URL ?? "",
   termsUrl: process.env.EXPO_PUBLIC_TERMS_URL ?? "",
   supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL,

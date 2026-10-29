@@ -1,12 +1,11 @@
 import Constants from "expo-constants";
 import { useRouter } from "expo-router";
 import { BadgeIndianRupee, Lock, MapPin, ShieldCheck } from "lucide-react-native";
-import { Linking, View } from "react-native";
+import { View } from "react-native";
 import { IconTile, Logo } from "@/components/brand";
 import { MenuGroup, MenuRow } from "@/components/menu";
 import { Text } from "@/components/text";
 import { Body, Card, Screen, ScreenHeader } from "@/components/ui";
-import { env } from "@/lib/env";
 import { useThemeColors } from "@/theme/theme";
 
 const POINTS = [
@@ -39,12 +38,10 @@ export function AboutScreen({ role }: { role: "customer" | "provider" }) {
           </View>
         </Card>
       ))}
-      {env.privacyUrl || env.termsUrl ? (
-        <MenuGroup>
-          {env.privacyUrl ? <MenuRow icon={Lock} label="Privacy policy" onPress={() => void Linking.openURL(env.privacyUrl)} /> : null}
-          {env.termsUrl ? <MenuRow icon={ShieldCheck} label="Terms of use" onPress={() => void Linking.openURL(env.termsUrl)} /> : null}
-        </MenuGroup>
-      ) : null}
+      <MenuGroup>
+        <MenuRow icon={Lock} label="Privacy policy" onPress={() => router.push({ pathname: "/legal/[doc]", params: { doc: "privacy" } })} />
+        <MenuRow icon={ShieldCheck} label="Terms of use" onPress={() => router.push({ pathname: "/legal/[doc]", params: { doc: "terms" } })} />
+      </MenuGroup>
       <Text className="text-center text-xs text-muted">HandyFix {role === "provider" ? "Pro " : ""}{version}</Text>
     </Screen>
   );

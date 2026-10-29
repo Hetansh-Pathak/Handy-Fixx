@@ -53,6 +53,24 @@ const check = (name, ok, extra = "") => { results.push({ name, ok }); console.lo
   let t = await text();
   check("sign-up flags weak password and mismatch", t.includes("Include at least one number") && t.includes("Passwords do not match"));
   await shot("03-sign-up-errors");
+  // The privacy policy and terms must be readable BEFORE signing in (store requirement), and offline, from inside the app.
+  check("sign-up says that creating an account means agreeing to the Terms of Use and Privacy Policy",
+    (await text()).includes("By creating an account you agree to our") && (await page.getByText("Terms of Use", { exact: true }).count()) >= 1 && (await page.getByText("Privacy Policy", { exact: true }).count()) >= 1);
+  await page.getByText("Privacy Policy", { exact: true }).locator("visible=true").last().click();
+  await page.waitForSelector("text=1. What we collect", { timeout: 15000 });
+  const policy = await text();
+  check("the privacy policy opens in the app before signing in and describes the real data (Aadhaar, selfie, location, partners)",
+    policy.includes("Version 1.0") && policy.includes("Aadhaar") && policy.includes("selfie") && policy.includes("Razorpay") && policy.includes("Delete account"), policy.slice(0, 200));
+  await shot("03b-privacy-policy");
+  await page.goBack();
+  await page.waitForSelector("text=Create your account");
+  await page.getByText("Terms of Use", { exact: true }).locator("visible=true").last().click();
+  await page.waitForSelector("text=1. What HandyFix is", { timeout: 15000 });
+  check("the terms of use open in the app and state the price and cancellation rules", (await text()).includes("locked when you book") && (await text()).includes("stays open until a pro accepts"));
+  await page.goBack();
+  await page.waitForSelector("text=Create your account");
+  await L("Full name").fill("Asha Patel");
+  await L("Email").fill("asha@example.com");
   await L("Password").fill("secret123");
   await L("Confirm password").fill("secret123");
   await page.getByText("Create account", { exact: true }).locator("visible=true").last().click();

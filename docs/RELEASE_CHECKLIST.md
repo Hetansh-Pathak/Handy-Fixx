@@ -54,7 +54,7 @@ Not verified (cannot be, without a phone): real sounds, GPS, camera, Razorpay, G
 |---|---|---|
 | Expo (EAS) **Pro project id** | Pro builds | Run `eas init` once with `EXPO_PUBLIC_APP_VARIANT=provider`, put the id in `apps\mobile\app.config.ts` (customer id is already set). |
 | Google Play Console account | any store release | One-time fee; verification can take days, so start early. |
-| Hosted **privacy policy** and **terms** pages | Play and App Store require a link | Set `EXPO_PUBLIC_PRIVACY_URL` and `EXPO_PUBLIC_TERMS_URL`; the rows in Help appear only when set. |
+| Hosted **privacy policy**, **terms** and **account deletion** pages | Play and App Store require links | **Built.** The pages are in the `site\` folder (made from the same text as the in-app screens: Profile > About > Privacy policy / Terms of use, also reachable from the sign-up screen before an account exists). Upload the folder to any free static host (Netlify drag-and-drop, Cloudflare Pages, GitHub Pages) and give Play Console these three addresses: `privacy.html` (privacy policy), `account-deletion.html` (account deletion URL), `terms.html`. To re-make them after any change: `npm run legal:build`. **Have a lawyer read them once before launch**; they describe what the apps really do, but they are not legal advice. Optional company details (legal name, address, grievance officer) are set with `LEGAL_ENTITY`, `LEGAL_ADDRESS`, `LEGAL_GRIEVANCE_OFFICER` when building the pages and `EXPO_PUBLIC_LEGAL_ENTITY`, `EXPO_PUBLIC_LEGAL_ADDRESS`, `EXPO_PUBLIC_GRIEVANCE_OFFICER` in the apps; empty values are left out. |
 | Support email / phone | Help screens | `EXPO_PUBLIC_SUPPORT_EMAIL` (default support@handyfix.in), optional `EXPO_PUBLIC_SUPPORT_PHONE`. |
 | Google sign-in | "Continue with Google" | Android OAuth client per package with the **release** SHA-1; `docs\GOOGLE_SIGNIN_SETUP.md`. |
 | Razorpay **live** keys and webhook | wallet recharge | `docs\PAYMENTS_SETUP.md`. Keys live only in Edge Function secrets. Deploy the pack-only `create-wallet-topup-order` function from `supabase\proposals\functions`. |
@@ -72,7 +72,8 @@ Not verified (cannot be, without a phone): real sounds, GPS, camera, Razorpay, G
 | `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` | from Google Cloud |
 | `EXPO_PUBLIC_PDF_PRICING_LIVE` | `1` (without it real customers **cannot confirm a booking**) |
 | `EXPO_PUBLIC_ARRIVED_STATUS` | `1` in the Pro app, only after `20261113000000` is applied |
-| `EXPO_PUBLIC_PRIVACY_URL`, `EXPO_PUBLIC_TERMS_URL`, `EXPO_PUBLIC_SUPPORT_EMAIL` | your pages and address |
+| `EXPO_PUBLIC_SUPPORT_EMAIL` | your support address (it is printed in the policy and terms). The privacy and terms screens are inside the app and need no web address. |
+| `EXPO_PUBLIC_LEGAL_ENTITY`, `EXPO_PUBLIC_LEGAL_ADDRESS`, `EXPO_PUBLIC_GRIEVANCE_OFFICER` | optional: company name, address, grievance officer (India expects a named contact) |
 | `EXPO_PUBLIC_PRO_APP_URL`, `EXPO_PUBLIC_CUSTOMER_APP_URL` | the store links, once they exist |
 | `EXPO_PUBLIC_MAPS_ENABLED` | `1` only when the Maps key is in the build |
 | `EXPO_PUBLIC_ENABLE_SPIKE` | leave unset (hides the developer screens) |
