@@ -1,5 +1,7 @@
 # Commission plan v2: phases (DRAFT for owner approval, 2026-10-28)
 
+> **NEEDS RECONCILIATION (2026-10-29).** After this draft was written, commit a60e734 on Ritesh recorded newer owner decisions: fee = 3% of the service bill (min ₹5, max ₹50) instead of the ₹15/₹30/₹50 slabs, fee held at accept (`wallet_holds`), no dues, recharge packs ₹49/₹99/₹199, pros' own rates per job and Labour & Shifting built, and the apnabanda Black + Blur look replacing cream/terracotta. Sections below that mention flat slabs, cream/terracotta or Phase 7 "pro rate" are superseded until the owner confirms the fee model. See the questions in the chat.
+
 Status: PLAN ONLY. No code changed yet. Source: owner answers on 2026-10-28 + HandyFix-complete.pdf. Where this plan differs from CLAUDE.md / the PDF, the owner's new answers win once this file is approved; CLAUDE.md and PROGRESS.md are then updated.
 
 ## 1. Decisions taken (owner)
