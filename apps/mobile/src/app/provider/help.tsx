@@ -17,7 +17,7 @@ const packs = `${amounts.slice(0, -1).join(", ")} or ${amounts[amounts.length - 
 // Answers follow the business model (3% fee on completed jobs only, prepaid wallet, customer pays the pro).
 const FAQ = [
   { q: "What does HandyFix charge?", a: `A fee on completed jobs only: ${FEE_RULE_LABEL}. It is worked out from the service bill (parts are not counted), reserved in your wallet when you accept and taken when the job completes. Cancelled or declined jobs cost nothing.` },
-  { q: "Is there a free period?", a: `Yes. Your first ${LAUNCH_PERIOD.months} months or first ${LAUNCH_PERIOD.jobs} jobs after approval are fee-free, whichever ends first.` },
+  { q: "Is there a free period?", a: `Yes. Your first ${LAUNCH_PERIOD.jobs} jobs or first ${LAUNCH_PERIOD.months} month${LAUNCH_PERIOD.months === 1 ? "" : "s"} after approval are fee-free, whichever ends first.` },
   { q: "Does declining cost me anything?", a: "No. Declining or missing a request costs ₹0. The customer is offered the next best pros." },
   { q: "How do customers pay me?", a: "Directly, by UPI or cash, after the job. The price is locked at booking and only grows if the customer approves extra work." },
   { q: "Why am I not getting requests?", a: "You must be approved, online, and have the app open. Check that your work areas and services are filled in. Closing the app hides you from customers." },

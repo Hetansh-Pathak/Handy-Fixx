@@ -42,7 +42,11 @@ and proposes a short plan. No need to explain the project again.
 - **UI restyle "Black + Blur" (2026-10-29, owner spec; styling only, no logic/DB/route changes):** Light/Dark/System theming with CSS-variable tokens (`src/theme/`), `ThemeProvider` at the root, `Glass` blur wrapper with Android fallback, `ScreenBackground` glows, apnabanda `AppLogo` + Pro pill, shared components restyled (`ui.tsx`: Button with icon and on-primary text, Chip, Card, `HeroCard`, `StatusPill`, `WarnBanner`, inputs, header), frosted tab bar, 103 hard-coded colours moved to `useThemeColors()`. Screens: customer Home ("Apna banda hai.", area chip, promise card, 4-column service tiles, trust tiles), Choose a pro (lowest price outlined, verified badge, "final price", footer note), Review & confirm (progress bar, ₹0 fee pill, amber "Price is locked", lock on Confirm), Booking status (hero, code in 4 boxes, green done hero), Pro dashboard (PRO pill, online hero, new-request preview, wallet strip), request popup (frosted sheet, big "You earn"), job (step tracker, You earn hero), wallet (hero). Profile > Appearance in both apps. `expo-blur` added and `userInterfaceStyle: "automatic"`, splash `#05070D`: **both apps need new development builds.** Built in the non-git copy (no commits).
   Follow-ups for the owner: new app icon / adaptive icon / splash image from the apnabanda SVG (not changed yet); in-app copy still says "HandyFix" (fee lines, Help, About); a "Most jobs" sort needs a shared ranking change; RN web blur is real, Android shows the fallback by design.
 
+- **Commission plan v2, phases 0-1 (2026-10-29):** launch period is now the first 10 jobs or 1 month (`LAUNCH_PERIOD`), Partner Agreement v1.2 states the 3% fee, hold at accept and the new launch, Help copy follows the constant. DB: proposal `20261115` (dry run `14_launch_one_month_DRYRUN.sql`, then `apply_14_launch_one_month_COMMIT.sql`; NOT applied, run it after or independent of `20261114`). Plan: `docs/PLAN_COMMISSION_PHASES.md` section 0.
+
 ## NEXT (in this order)
+
+Commission plan v2 (owner, 2026-10-29): **Phase 2** one config for fee/launch/wallet numbers + admin "Fees & tiers" page; **Phase 3** locked requests ("Top up ₹X to accept", lock = balance cannot cover the held fee); **Phase 4** in-app customer payment + same-day payout (deferred: needs Razorpay Payouts + refund rule from the owner). Then the A2-A7 list below.
 
 Owner plan of 2026-10-29 ("first release, do all the things"), one slice at a time:
 - **A2 "Not sure what's wrong?" check-up visit**: 27 check-up/visit items already exist in 7 services (none in HVAC; skip Salon, Cleaning, Home Help). Friendly names, a catalogue flag, shown first on each service. **Owner: priced per service; the visit fee is always charged** (repair added as extra work on top).
@@ -84,7 +88,7 @@ Owner plan of 2026-10-29 ("first release, do all the things"), one slice at a ti
 
 ## Open product decisions (PDF page 17)
 
-Assumed by the code today: (1) customers pay the pro directly, not in the app; (2) 3 months or 10 jobs fee-free; (3) no cheaper "Book again" with the same pro; (4) urgent add-on not built until payments are in the app. Change the assumption here when the owner decides.
+Assumed by the code today: (1) customers pay the pro directly, not in the app; (2) 10 jobs or 1 month fee-free (changed 2026-10-29); (3) no cheaper "Book again" with the same pro; (4) urgent add-on not built until payments are in the app. Change the assumption here when the owner decides.
 
 ## Known gotchas
 

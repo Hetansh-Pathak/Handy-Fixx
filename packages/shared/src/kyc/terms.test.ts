@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { TERMS_VERSION } from "./kyc";
+import { FEE_MAX, FEE_MIN, FEE_RATE } from "../money/fee";
+import { LAUNCH_PERIOD } from "../money/launch";
 import { PARTNER_TERMS } from "./terms";
 
 describe("partner terms", () => {
@@ -13,15 +15,18 @@ describe("partner terms", () => {
     });
   });
 
-  it("states the flat fee model, not the old percentage fee", () => {
-    expect(all).toContain("₹15");
-    expect(all).toContain("₹30");
-    expect(all).toContain("₹50");
+  it("states the current fee rule and launch period, not the old slabs or the 12% fee", () => {
+    expect(all).toContain(`${Math.round(FEE_RATE * 100)}% of the service bill`);
+    expect(all).toContain(`₹${FEE_MIN}`);
+    expect(all).toContain(`₹${FEE_MAX}`);
+    expect(LAUNCH_PERIOD.months).toBe(1); // the wording below says "first month"
+    expect(all).toContain(`first ${LAUNCH_PERIOD.jobs} jobs or first month `);
+    expect(all).not.toContain("₹15");
     expect(all).not.toMatch(/12\s?%/);
     expect(all).not.toMatch(/\bQR\b/);
   });
 
   it("is a new version, because the fee wording changed", () => {
-    expect(TERMS_VERSION).toBe("v1.1");
+    expect(TERMS_VERSION).toBe("v1.2");
   });
 });

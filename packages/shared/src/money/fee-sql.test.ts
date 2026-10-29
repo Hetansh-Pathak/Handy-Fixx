@@ -8,8 +8,8 @@ import { RECHARGE_PACK_AMOUNTS } from "./wallet";
 // Guards against the TypeScript rules and the SQL drifting apart.
 const read = (name: string) => readFileSync(resolve(__dirname, "../../../../supabase/proposals", name), "utf8");
 const fee = read("20261114000000_fee_3pct_holds_autoclose_PROPOSAL_NOT_APPLIED.sql");
-// The launch rule lives in the applied wallet-fee migration (provider_launch_active), unchanged by 20261114.
-const launch = read("20261102000001_provider_wallet_fee_PROPOSAL_NOT_APPLIED.sql");
+// The launch rule (provider_launch_active) is redefined by 20261115 (1 month); 20261102000001 keeps the original 3 months.
+const launch = read("20261115000000_launch_one_month_PROPOSAL_NOT_APPLIED.sql");
 
 describe("SQL matches the shared fee rules", () => {
   it("uses the same 3%, minimum and maximum", () => {
@@ -26,7 +26,7 @@ describe("SQL matches the shared fee rules", () => {
   it("posts the fee as a negative ledger entry exactly once per booking", () => {
     expect(fee).toContain("'cash_fee', -v_charged, 'fee:' || b.id::text");
   });
-  it("uses the same launch period (3 months or 10 jobs)", () => {
+  it("uses the same launch period (10 jobs or 1 month)", () => {
     expect(launch).toContain(`interval '${LAUNCH_PERIOD.months} months'`);
     expect(launch).toContain(`v_done < ${LAUNCH_PERIOD.jobs}`);
   });

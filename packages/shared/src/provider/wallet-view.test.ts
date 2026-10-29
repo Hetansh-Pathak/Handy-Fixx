@@ -31,17 +31,17 @@ describe("walletStateFromSummary (live get_wallet_summary → fee rules)", () =>
 
 describe("providerLaunchStatus", () => {
   it("starts at approval and counts completed jobs", () => {
-    const s = providerLaunchStatus({ kycReviewedAt: "2026-11-01T00:00:00Z", totalJobs: 4 }, now);
+    const s = providerLaunchStatus({ kycReviewedAt: "2026-12-01T00:00:00Z", totalJobs: 4 }, now);
     expect(s).toMatchObject({ active: true, jobsLeft: 6 });
   });
-  it("is not active before approval, after 10 jobs, or after 3 months", () => {
+  it("is not active before approval, after 10 jobs, or after 1 month", () => {
     expect(providerLaunchStatus({ kycReviewedAt: null, totalJobs: 0 }, now)).toEqual({ active: false, reason: "not_started" });
     expect(providerLaunchStatus({ kycReviewedAt: "garbage", totalJobs: 0 }, now)).toEqual({ active: false, reason: "not_started" });
-    expect(providerLaunchStatus({ kycReviewedAt: "2026-11-01T00:00:00Z", totalJobs: 10 }, now)).toEqual({ active: false, reason: "jobs_over" });
+    expect(providerLaunchStatus({ kycReviewedAt: "2026-12-01T00:00:00Z", totalJobs: 10 }, now)).toEqual({ active: false, reason: "jobs_over" });
     expect(providerLaunchStatus({ kycReviewedAt: "2026-01-01T00:00:00Z", totalJobs: 1 }, now)).toEqual({ active: false, reason: "time_over" });
   });
   it("treats missing job counts as zero", () => {
-    expect(providerLaunchStatus({ kycReviewedAt: "2026-11-01T00:00:00Z", totalJobs: null }, now)).toMatchObject({ active: true, jobsLeft: 10 });
+    expect(providerLaunchStatus({ kycReviewedAt: "2026-12-01T00:00:00Z", totalJobs: null }, now)).toMatchObject({ active: true, jobsLeft: 10 });
   });
 });
 

@@ -1,5 +1,5 @@
 /** Fee-free launch for a provider: ends at whichever limit is reached first. */
-export const LAUNCH_PERIOD = { months: 3, jobs: 10 } as const;
+export const LAUNCH_PERIOD = { months: 1, jobs: 10 } as const;
 
 export type LaunchConfig = { months: number; jobs: number };
 

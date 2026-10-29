@@ -5,7 +5,7 @@ marked QUEUED or BLOCKED** at the end of each report until it is done.
 
 Decisions locked: React Native + Expo, one app with two roles (one role per account), PDF business model
 (customer pays the pro's own rate, ₹0 customer fee; provider pays 3% (min ₹5, max ₹50; was a flat ₹15/30/50 until 2026-10-29) from a prepaid wallet only on
-completed jobs; fee-free first 3 months or 10 jobs; customer pays the pro directly by UPI or cash), Android first.
+completed jobs; fee-free first 10 jobs or 1 month; customer pays the pro directly by UPI or cash), Android first.
 Package name: `in.handyfix.app`.
 
 ## Done (committed locally, not pushed)

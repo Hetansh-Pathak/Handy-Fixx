@@ -1,6 +1,22 @@
 # Commission plan v2: phases (DRAFT for owner approval, 2026-10-28)
 
-> **NEEDS RECONCILIATION (2026-10-29).** After this draft was written, commit a60e734 on Ritesh recorded newer owner decisions: fee = 3% of the service bill (min ₹5, max ₹50) instead of the ₹15/₹30/₹50 slabs, fee held at accept (`wallet_holds`), no dues, recharge packs ₹49/₹99/₹199, pros' own rates per job and Labour & Shifting built, and the apnabanda Black + Blur look replacing cream/terracotta. Sections below that mention flat slabs, cream/terracotta or Phase 7 "pro rate" are superseded until the owner confirms the fee model. See the questions in the chat.
+> **RECONCILED 2026-10-29.** Owner confirmed: fee = 3% (min ₹5, max ₹50) as in a60e734 (NOT the flat slabs below), apnabanda Black + Blur look stays, lock = wallet cannot cover the held fee, in-app customer payment deferred. Read section 0 first; sections 1-3 are the original draft and are superseded where they differ.
+
+## 0. FINAL plan (use this)
+
+| Phase | What | Status |
+|---|---|---|
+| 0 | Reconcile docs with the owner decisions | done |
+| 1 | Launch = first 10 jobs or 1 month: `LAUNCH_PERIOD`, tests, Help copy, Partner Agreement (v1.2, 3% wording), DB proposal `20261115` (+ dry run 14 / apply 14), CLAUDE.md, README | done (proposal NOT applied) |
+| 2 | One config for fee, launch and wallet numbers in shared (single source) + admin "Fees & tiers" read/edit page; DB config table only after owner approval | next |
+| 3 | Locked requests: pro sees the request and earning, address and phone hidden, "Top up ₹X to accept" (lock = spendable balance cannot cover the held fee; no tiers; silent alert; max 3 cards + counter); DB twin of the accept rule is already in `20261114` | |
+| 4 | In-app customer payment + same-day payout (Razorpay Payouts) | deferred until the owner confirms Payouts + the refund rule |
+| 5 | Remaining PDF items not yet built (A2-A7 in PROGRESS.md NEXT, problem-closing prompt, dispute evidence, quote/visit fee, push, ranking, pincode and cancel rules) | |
+| 6 | Polish and release checks (screen-by-screen, small screens, screen readers, full check run) | |
+
+Pro own rates and Labour & Shifting were built on 2026-10-29 (a60e734), so they are no longer in the plan.
+
+## Original draft (superseded where it differs)
 
 Status: PLAN ONLY. No code changed yet. Source: owner answers on 2026-10-28 + HandyFix-complete.pdf. Where this plan differs from CLAUDE.md / the PDF, the owner's new answers win once this file is approved; CLAUDE.md and PROGRESS.md are then updated.
 

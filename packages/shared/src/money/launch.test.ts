@@ -17,13 +17,13 @@ describe("addMonths", () => {
 });
 
 describe("launchStatus", () => {
-  it("is active in the first 3 months and the first 10 jobs", () => {
-    const s = launchStatus({ launchStartedAt: start, completedJobs: 4, now: new Date("2026-12-15T00:00:00Z") });
+  it("is active in the first month and the first 10 jobs", () => {
+    const s = launchStatus({ launchStartedAt: start, completedJobs: 4, now: new Date("2026-11-10T00:00:00Z") });
     expect(s).toMatchObject({ active: true, jobsLeft: 6 });
-    if (s.active) expect(s.daysLeft).toBe(48);
+    if (s.active) expect(s.daysLeft).toBe(21);
   });
-  it("ends after 3 months", () => {
-    expect(launchStatus({ launchStartedAt: start, completedJobs: 1, now: new Date("2027-02-01T00:00:00Z") }))
+  it("ends after 1 month", () => {
+    expect(launchStatus({ launchStartedAt: start, completedJobs: 1, now: new Date("2026-12-01T00:00:00Z") }))
       .toEqual({ active: false, reason: "time_over" });
   });
   it("ends after 10 completed jobs, whichever comes first", () => {

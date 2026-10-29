@@ -18,7 +18,7 @@ Time-dependent functions take `now: Date` as an argument. Never call `new Date()
 | `money/fee` | 3% of the service bill, min ₹5, max ₹50 (owner 2026-10-29, replaces the PDF slabs), customer fee = ₹0 | owner |
 | `money/price-band` | Admin band check, clamp, inclusive bounds | PDF p.3 |
 | `money/bill` | Final bill, approved-only extras, parts excluded from fee, extra-work validation and approve/decline | PDF p.3, p.5 |
-| `money/launch` | Fee-free launch: first 3 months or first 10 jobs | PDF p.6 |
+| `money/launch` | Fee-free launch: first 10 jobs or first 1 month | PDF p.6 |
 | `money/wallet` | Recharge packs ₹49/₹99/₹199, "covers about N jobs", accept check ("Recharge ₹49 to accept"), job settlement with a fee held at accept (charge / release / waive; old dues only for jobs accepted before holds) | PDF p.7–8, owner 2026-10-29 |
 | `money/money` | `formatInr` with Indian grouping (no `Intl` dependency) | legacy `inr()` |
 | `booking/status` | Lifecycle, who may transition, provider primary button per step, customer buttons per state | PDF p.5, p.7, p.10 |
@@ -53,7 +53,7 @@ Time-dependent functions take `now: Date` as an argument. Never call `new Date()
 
 The PDF is silent or ambiguous here. Each is a named constant or parameter, so changing it is one line plus a test.
 
-1. **Launch period** ends at whichever limit is hit first (3 months *or* 10 jobs). The clock starts when the provider is approved; `launchStartedAt = null` means not started, so fees apply.
+1. **Launch period** ends at whichever limit is hit first (1 month *or* 10 jobs). The clock starts when the provider is approved; `launchStartedAt = null` means not started, so fees apply.
 2. **Wallet below the fee at completion:** with a hold (proposal 20261114) no due is ever created; a fee raised by extras past hold + balance is recorded as `uncollected` (at most ₹45). Without a hold (accepted before the change) the uncovered fee becomes a due, and a recharge clears dues first.
 3. **"Similar price"** for next-best offers is ±25% (`SIMILAR_PRICE_TOLERANCE`), max 3 pros, same pincode or city, online and KYC-approved.
 4. **"Late" cancellation** is not defined in the PDF. `instantBookingPause` takes the late-cancellation timestamps; the caller decides what counts.

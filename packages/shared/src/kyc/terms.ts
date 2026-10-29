@@ -23,7 +23,7 @@ export const PARTNER_TERMS: readonly TermsSection[] = [
   },
   {
     heading: "4. Fees and your wallet",
-    body: "Joining, going online, receiving requests and declining a request are free. HandyFix charges a flat fee only on a completed job: ₹15 for a service bill under ₹500, ₹30 for ₹500 to ₹1,500 and ₹50 above ₹1,500. Parts and materials are not part of the fee. The fee is taken from your prepaid wallet when the customer's code is accepted. Your first 3 months or first 10 jobs, whichever comes first, are fee-free. If your wallet is too low to cover a fee, you cannot accept new jobs until you top up.",
+    body: "Joining, going online, receiving requests and declining a request are free. HandyFix charges a fee only on a completed job: 3% of the service bill, rounded to the nearest rupee, never less than ₹5 and never more than ₹50. Parts and materials are not part of the fee. When you accept a job, the fee is set aside from your prepaid wallet; it is charged when the customer's code is accepted and released if the job is cancelled, declined or missed. Your first 10 jobs or first month after approval, whichever comes first, are fee-free. If your wallet cannot cover the fee, you cannot accept the job until you recharge.",
   },
   {
     heading: "5. Payment from the customer",
