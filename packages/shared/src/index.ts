@@ -5,6 +5,7 @@ export * from "./money/bill";
 export * from "./money/launch";
 export * from "./money/wallet";
 export * from "./money/platform-config";
+export * from "./money/refund-policy";
 export * from "./booking/status";
 export * from "./booking/schedule";
 export * from "./booking/validation";
