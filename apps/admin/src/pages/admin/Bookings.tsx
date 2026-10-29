@@ -427,7 +427,7 @@ const Bookings: React.FC = () => {
                         {STATUS_LABELS[b.status] ?? b.status}
                       </Badge>
                       {closingProblem({ status: b.status, startedAt: b.started_at, now: new Date() }).active && (
-                        <Badge className="mt-1 block w-fit bg-amber-500/15 text-[10px] text-amber-600">No code after 2 h</Badge>
+                        <Badge className="mt-1 block w-fit bg-amber-500/15 text-xs text-amber-700 dark:text-amber-300">No code after 2 h</Badge>
                       )}
                     </td>
                     <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
@@ -477,7 +477,7 @@ const Bookings: React.FC = () => {
               </SheetHeader>
 
               {closingProblem({ status: selectedBooking.status, startedAt: selectedBooking.started_at, now: new Date() }).active && (
-                <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-700">
+                <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-700 dark:text-amber-300">
                   <p className="font-semibold">Problem closing the job?</p>
                   <p>This job has been in progress for over 2 hours and the completion code has not been entered. Contact the customer and the pro, then cancel or reassign if needed.</p>
                 </div>
