@@ -3,6 +3,7 @@
  * release build, never on web). The wallet is credited by the server webhook, not by this result: success here
  * only means "the payment went through, wait for the ledger to show it".
  */
+import { checkoutFailure } from "@handyfix/shared";
 import { Platform } from "react-native";
 
 export type CheckoutOrder = {
@@ -29,20 +30,17 @@ export async function openCheckout(order: CheckoutOrder): Promise<CheckoutResult
       order_id: order.order_id,
       amount: order.amount_paise,
       currency: "INR",
-      name: "HandyFix",
+      name: "apnabanda",
       description: "Wallet recharge",
       prefill: order.prefill,
-      theme: { color: "#C16430" },
+      theme: { color: "#1F5BFF" },
     });
     const payment = data?.razorpay_payment_id && data.razorpay_signature
       ? { razorpay_order_id: data.razorpay_order_id ?? order.order_id, razorpay_payment_id: data.razorpay_payment_id, razorpay_signature: data.razorpay_signature }
       : null;
     return { status: "paid", payment };
   } catch (e) {
-    const err = e as { code?: number | string; description?: string; error?: { description?: string; reason?: string } };
-    // Razorpay reports a closed sheet as code 0 / "Payment cancelled by user".
-    const text = err.description ?? err.error?.description ?? "";
-    if (err.code === 0 || err.code === "0" || /cancel/i.test(text)) return { status: "cancelled" };
-    return { status: "failed", message: text || "The payment did not go through. You were not charged." };
+    // Closed sheet = cancelled; Android sends the reason as a JSON string, which must never reach the screen.
+    return checkoutFailure(e);
   }
 }

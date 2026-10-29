@@ -23,6 +23,16 @@ describe("SQL matches the shared fee rules", () => {
     const fn = read("functions/create-wallet-topup-order/index.ts");
     expect(fn).toContain(`const PACKS = [${RECHARGE_PACK_AMOUNTS.join(", ")}];`);
   });
+  it.each(["create-wallet-topup-order", "razorpay-webhook", "verify-wallet-payment"])(
+    "the deployable copy of %s is the proposal (only the header differs)",
+    (name) => {
+      // Code from the first import on; line endings ignored (Windows checkouts have CRLF).
+      const code = (p: string) => readFileSync(p, "utf8").replace(/\r\n/g, "\n").replace(/^[\s\S]*?(?=\/\/ @ts-expect-error|import )/, "")
+        .replace(/^\/\/ (PROPOSAL, NOT DEPLOYED\.|Originally:)/m, "");
+      const root = resolve(__dirname, "../../../../supabase");
+      expect(code(resolve(root, "functions", name, "index.ts"))).toBe(code(resolve(root, "proposals/functions", name, "index.ts")));
+    },
+  );
   it("posts the fee as a negative ledger entry exactly once per booking", () => {
     expect(fee).toContain("'cash_fee', -v_charged, 'fee:' || b.id::text");
   });

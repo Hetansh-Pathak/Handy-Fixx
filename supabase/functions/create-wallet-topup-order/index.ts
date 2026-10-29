@@ -1,9 +1,21 @@
+// DEPLOYABLE COPY of supabase/proposals/functions/create-wallet-topup-order (copied 2026-10-30, Section 0). NOT deployed until the owner runs the
+// deploy command in docs/PAYMENTS_SETUP.md. Keep both copies identical below this header.
+// Originally: Replaces supabase/functions/create-wallet-topup-order (owner decision 2026-10-29).
+// Changes: only the recharge packs ₹49 / ₹99 / ₹199 ({ pack }), checked here on the server; at most 5 orders per
+// pro per 10 minutes. Deploy:  supabase functions deploy create-wallet-topup-order
+// The wallet is credited ONLY by razorpay-webhook after Razorpay confirms the payment, never by this function or the app.
+
 // @ts-expect-error Supabase resolves Deno URL imports at deploy time.
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 // @ts-expect-error Supabase resolves Deno URL imports at deploy time.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 declare const Deno: { env: { get: (name: string) => string | undefined } };
+
+/** Must equal RECHARGE_PACK_AMOUNTS in packages/shared/src/money/wallet.ts (a shared test checks it). */
+const PACKS = [49, 99, 199];
+const MAX_ORDERS = 5;
+const WINDOW_MINUTES = 10;
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -27,7 +39,7 @@ async function razorpay(path: string, method: "GET" | "POST", body?: unknown) {
   return data;
 }
 
-// Returns { admin, user, provider } for the signed-in provider, or a Response to return.
+// Returns { admin, provider } for the signed-in provider, or a Response to return.
 async function requireProvider(req: Request) {
   const url = Deno.env.get("SUPABASE_URL");
   const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
@@ -43,11 +55,9 @@ async function requireProvider(req: Request) {
     .eq("user_id", user.id)
     .maybeSingle();
   if (!provider) return { error: json({ error: "Provider account not found" }, 403) };
-  return { admin, user, provider };
+  return { admin, provider };
 }
 
-// Creates a Razorpay order so a provider can pay their dues by UPI / card.
-// The wallet is credited ONLY by the webhook after Razorpay confirms the payment.
 serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   try {
@@ -55,34 +65,40 @@ serve(async (req: Request) => {
     if ("error" in ctx) return ctx.error;
     const { admin, provider } = ctx;
 
-    const { amount } = await req.json();
-    const rupees = Number(amount);
-    if (!Number.isInteger(rupees) || rupees < 1 || rupees > 50000) {
-      return json({ error: "Enter a whole amount between ₹1 and ₹50,000" }, 400);
+    const body = await req.json().catch(() => ({}));
+    const pack = Number(body?.pack);
+    if (!PACKS.includes(pack)) {
+      return json({ error: `Pick a recharge pack: ${PACKS.map((p) => `₹${p}`).join(", ")}.` }, 400);
+    }
+
+    const since = new Date(Date.now() - WINDOW_MINUTES * 60_000).toISOString();
+    const { count } = await admin
+      .from("wallet_topup_orders")
+      .select("order_id", { count: "exact", head: true })
+      .eq("provider_id", provider.id)
+      .gte("created_at", since);
+    if ((count ?? 0) >= MAX_ORDERS) {
+      return json({ error: "Too many payment attempts. Wait a few minutes and try again." }, 429);
     }
 
     const order = await razorpay("/orders", "POST", {
-      amount: rupees * 100,
+      amount: pack * 100,
       currency: "INR",
       receipt: `topup_${provider.id.slice(0, 8)}_${Date.now()}`,
-      notes: { type: "wallet_topup", provider_id: provider.id },
+      notes: { type: "wallet_topup", provider_id: provider.id, pack: String(pack) },
     });
 
-    const { error } = await admin.from("wallet_topup_orders").insert({
-      order_id: order.id,
-      provider_id: provider.id,
-      amount: rupees,
-    });
+    const { error } = await admin.from("wallet_topup_orders").insert({ order_id: order.id, provider_id: provider.id, amount: pack });
     if (error) throw error;
 
     return json({
       order_id: order.id,
-      amount_paise: rupees * 100,
+      amount_paise: pack * 100,
       key_id: Deno.env.get("RAZORPAY_KEY_ID"),
       prefill: { name: provider.full_name ?? "", email: provider.email ?? "", contact: provider.phone ?? "" },
     });
   } catch (e) {
     console.error("create-wallet-topup-order:", e);
-    return json({ error: e instanceof Error ? e.message : "Could not start the payment" }, 500);
+    return json({ error: "Could not start the payment. Please try again." }, 500);
   }
 });

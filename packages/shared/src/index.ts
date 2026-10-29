@@ -37,6 +37,7 @@ export * from "./provider/request-access";
 export * from "./provider/job-stages";
 export * from "./provider/wallet-view";
 export * from "./provider/wallet-ledger";
+export * from "./provider/recharge";
 export * from "./provider/profile";
 export * from "./provider/payout";
 export * from "./provider/weekly-schedule";

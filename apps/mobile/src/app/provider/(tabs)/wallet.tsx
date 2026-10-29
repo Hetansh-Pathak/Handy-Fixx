@@ -1,6 +1,6 @@
 import {
-  describeLedgerEntry, earningsSummary, FEE_RULE_LABEL, formatInr, jobsCovered, jobsCoveredLine, launchLine, payoutSummary, RECHARGE_PACKS, TYPICAL_BILL,
-  type RechargePack,
+  describeLedgerEntry, earningsSummary, FEE_RULE_LABEL, findNewTopup, rechargeStartError, formatInr, jobsCovered, jobsCoveredLine, launchLine, payoutSummary, RECHARGE_PACKS, TYPICAL_BILL,
+  type LedgerEntry, type RechargePack,
 } from "@handyfix/shared";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
@@ -58,16 +58,17 @@ export default function WalletScreen() {
       // Only the server webhook credits the wallet, after Razorpay confirms. The signature check is just for a faster answer.
       const check = result.payment ? await verifyTopUpPayment(result.payment) : null;
       if (check && !check.verified) { setError("We could not confirm this payment yet. If money left your account, it will show here within a few minutes."); }
-      const before = ledger.data?.length ?? 0;
+      // Watch for this top-up's own ledger row (counting rows misses it once the 40-row list is full).
+      const beforeIds = new Set((ledger.data ?? []).map((e) => e.id));
       for (let i = 0; i < 10; i += 1) {
         await sleep(2000);
         await reloadMoney();
-        const fresh = queryClient.getQueryData<unknown[]>(["wallet-ledger", providerId]);
-        if ((fresh?.length ?? 0) > before) { setError(null); setNotice(`${formatInr(pack)} added to your wallet.`); return; }
+        const fresh = queryClient.getQueryData<LedgerEntry[]>(["wallet-ledger", providerId]) ?? [];
+        if (findNewTopup(beforeIds, fresh, pack)) { setError(null); setNotice(`${formatInr(pack)} added to your wallet.`); return; }
       }
       setNotice("Payment received. It can take a minute to appear here; you are never charged twice.");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not start the payment.");
+      setError(rechargeStartError(e));
     } finally {
       setBusy(null);
     }

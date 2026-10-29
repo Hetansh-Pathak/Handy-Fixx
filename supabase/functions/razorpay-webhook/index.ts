@@ -1,3 +1,5 @@
+// DEPLOYABLE COPY of supabase/proposals/functions/razorpay-webhook (copied 2026-10-30, Section 0). NOT deployed until the owner runs the
+// deploy command in docs/PAYMENTS_SETUP.md. Keep both copies identical below this header.
 // @ts-expect-error Supabase resolves Deno URL imports at deploy time.
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 // @ts-expect-error Supabase resolves Deno URL imports at deploy time.
@@ -5,6 +7,12 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 declare const Deno: { env: { get: (name: string) => string | undefined } };
 
+// Originally: Replaces supabase/functions/razorpay-webhook (owner decision 2026-10-29).
+// Change: a payment.captured / order.paid whose notes say it is NOT a wallet top-up is ignored before touching the
+// wallet. Unchanged: HMAC check, every money write idempotent (record_wallet_topup credits once per payment and only
+// when the paid amount equals the order), refund.processed posts a refund_reversal via record_refund.
+// Events to enable in the Razorpay dashboard: payment.captured, order.paid, refund.processed (see docs/PAYMENTS_SETUP.md).
+//
 // Deploy with:  supabase functions deploy razorpay-webhook --no-verify-jwt
 // (Razorpay does not send a Supabase login. Security = the HMAC signature below.)
 
@@ -101,8 +109,12 @@ serve(async (req: Request) => {
       return Response.json({ ok: true, result });
     }
 
-    // ── Provider paid dues (Razorpay Checkout order) ─────────────────────────
+    // ── Pro recharged the wallet (Razorpay Checkout order) ───────────────────
     if ((type === "payment.captured" || type === "order.paid") && payment?.order_id) {
+      // Orders made by create-wallet-topup-order carry notes.type = "wallet_topup". Payments without notes still go
+      // through record_wallet_topup, which ignores any order that is not in wallet_topup_orders ("unknown_order").
+      const noteType = event?.payload?.order?.entity?.notes?.type ?? payment?.notes?.type;
+      if (noteType && noteType !== "wallet_topup") return Response.json({ ok: true, result: "ignored" });
       const { data, error } = await admin.rpc("record_wallet_topup", {
         p_order_id: payment.order_id,
         p_payment_id: payment.id,
