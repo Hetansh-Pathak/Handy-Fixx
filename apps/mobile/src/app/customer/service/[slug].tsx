@@ -1,4 +1,4 @@
-import { distanceKm, formatDistance, formatDuration, formatInr, formatRating, formatResponseTime, groupSubItems, priceRangeLabel, isCheckupVisit, sortProviders, type LatLng, type ProviderSort } from "@handyfix/shared";
+import { CHECKUP_FEE_NOTE, checkupsFirst, distanceKm, findGenericCheckup, formatDistance, formatDuration, formatInr, formatRating, formatResponseTime, groupSubItems, priceRangeLabel, isCheckupVisit, sortProviders, type LatLng, type ProviderSort } from "@handyfix/shared";
 import { useQuery } from "@tanstack/react-query";
 import * as Location from "expo-location";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -9,7 +9,7 @@ import { IconTile, ServiceIcon } from "@/components/brand";
 import { Avatar } from "@/components/Avatar";
 import { CitySuggestions } from "@/components/CitySuggestions";
 import { Text } from "@/components/text";
-import { Body, Button, Chip, ErrorBanner, Screen, ScreenHeader, StatusPill, TextField, Title, ListSkeleton } from "@/components/ui";
+import { Body, Button, Card, Chip, ErrorBanner, InfoBanner, Screen, ScreenHeader, StatusPill, TextField, Title, ListSkeleton } from "@/components/ui";
 import { useThemeColors } from "@/theme/theme";
 import { useArea } from "@/features/customer/area-context";
 import { fetchServiceBySlug, fetchSubItems, searchProviders } from "@/features/customer/catalog-api";
@@ -31,6 +31,7 @@ export default function ServiceScreen() {
   const subItems = useQuery({ queryKey: ["sub-items", serviceId], queryFn: () => fetchSubItems(serviceId!), enabled: !!serviceId });
   const subItem: SubItemRow | null = subItems.data?.find((s) => s.id === subId) ?? null;
   const sections = useMemo(() => groupSubItems(subItems.data ?? []), [subItems.data]);
+  const generalCheckup = useMemo(() => findGenericCheckup(subItems.data ?? []), [subItems.data]);
   const [section, setSection] = useState<string | null>(null);
   // The tapped section, else the section of the chosen item, else the first one.
   const currentSection = sections.find((g) => g.section === section) ?? sections.find((g) => g.items.some((i) => i.id === subId)) ?? sections[0];
@@ -101,6 +102,14 @@ export default function ServiceScreen() {
 
       {(subItems.data?.length ?? 0) > 0 ? (
         <View className="gap-3">
+          {generalCheckup ? (
+            <Card>
+              <Text accessibilityRole="header" className="text-lg font-semibold text-fg">Not sure what's wrong?</Text>
+              <Body muted>A pro comes, finds the problem and tells you the price before any repair.</Body>
+              <Button label={`Book a check-up visit · ${formatInr(generalCheckup.base_price)}`} variant={subId === generalCheckup.id ? "secondary" : "primary"}
+                onPress={() => setSubId(generalCheckup.id)} />
+            </Card>
+          ) : null}
           {sections.length > 1 ? (
             <>
               <Text className="text-lg font-semibold text-fg">Select a service</Text>
@@ -121,7 +130,7 @@ export default function ServiceScreen() {
           ) : null}
           <Text className="text-lg font-semibold text-fg">{sections.length > 1 && currentSection ? currentSection.section : "What do you need?"}</Text>
           <View className="flex-row flex-wrap justify-between gap-y-3">
-            {(currentSection?.items ?? []).map((s) => {
+            {checkupsFirst(currentSection?.items ?? []).map((s) => {
               const selected = s.id === subId;
               const visit = isCheckupVisit(s.name);
               return (
@@ -143,6 +152,8 @@ export default function ServiceScreen() {
           </View>
         </View>
       ) : null}
+
+      {subItem && isCheckupVisit(subItem.name) ? <InfoBanner message={`${subItem.name}: ${CHECKUP_FEE_NOTE}`} /> : null}
 
       <TextField label="Your area" value={area} onChangeText={setArea} placeholder="City or 6-digit pincode" autoCapitalize="words" />
       <CitySuggestions query={area} onPick={setArea} />

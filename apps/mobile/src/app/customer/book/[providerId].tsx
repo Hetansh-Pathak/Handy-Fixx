@@ -1,6 +1,6 @@
 import {
-  availableTimes, bookableDates, describeDay, restrictToWindows, windowsOn, bookingAddressSchema, bookingScheduleSchema, fieldErrors, formatBookingWhen, formatDateChip, formatDuration,
-  formatInr, isValidPincode, newBookingInputSchema, quoteBooking, snapToAvailable, toDateString, toDbTime,
+  CHECKUP_FEE_NOTE, availableTimes, bookableDates, describeDay, restrictToWindows, windowsOn, bookingAddressSchema, bookingScheduleSchema, fieldErrors, formatBookingWhen, formatDateChip, formatDuration,
+  formatInr, isCheckupVisit, isValidPincode, newBookingInputSchema, quoteBooking, snapToAvailable, toDateString, toDbTime,
   type BookingSlot,
 } from "@handyfix/shared";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -266,6 +266,7 @@ export default function BookScreen() {
             <View className="my-1 h-px bg-line" />
             <Row label="Total" value={formatInr(quote.total)} strong />
           </Card>
+          {ctx.subItem && isCheckupVisit(ctx.subItem.name) ? <InfoBanner message={CHECKUP_FEE_NOTE} /> : null}
           <WarnBanner icon={Lock} message={`Price is locked. Pay ${ctx.provider.fullName.split(" ")[0]} directly by UPI or cash after the service.`} />
           <TextField label="Describe the problem (optional)" value={notes} onChangeText={setNotes} multiline maxLength={1000}
             placeholder="e.g. Kitchen tap leaking since yesterday, water under the sink" />

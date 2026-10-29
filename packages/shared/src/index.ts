@@ -41,6 +41,7 @@ export * from "./provider/avatar";
 export * from "./catalog/availability";
 export * from "./catalog/pricing";
 export * from "./catalog/display";
+export * from "./catalog/checkups";
 export * from "./catalog/sections";
 export * from "./catalog/pro-offers";
 export * from "./geo/distance";

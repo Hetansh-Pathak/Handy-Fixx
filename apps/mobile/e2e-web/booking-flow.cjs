@@ -74,6 +74,14 @@ const check = (name, ok, extra = "") => {
   await see("What do you need?");
   check("sub-items are listed with catalogue prices", (await body()).includes("Tap repair") && (await body()).includes("₹199") && (await body()).includes("₹349"));
   check("pros are hidden until a sub-item is chosen", (await count("Asha Patel", false)) === 0 && (await body()).includes("Choose what you need above"));
+  check("'Not sure what's wrong?' offers the check-up visit with its price", (await body()).includes("Not sure what's wrong?") && (await count("Book a check-up visit · ₹129")) >= 1);
+  const visitBox = await T("Plumber Visit", false).boundingBox();
+  const tapBox = await T("Tap repair", false).boundingBox();
+  check("the check-up visit is listed before the repairs (same row, further left, or higher)",
+    !!visitBox && !!tapBox && (visitBox.y < tapBox.y - 5 || (Math.abs(visitBox.y - tapBox.y) <= 5 && visitBox.x < tapBox.x)), JSON.stringify({ visitBox, tapBox }));
+  await T("Book a check-up visit · ₹129").click();
+  await see("The visit fee is always charged");
+  check("choosing a check-up says the visit fee is always charged and the repair is approved extra work", (await body()).includes("adds it as extra work"));
   await T("Tap repair").click();
   await see("Asha Patel");
   check("only available, in-area pros are shown (offline, stale heartbeat and other-city pros hidden)",

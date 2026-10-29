@@ -26,6 +26,7 @@ db.services = [
 ];
 db.subItems = [
   { id: "si-tap", service_id: "s-plumb", name: "Tap repair", description: "Leaking or broken tap", icon: "🚰", base_price: 199, duration_minutes: 45 },
+  { id: "si-visit", service_id: "s-plumb", name: "Plumber Visit", description: "Inspection and quote for any job", icon: "🧰", base_price: 129, duration_minutes: 45 },
   { id: "si-leak", service_id: "s-plumb", name: "Pipe leak", description: "Leak in a pipe or joint", icon: "💧", base_price: 349, duration_minutes: 60, price_min: 249, price_max: 449 },
 ];
 // Pros' ticked jobs (proposal 20261113000002). Empty = every pro does every job at the catalogue price.
