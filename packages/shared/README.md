@@ -41,6 +41,7 @@ Time-dependent functions take `now: Date` as an argument. Never call `new Date()
 | `auth/deep-link` | Parses Supabase links (`#access_token=…&type=recovery`) | new |
 | `provider/job-flow` | Button per step, the booking patch each button writes, decline, progress (x of 4 or 3), phone visibility, pro-side status wording | PDF p.7, legacy provider portal |
 | `provider/request` | Open-request window (30 s), oldest-first pick, earning/fee/keep shown on the alert | PDF p.7 |
+| `provider/request-access` | Locked requests: `requestAccess` (open or locked by wallet), `partitionByAccess` (3 locked cards + counter), `whereForProvider` (address hidden until accepted) | owner 2026-10-29 |
 | `provider/wallet-view` | Live wallet summary → fee-rule state, launch status from approval date, accept-block text | PDF p.6-8 |
 | `provider/eta` | Distance → ETA minutes | new |
 | `catalog/availability` | Online + fresh-heartbeat rule (90 s), offers-service, serves-area | legacy `ServiceDetail` |

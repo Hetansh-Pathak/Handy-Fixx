@@ -1,12 +1,12 @@
 import {
-  formatBookingWhen, heldFromSummary, openRequests, providerLaunchStatus, requestEconomics, walletStateFromSummary, type LaunchStatus, type WalletState,
+  formatBookingWhen, heldFromSummary, openRequests, providerLaunchStatus, requestAccess, requestEconomics, walletStateFromSummary, type LaunchStatus, type WalletState,
 } from "@handyfix/shared";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { AppState } from "react-native";
 import { useSession } from "@/features/auth/session-provider";
-import { configureNotificationHandler, notifyNewRequest, onRequestTapped } from "@/lib/notifications";
+import { configureNotificationHandler, notifyLockedRequest, notifyNewRequest, onRequestTapped } from "@/lib/notifications";
 import { getSupabase } from "@/lib/supabase";
 import { fetchPendingRequests, fetchWalletSummary, serviceNameOf, setOnline, touchPresence, type ProviderBooking } from "./api";
 import { RequestPopup } from "./RequestPopup";
@@ -129,18 +129,26 @@ export function ProviderRuntime({ children }: { children: ReactNode }) {
     router.push({ pathname: "/provider/job/[id]", params: { id } });
   }, [markRequestSeen, router]);
 
+  const accessOf = useCallback(
+    (r: ProviderBooking) => requestAccess({ price: Number(r.provider_amount ?? 0), wallet, launchActive: launch.active, walletReady: walletQuery.isSuccess }),
+    [wallet, launch.active, walletQuery.isSuccess],
+  );
+
   // A phone notification once per new request. No countdown: the pro reviews it and answers when ready.
+  // A request the wallet cannot cover gets a QUIET one (no ring) that points at the recharge.
   useEffect(() => {
     for (const r of open) {
       if (notified.current.has(r.id)) continue;
       notified.current.add(r.id);
-      void notifyNewRequest({
-        bookingId: r.id,
-        title: `New request: ${serviceNameOf(r)}`,
-        body: `${formatBookingWhen(r.booking_date, r.booking_time)} · ${r.city ?? "Nearby"}. Tap to see the details and decide.`,
-      });
+      const access = accessOf(r);
+      const when = `${formatBookingWhen(r.booking_date, r.booking_time)} · ${r.city ?? "Nearby"}`;
+      if (access.state === "locked") {
+        void notifyLockedRequest({ bookingId: r.id, title: `Locked request: ${serviceNameOf(r)}`, body: `${when}. ${access.cta}.` });
+      } else {
+        void notifyNewRequest({ bookingId: r.id, title: `New request: ${serviceNameOf(r)}`, body: `${when}. Tap to see the details and decide.` });
+      }
     }
-  }, [open]);
+  }, [open, accessOf]);
 
   useEffect(() => {
     configureNotificationHandler();
@@ -200,8 +208,10 @@ export function ProviderRuntime({ children }: { children: ReactNode }) {
           key={unseen[0].id}
           request={unseen[0]}
           economics={requestEconomics({ price: Number(unseen[0].provider_amount ?? 0), launchActive: launch.active })}
+          access={accessOf(unseen[0])}
           more={unseen.length - 1}
           onView={() => openRequest(unseen[0]!.id)}
+          onRecharge={() => { markRequestSeen(unseen[0]!.id); router.push("/provider/wallet"); }}
           onLater={() => markRequestSeen(unseen[0]!.id)}
         />
       ) : null}

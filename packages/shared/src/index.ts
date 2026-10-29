@@ -26,6 +26,7 @@ export * from "./providers/ranking";
 export * from "./provider/job-flow";
 export * from "./provider/eta";
 export * from "./provider/request";
+export * from "./provider/request-access";
 export * from "./provider/job-stages";
 export * from "./provider/wallet-view";
 export * from "./provider/wallet-ledger";

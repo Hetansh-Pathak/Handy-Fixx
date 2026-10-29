@@ -9,7 +9,7 @@
 | 0 | Reconcile docs with the owner decisions | done |
 | 1 | Launch = first 10 jobs or 1 month: `LAUNCH_PERIOD`, tests, Help copy, Partner Agreement (v1.2, 3% wording), DB proposal `20261115` (+ dry run 14 / apply 14), CLAUDE.md, README | done (proposal NOT applied) |
 | 2 | One config for fee, launch and wallet numbers in shared (`PLATFORM_RULES`, `feePreview`) + read-only admin "Fees & rules" page. Editable DB config table NOT built (needs owner approval) | done |
-| 3 | Locked requests (next): pro sees the request and earning, address and phone hidden, "Top up ₹X to accept" (lock = spendable balance cannot cover the held fee; no tiers; silent alert; max 3 cards + counter); DB twin of the accept rule is already in `20261114` | |
+| 3 | DONE (see PROGRESS.md). Locked requests: pro sees the request and earning, address and phone hidden, "Top up ₹X to accept" (lock = spendable balance cannot cover the held fee; no tiers; silent alert; max 3 cards + counter); DB twin of the accept rule is already in `20261114` | |
 | 4 | In-app customer payment + same-day payout (Razorpay Payouts) | deferred until the owner confirms Payouts + the refund rule |
 | 5 | Remaining PDF items not yet built (A2-A7 in PROGRESS.md NEXT, problem-closing prompt, dispute evidence, quote/visit fee, push, ranking, pincode and cancel rules) | |
 | 6 | Polish and release checks (screen-by-screen, small screens, screen readers, full check run) | |

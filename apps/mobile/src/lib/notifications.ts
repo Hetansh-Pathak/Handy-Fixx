@@ -2,14 +2,16 @@ import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
 
 export const REQUEST_CHANNEL = "requests";
+/** Requests the wallet cannot cover yet: visible, but quiet (no ring, no heads-up). */
+export const LOCKED_REQUEST_CHANNEL = "requests_locked";
 
 /** Foreground behaviour: show the banner and play the sound even while the app is open. */
 export function configureNotificationHandler() {
   Notifications.setNotificationHandler({
-    handleNotification: async () => ({
+    handleNotification: async (n) => ({
       shouldShowBanner: true,
       shouldShowList: true,
-      shouldPlaySound: true,
+      shouldPlaySound: n.request.content.data?.locked !== true,
       shouldSetBadge: false,
     }),
   });
@@ -31,6 +33,17 @@ export async function ensureRequestChannel() {
     bypassDnd: true,
     enableLights: true,
     lightColor: "#C16430",
+  });
+}
+
+async function ensureLockedChannel() {
+  if (Platform.OS !== "android") return;
+  await Notifications.setNotificationChannelAsync(LOCKED_REQUEST_CHANNEL, {
+    name: "Locked job requests (recharge needed)",
+    importance: Notifications.AndroidImportance.DEFAULT,
+    sound: null,
+    vibrationPattern: [0],
+    lockscreenVisibility: Notifications.AndroidNotificationVisibility.PRIVATE,
   });
 }
 
@@ -62,6 +75,24 @@ export async function notifyNewRequest(args: { bookingId: string; title: string;
     });
   } catch {
     /* the banner inside the app still shows the request */
+  }
+}
+
+/**
+ * A QUIET phone notification for a request the pro cannot accept yet because the wallet is too low: no
+ * ring, no vibration. Tapping it opens the request, where the recharge button is. Best effort, like the loud one.
+ */
+export async function notifyLockedRequest(args: { bookingId: string; title: string; body: string }): Promise<void> {
+  if (Platform.OS === "web") return;
+  try {
+    if (!(await ensurePermission())) return;
+    await ensureLockedChannel();
+    await Notifications.scheduleNotificationAsync({
+      content: { title: args.title, body: args.body, data: { bookingId: args.bookingId, locked: true }, sound: false },
+      trigger: Platform.OS === "android" ? { channelId: LOCKED_REQUEST_CHANNEL } : null,
+    });
+  } catch {
+    /* the card inside the app still shows the request */
   }
 }
 

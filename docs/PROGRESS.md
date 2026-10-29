@@ -46,9 +46,11 @@ and proposes a short plan. No need to explain the project again.
 
 - **Commission plan v2, phase 2 (2026-10-29):** `PLATFORM_RULES` + `feePreview` in `packages/shared/src/money/platform-config.ts` (built from the fee/launch/wallet constants, frozen, 8 tests) and a read-only admin page **Fees & rules** (`/fees`: rules in force + bill calculator with parts and launch waiver). Editing the numbers from the admin app needs a database config table: not built, ask first (it would also need the SQL twins to read it).
 
+- **Commission plan v2, phase 3: locked requests (2026-10-29):** `provider/request-access.ts` (`requestAccess`, `partitionByAccess`, `whereForProvider`, `lockedEarningLine`, 15 tests). A request the wallet cannot cover (spendable balance below the fee that accepting holds, or an old due) stays visible but **locked**: the alert popup says "Locked job request" with a "Recharge ₹X to accept" button, Jobs > New shows open requests first, then at most 3 locked cards (earning line, lock badge) and a "+N more locked requests" counter, the job page explains the lock, and the phone notification is quiet (own channel `requests_locked`, no sound). The street address is hidden until accepted (city and pincode only). Launch period never locks; while the wallet is still loading nothing locks. Browser suite provider-flow: 33 checks. **Limit:** hiding the address is on the screen only; the pro's database access still allows reading the booking row. Making it server-side needs a view or function change (ask first). **Rebuild both dev builds** (new notification channel).
+
 ## NEXT (in this order)
 
-Commission plan v2 (owner, 2026-10-29): **Phase 3** locked requests ("Top up ₹X to accept", lock = balance cannot cover the held fee); **Phase 4** in-app customer payment + same-day payout (deferred: needs Razorpay Payouts + refund rule from the owner). Then the A2-A7 list below.
+Commission plan v2 (owner, 2026-10-29): **Phase 4** in-app customer payment + same-day payout (deferred: needs Razorpay Payouts + refund rule from the owner). Then the A2-A7 list below.
 
 Owner plan of 2026-10-29 ("first release, do all the things"), one slice at a time:
 - **A2 "Not sure what's wrong?" check-up visit**: 27 check-up/visit items already exist in 7 services (none in HVAC; skip Salon, Cleaning, Home Help). Friendly names, a catalogue flag, shown first on each service. **Owner: priced per service; the visit fee is always charged** (repair added as extra work on top).

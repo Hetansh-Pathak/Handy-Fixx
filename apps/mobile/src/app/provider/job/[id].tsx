@@ -1,7 +1,7 @@
 import {
-  acceptBlockMessage, canDecline, checkCanAccept, COMPLETION_CODE_LENGTH, declinePatch, formatBookingWhen,
+  canDecline, COMPLETION_CODE_LENGTH, declinePatch, formatBookingWhen,
   formatInr, interpretCompletion, isCompletionCode, isPatchAction, isRequestOpen, jobProgress, phoneVisibleToProvider, PROVIDER_ACTION_LABEL,
-  providerActionPatch, providerStatusLabel, providerStep, requestEconomics, settleJob, type BookingStatus, type PatchAction, type Settlement,
+  providerActionPatch, providerStatusLabel, providerStep, requestAccess, requestEconomics, settleJob, whereForProvider, type BookingStatus, type PatchAction, type Settlement,
 } from "@handyfix/shared";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -74,8 +74,8 @@ export default function JobScreen() {
   const price = Number(booking.provider_amount ?? 0);
   const serviceBill = Math.max(0, price - Number(booking.parts_amount ?? 0));
   const economics = requestEconomics({ price: serviceBill, launchActive: rt.launch.active });
-  const acceptCheck = checkCanAccept({ wallet: rt.wallet, estimatedServiceBill: price, launchActive: rt.launch.active });
-  const blocked = !acceptCheck.ok ? acceptBlockMessage(acceptCheck) : null;
+  const access = requestAccess({ price, wallet: rt.wallet, launchActive: rt.launch.active, walletReady: rt.walletReady });
+  const locked = access.state === "locked" ? access : null;
   const destination = booking.latitude != null && booking.longitude != null ? { latitude: Number(booking.latitude), longitude: Number(booking.longitude) } : null;
 
   const reload = async () => {
@@ -186,11 +186,14 @@ export default function JobScreen() {
       {status === "pending" && isRequestOpen({ status, bookingDate: booking.booking_date, bookingTime: booking.booking_time }, new Date()) ? (
         <>
           <InfoBanner message="Review the problem, photos and voice note above, then decide. There is no timer: the customer is waiting for your answer." />
-          <ErrorBanner message={blocked} />
-          <Button label="Accept" loading={busy} disabled={!!blocked} onPress={() => void run("accept")} />
-          {!acceptCheck.ok ? (
-            <Button label={`Recharge ${formatInr(acceptCheck.suggestedTopUp)} to accept`} variant="secondary" onPress={() => router.push("/provider/wallet")} />
+          {locked ? (
+            <Card>
+              <Text className="text-lg font-semibold text-fg">Locked: recharge to take this job</Text>
+              <Body muted>{locked.message} You keep the request and can accept it as soon as your wallet covers the fee.</Body>
+              <Button label={locked.cta} onPress={() => router.push("/provider/wallet")} />
+            </Card>
           ) : null}
+          <Button label="Accept" loading={busy} disabled={!!locked} onPress={() => void run("accept")} />
           {canDecline(status) ? <Button label="Decline" variant="secondary" disabled={busy} onPress={() => void decline()} /> : null}
         </>
       ) : status === "pending" ? (
@@ -252,13 +255,13 @@ export default function JobScreen() {
 
 function CustomerCard({ booking, status }: { booking: ProviderBooking; status: BookingStatus }) {
   const showPhone = phoneVisibleToProvider(status);
-  const where = [booking.address, booking.city, booking.pincode].filter(Boolean).join(", ");
+  const where = whereForProvider(booking, status);
   const active = ACTIVE.includes(status);
   return (
     <Card>
       <Line label="Customer" value={booking.customer_name ?? "Customer"} />
       <Line label="When" value={formatBookingWhen(booking.booking_date, booking.booking_time)} />
-      <Line label="Where" value={where || "Address not shared"} />
+      <Line label="Where" value={where} />
       {booking.special_instructions ? <Line label="Problem" value={booking.special_instructions} /> : null}
       <AttachmentGallery bookingId={booking.id} />
       {showPhone && booking.customer_phone ? (

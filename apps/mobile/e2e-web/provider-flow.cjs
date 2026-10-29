@@ -167,6 +167,10 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   const r3 = newRequest();
   pushBookingChange(r3);
   await alertUp(6000);
+  await see("Locked job request", 8000);
+  const lockedPopup = await body();
+  check("the alert for a request the wallet cannot cover says Locked and offers the recharge",
+    norm(lockedPopup).includes("locked job request") && (await count("Recharge ₹49 to accept")) >= 1 && norm(lockedPopup).includes("you earn ₹349"), lockedPopup.slice(0, 300));
   await openRequest();
   const blockedText = await body();
   check("with an empty wallet the request says to recharge the ₹49 pack and Accept is disabled",
@@ -178,6 +182,23 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   await shot("35-request-blocked");
   await T("Decline").click();
   for (let i = 0; i < 20 && db.storedBookings.find((b) => b.id === r3.id).status !== "cancelled"; i += 1) await sleep(250);
+
+  check("the locked request page explains the lock and keeps the street address hidden",
+    blockedText.includes("Locked: recharge to take this job") && blockedText.includes("full address after you accept") && !blockedText.includes("12 MG Road"), blockedText.slice(0, 300));
+
+  // Jobs > New: locked requests stay visible (earning shown) but at most 3 cards, then a counter.
+  const extra = [newRequest(), newRequest(), newRequest(), newRequest(), newRequest()];
+  extra.forEach((r) => pushBookingChange(r));
+  await page.goto(`${BASE}/provider/jobs?tab=new`, { waitUntil: "networkidle" });
+  for (let i = 0; i < 8 && (await count("Later")) > 0; i += 1) { await T("Later").click(); await sleep(250); }
+  await see("+2 more locked requests", 20000);
+  const lockedList = await body();
+  const lockedCards = lockedList.split("You would earn ₹349 · fee ₹10 · you would keep ₹339").length - 1;
+  check("Jobs > New shows 3 locked cards with the earning and a +2 more counter", lockedCards === 3 && lockedList.includes("+2 more locked requests"), `${lockedCards} cards`);
+  check("a locked card does not show the street address", !lockedList.includes("12 MG Road"));
+  await sleep(500);
+  await shot("35b-jobs-locked");
+  for (const r of extra) db.storedBookings.splice(db.storedBookings.findIndex((b) => b.id === r.id), 1); // keep the stage counts below exact
 
   db.wallet = { available: 200, dues: 0 };
   await goHome();

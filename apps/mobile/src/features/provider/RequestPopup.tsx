@@ -1,6 +1,6 @@
-import { formatBookingWhen, formatInr, type RequestEconomics } from "@handyfix/shared";
+import { formatBookingWhen, formatInr, type RequestAccess, type RequestEconomics } from "@handyfix/shared";
 import { useQuery } from "@tanstack/react-query";
-import { BellRing, Image as ImageIcon, Mic } from "lucide-react-native";
+import { BellRing, Image as ImageIcon, Lock, Mic } from "lucide-react-native";
 import { Modal, Pressable, StyleSheet, View } from "react-native";
 import { Glass } from "@/components/glass";
 import { Text } from "@/components/text";
@@ -13,9 +13,10 @@ import { serviceNameOf, type ProviderBooking } from "./api";
  * "You have a new request" popup. No timer and no decision here: the pro opens the request to see the full
  * details, photos and voice note, then accepts or declines. "Later" just closes it; the request stays in Jobs → New.
  */
-export function RequestPopup({ request, economics, more, onView, onLater }: {
-  request: ProviderBooking; economics: RequestEconomics; more: number; onView: () => void; onLater: () => void;
+export function RequestPopup({ request, economics, access, more, onView, onRecharge, onLater }: {
+  request: ProviderBooking; economics: RequestEconomics; access: RequestAccess; more: number; onView: () => void; onRecharge: () => void; onLater: () => void;
 }) {
+  const locked = access.state === "locked" ? access : null;
   const colors = useThemeColors();
   const files = useQuery({ queryKey: attachmentsKey(request.id), queryFn: () => fetchBookingAttachments(request.id) });
   const photos = (files.data ?? []).filter((f) => f.type === "image").length;
@@ -28,8 +29,8 @@ export function RequestPopup({ request, economics, more, onView, onLater }: {
         <Pressable accessibilityViewIsModal className="w-full max-w-[400px] gap-4 overflow-hidden rounded-hero border border-line p-6" style={{ zIndex: 0 }} onPress={() => undefined}>
           <Glass tone="sheet" intensity={60} style={[StyleSheet.absoluteFill, { zIndex: -1 }]} />
           <View className="items-center gap-2">
-            <View className="h-14 w-14 items-center justify-center rounded-full bg-brand"><BellRing size={26} color={colors.onBrand} /></View>
-            <Text className="text-xs font-semibold uppercase tracking-[3px] text-brand">New job request{more ? ` · +${more} more` : ""}</Text>
+            <View className="h-14 w-14 items-center justify-center rounded-full bg-brand">{locked ? <Lock size={26} color={colors.onBrand} /> : <BellRing size={26} color={colors.onBrand} />}</View>
+            <Text className="text-xs font-semibold uppercase tracking-[3px] text-brand">{locked ? "Locked job request" : "New job request"}{more ? ` · +${more} more` : ""}</Text>
             <Text className="text-center text-2xl font-bold text-fg">{serviceNameOf(request)}</Text>
             <Text className="text-center text-sm text-muted">{formatBookingWhen(request.booking_date, request.booking_time)} · {request.city ?? "Nearby"}</Text>
           </View>
@@ -55,11 +56,13 @@ export function RequestPopup({ request, economics, more, onView, onLater }: {
             </View>
           </View>
 
+          {locked ? <Text className="text-center text-sm text-fg">{locked.message}</Text> : null}
           <View className="gap-2">
-            <Button label="View request" onPress={onView} />
+            {locked ? <Button label={locked.cta} onPress={onRecharge} /> : null}
+            <Button label="View request" variant={locked ? "secondary" : "primary"} onPress={onView} />
             <Button label="Later" variant="secondary" onPress={onLater} />
           </View>
-          <Text className="text-center text-xs text-muted">No timer. It stays in Jobs → New until you accept or decline.</Text>
+          <Text className="text-center text-xs text-muted">{locked ? "You keep this request. It unlocks as soon as your wallet covers the fee." : "No timer. It stays in Jobs → New until you accept or decline."}</Text>
         </Pressable>
       </Pressable>
     </Modal>
