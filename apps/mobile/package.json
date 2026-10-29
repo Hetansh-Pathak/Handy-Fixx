@@ -69,6 +69,10 @@
     "start:provider": "cross-env EXPO_PUBLIC_APP_VARIANT=provider expo start --dev-client",
     "build:customer": "eas build --profile customer-dev --platform android",
     "build:provider": "eas build --profile provider-dev --platform android",
+    "build:customer:preview": "eas build --profile customer-preview --platform android",
+    "build:provider:preview": "eas build --profile provider-preview --platform android",
+    "build:customer:release": "eas build --profile customer-production --platform android",
+    "build:provider:release": "eas build --profile provider-production --platform android",
     "typecheck": "tsc --noEmit",
     "export:android": "EXPO_OFFLINE=1 expo export --platform android",
     "test:e2e-web": "node e2e-web/auth-flow.cjs && node e2e-web/booking-flow.cjs && node e2e-web/provider-flow.cjs && node e2e-web/status-flow.cjs && node e2e-web/wallet-flow.cjs && node e2e-web/features-flow.cjs && node e2e-web/services-flow.cjs"
