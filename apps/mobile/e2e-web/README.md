@@ -22,7 +22,7 @@ It is a regression net for navigation and form logic. It does **not** replace te
 
 ```bash
 cd apps/mobile
-npm i -D playwright && npx playwright install chromium     # once
+npm i --no-save playwright && npx playwright install chromium     # once
 
 # terminal 1: the app on the web, pointed at the mock host the script intercepts
 EXPO_PUBLIC_SUPABASE_URL=https://mock.supabase.co \
