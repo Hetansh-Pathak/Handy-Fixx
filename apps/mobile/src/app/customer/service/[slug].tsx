@@ -1,4 +1,4 @@
-import { distanceKm, formatDistance, formatDuration, formatInr, formatRating, groupSubItems, isCheckupVisit, sortProviders, type LatLng, type ProviderSort } from "@handyfix/shared";
+import { distanceKm, formatDistance, formatDuration, formatInr, formatRating, formatResponseTime, groupSubItems, isCheckupVisit, sortProviders, type LatLng, type ProviderSort } from "@handyfix/shared";
 import { useQuery } from "@tanstack/react-query";
 import * as Location from "expo-location";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -193,6 +193,7 @@ export default function ServiceScreen() {
               </View>
             </View>
             {p.distanceKm !== null ? <Text className="text-sm text-muted">About {formatDistance(p.distanceKm)} away</Text> : null}
+            {p.avgResponseSeconds !== null ? <Text className="text-sm text-muted">{formatResponseTime(p.avgResponseSeconds)}</Text> : null}
             {p.bio ? <Text className="text-sm text-muted" numberOfLines={2}>{p.bio}</Text> : null}
             <Button label={`Book ${p.fullName.split(" ")[0]}`} onPress={() => book(p)} />
           </View>

@@ -32,7 +32,7 @@ Time-dependent functions take `now: Date` as an argument. Never call `new Date()
 | `booking/request-outcome` | Waiting / expired / declined / accepted, "offer next pros" rule | PDF p.4 |
 | `booking/grouping` | In-progress vs past bookings, when the code card and map show | PDF p.10 |
 | `booking/request-timer` | 30 s accept countdown | PDF p.6 |
-| `providers/ranking` | Rank by rating → distance → response speed (never money), featured slots, next-best offers | PDF p.4, p.12 |
+| `providers/ranking` | Rank by rating → distance → response speed, compared in bands the customer can tell apart (never money), featured slots, next-best offers | PDF p.4, p.12 |
 | `geo/distance` | Haversine km, distance formatting | new |
 | `kyc/kyc` | 9 steps, Aadhaar (Verhoeff) and PAN checks, masks, file validation, 18+ check | legacy `constants.ts` |
 | `auth/roles` | One role per account, role → home route (`/customer`, `/provider`), background-location rule | locked decisions |
@@ -44,6 +44,8 @@ Time-dependent functions take `now: Date` as an argument. Never call `new Date()
 | `provider/request-access` | Locked requests: `requestAccess` (open or locked by wallet), `partitionByAccess` (3 locked cards + counter), `whereForProvider` (address hidden until accepted) | owner 2026-10-29 |
 | `booking/closing-problem` | "Problem closing the job?" after 2 h in progress without the code: rule, plain-words prompt, admin cutoff | PDF p.10 |
 | `booking/arrival-evidence` | Arrival vs job address distance for disputes, map link | PDF p.11 |
+| `booking/watchlist` | Admin watchlist: pending 15+ min, per-pro activity, flags (low completion, repeated declines) | PDF p.9, p.11, p.12 |
+| `providers/response-time` | "Replies in about 3 min" wording and the safe reader for `provider_response_times()` | PDF p.12 |
 | `provider/wallet-view` | Live wallet summary → fee-rule state, launch status from approval date, accept-block text | PDF p.6-8 |
 | `provider/eta` | Distance → ETA minutes | new |
 | `catalog/availability` | Online + fresh-heartbeat rule (90 s), offers-service, serves-area | legacy `ServiceDetail` |

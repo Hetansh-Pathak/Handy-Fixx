@@ -25,6 +25,22 @@ const cmp = (a: number | null, b: number | null, dir: 1 | -1) => {
 const byId = (a: ProviderCard, b: ProviderCard) => a.id.localeCompare(b.id);
 
 /**
+ * Ranking compares what the customer can tell apart: a rating to one decimal (the card shows 4.7, so 4.74 and 4.70
+ * are equal), distance within the same kilometre and response time within the same 30 seconds. Without these bands
+ * an exact decimal rating would decide everything and distance and speed would never count.
+ */
+export const RATING_BAND = 0.1;
+export const DISTANCE_BAND_KM = 1;
+export const RESPONSE_BAND_SECONDS = 30;
+
+const band = (value: number | null, size: number, how: "round" | "floor"): number | null =>
+  value === null || !Number.isFinite(value) ? null : (how === "round" ? Math.round(value / size + 1e-9) : Math.floor(value / size)) ;
+
+const ratingBand = (r: number | null) => band(r, RATING_BAND, "round");
+const distanceBand = (d: number | null) => band(d, DISTANCE_BAND_KM, "floor");
+const responseBand = (s: number | null) => band(s, RESPONSE_BAND_SECONDS, "floor");
+
+/**
  * Default ordering: rating, then distance, then response speed. NEVER by money,
  * and featured slots are handled separately (PDF p.12).
  */
@@ -33,6 +49,10 @@ export function rankProviders<T extends ProviderCard>(list: readonly T[]): T[] {
 }
 
 const rankCompare = (a: ProviderCard, b: ProviderCard) =>
+  cmp(ratingBand(a.rating), ratingBand(b.rating), -1) ||
+  cmp(distanceBand(a.distanceKm), distanceBand(b.distanceKm), 1) ||
+  cmp(responseBand(a.avgResponseSeconds), responseBand(b.avgResponseSeconds), 1) ||
+  // Inside the same bands the exact values still decide, so the order does not depend on the id alone.
   cmp(a.rating, b.rating, -1) ||
   cmp(a.distanceKm, b.distanceKm, 1) ||
   cmp(a.avgResponseSeconds, b.avgResponseSeconds, 1) ||
@@ -42,7 +62,7 @@ const rankCompare = (a: ProviderCard, b: ProviderCard) =>
 export function sortProviders<T extends ProviderCard>(list: readonly T[], sort: ProviderSort): T[] {
   const primary: Record<ProviderSort, (a: T, b: T) => number> = {
     cheapest: (a, b) => a.price - b.price,
-    top_rated: (a, b) => cmp(a.rating, b.rating, -1),
+    top_rated: (a, b) => cmp(ratingBand(a.rating), ratingBand(b.rating), -1),
     nearest: (a, b) => cmp(a.distanceKm, b.distanceKm, 1),
   };
   return [...list].sort((a, b) => primary[sort](a, b) || rankCompare(a, b));

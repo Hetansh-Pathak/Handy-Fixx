@@ -260,6 +260,10 @@ async function installMock(page) {
       db.ledger.unshift({ id: "l-po" + db.payouts.length, type: "payout", amount: -amt, note: "Withdrawal request", created_at: row.requested_at });
       return json(route, 200, { ok: true, payout_id: row.id, amount: amt });
     }
+    if (p === "/rest/v1/rpc/provider_response_times") {
+      const ids = body().p_ids || [];
+      return json(route, 200, (db.responseTimes || []).filter((r) => ids.includes(r.provider_id)));
+    }
     if (p === "/rest/v1/rpc/record_arrival") {
       const b = body();
       db.arrivals = db.arrivals || [];

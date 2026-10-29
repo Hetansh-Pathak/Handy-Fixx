@@ -31,6 +31,30 @@ describe("rankProviders: rating, then distance, then response speed", () => {
   });
 });
 
+describe("ranking bands: what the customer can tell apart", () => {
+  it("treats 4.74 and 4.70 as the same rating, so distance decides", () => {
+    expect(ids(rankProviders([p("far", { rating: 4.74, distanceKm: 6 }), p("near", { rating: 4.7, distanceKm: 1 })]))).toEqual(["near", "far"]);
+  });
+  it("still puts a clearly higher rating first (0.1 apart)", () => {
+    expect(ids(rankProviders([p("near", { rating: 4.6, distanceKm: 1 }), p("far", { rating: 4.8, distanceKm: 9 })]))).toEqual(["far", "near"]);
+  });
+  it("treats pros in the same kilometre as equally near, so response speed decides", () => {
+    expect(ids(rankProviders([p("slow", { distanceKm: 1.1, avgResponseSeconds: 200 }), p("quick", { distanceKm: 1.8, avgResponseSeconds: 20 })]))).toEqual(["quick", "slow"]);
+  });
+  it("treats replies within 30 s as equally fast, and falls back to the exact values", () => {
+    expect(ids(rankProviders([p("b", { avgResponseSeconds: 25 }), p("a", { avgResponseSeconds: 5 })]))).toEqual(["a", "b"]);
+  });
+  it("is stable for identical cards and ignores money entirely", () => {
+    expect(ids(rankProviders([p("b", { price: 100 }), p("a", { price: 900 })]))).toEqual(["a", "b"]);
+  });
+  it("copes with missing numbers and NaN (sorted last)", () => {
+    expect(ids(rankProviders([p("x", { rating: Number.NaN }), p("y", { rating: 4 }), p("z", { rating: null })]))).toEqual(["y", "x", "z"]);
+  });
+  it("top rated groups by displayed rating and then uses distance", () => {
+    expect(ids(sortProviders([p("far", { rating: 4.74, distanceKm: 8 }), p("near", { rating: 4.7, distanceKm: 1 })], "top_rated"))).toEqual(["near", "far"]);
+  });
+});
+
 describe("sortProviders (customer choice)", () => {
   const list = [
     p("a", { price: 429, rating: 4.9, distanceKm: 6 }),

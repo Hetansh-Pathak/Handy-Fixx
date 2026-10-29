@@ -1,5 +1,5 @@
 import {
-  groupProOffers, isProviderAvailable, offersService, offersSubItem, ownSubItemRate, readPoint, resolveListedPrice, servesArea, friendlyDbError,
+  groupProOffers, isProviderAvailable, offersService, offersSubItem, ownSubItemRate, readPoint, resolveListedPrice, responseTimeMap, servesArea, friendlyDbError,
   type ProSubItemRow,
 } from "@handyfix/shared";
 import { getSupabase } from "@/lib/supabase";
@@ -130,7 +130,24 @@ export async function searchProviders(args: ProviderSearchArgs): Promise<{ listi
       point: readPoint(p.approx_latitude, p.approx_longitude),
     });
   }
+  await attachResponseTimes(listings);
   return { listings, offlineCount };
+}
+
+/**
+ * How fast each pro answers (PDF p.12 ranking: rating, distance, response speed). Comes from proposal 20261117; until it
+ * is applied (or when the call fails) nobody has a response time and the list ranks by rating and distance only.
+ */
+async function attachResponseTimes(listings: ProviderListing[]): Promise<void> {
+  if (listings.length === 0) return;
+  try {
+    const { data, error } = await getSupabase().rpc("provider_response_times", { p_ids: listings.map((l) => l.id).slice(0, 200) });
+    if (error) return;
+    const seconds = responseTimeMap(data);
+    for (const l of listings) l.avgResponseSeconds = seconds.get(l.id) ?? null;
+  } catch {
+    /* optional: ranking falls back to rating and distance */
+  }
 }
 
 export type BookingContext = {

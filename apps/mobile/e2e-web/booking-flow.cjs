@@ -92,10 +92,14 @@ const check = (name, ok, extra = "") => {
   await L("Your area").fill("Gandhinagar");
 
   // own-rate pricing + sorting on a service without sub-items
+  db.responseTimes = [{ provider_id: "p-asha", avg_seconds: "150", samples: "6" }, { provider_id: "p-ravi", avg_seconds: "30", samples: "2" }];
   await page.goBack();
   await page.locator('[aria-label="House Cleaning"]:visible').last().click();
   await see("Asha Patel");
   check("without sub-items each pro shows their own rate", (await body()).includes("₹599") && (await body()).includes("₹449"));
+  await page.getByText("Replies in about 3 min").first().waitFor({ state: "visible", timeout: 25000 }).catch(() => undefined); // the list refreshes every 15 s
+  check("a pro with enough replies shows how fast they answer; one with too few does not",
+    (await count("Replies in about 3 min")) === 1 && (await body()).split("Replies in").length - 1 === 1, (await body()).slice(0, 300));
   const ashaFirst = (await yOf("Asha Patel")) < (await yOf("Ravi Shah"));
   check("default order is top rated first", ashaFirst);
   await T("Cheapest").click();

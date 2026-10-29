@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { LayoutDashboard, Shield, Users, BookOpen, FileText, LogOut, Menu, ChevronLeft, Wallet, Tag, Gavel, Percent } from 'lucide-react';
+import { LayoutDashboard, Shield, Users, BookOpen, FileText, LogOut, Menu, ChevronLeft, Wallet, Tag, Gavel, Percent, Eye } from 'lucide-react';
 import { useAdminAuth } from '@/contexts/AdminAuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
@@ -44,6 +44,7 @@ const AdminLayout: React.FC = () => {
     { to: '/providers', icon: <Users className="h-5 w-5" />, label: 'Providers' },
     { to: '/bookings', icon: <BookOpen className="h-5 w-5" />, label: 'Bookings' },
     { to: '/pricing', icon: <Tag className="h-5 w-5" />, label: 'Price bands' },
+    { to: '/watchlist', icon: <Eye className="h-5 w-5" />, label: 'Watchlist' },
     { to: '/fees', icon: <Percent className="h-5 w-5" />, label: 'Fees & rules' },
     { to: '/disputes', icon: <Gavel className="h-5 w-5" />, label: 'Fees & disputes' },
     { to: '/wallets', icon: <Wallet className="h-5 w-5" />, label: 'Wallets & payouts' },
