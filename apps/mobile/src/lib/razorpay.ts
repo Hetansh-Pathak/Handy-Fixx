@@ -21,8 +21,11 @@ export type CheckoutResult =
   | { status: "cancelled" }
   | { status: "failed"; message: string };
 
-export async function openCheckout(order: CheckoutOrder): Promise<CheckoutResult> {
-  if (Platform.OS === "web") throw new Error("Top-up works in the HandyFix phone app.");
+/** What the Razorpay sheet says, and the message on web (Checkout is a native module). Defaults = wallet recharge. */
+export type CheckoutOptions = { description?: string; webMessage?: string };
+
+export async function openCheckout(order: CheckoutOrder, options: CheckoutOptions = {}): Promise<CheckoutResult> {
+  if (Platform.OS === "web") throw new Error(options.webMessage ?? "Top-up works in the HandyFix phone app.");
   const { default: RazorpayCheckout } = await import("react-native-razorpay");
   try {
     const data: Partial<CheckoutPayment> = await RazorpayCheckout.open({
@@ -31,7 +34,7 @@ export async function openCheckout(order: CheckoutOrder): Promise<CheckoutResult
       amount: order.amount_paise,
       currency: "INR",
       name: "apnabanda",
-      description: "Wallet recharge",
+      description: options.description ?? "Wallet recharge",
       prefill: order.prefill,
       theme: { color: "#1F5BFF" },
     });

@@ -1,5 +1,5 @@
 import {
-  customerCanCancel, customerStatusLabel, formatBookingWhen, formatInr, formatRating, isLateCancellation, needsAlternatives, quoteBooking,
+  canPayOnline, customerCanCancel, customerStatusLabel, formatBookingWhen, formatInr, formatRating, isLateCancellation, needsAlternatives, paymentState, quoteBooking,
   reconcileQuote, requestOutcome, showsCompletionCode, showsLiveMap, trackingSummary, type BookingStatus,
 } from "@handyfix/shared";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -24,6 +24,7 @@ import type { ProviderListing } from "@/features/customer/types";
 import { useBookingLive } from "@/features/customer/use-booking-live";
 import { CustomerDispute } from "@/features/disputes/components";
 import { BillCard, CustomerExtras, useExtras } from "@/features/extras/components";
+import { BookingPayment } from "@/features/customer/booking-payment";
 import { RateYourPro } from "@/features/reviews/components";
 
 const FINISHED = ["completed", "cancelled"];
@@ -92,6 +93,7 @@ export default function BookingStatusScreen() {
   });
   const profile = useQuery({ queryKey: ["customer-profile", userId], enabled: !!userId, queryFn: () => loadCustomerProfile(userId!) });
   const extras = useExtras(id, status);
+  const pendingExtras = (extras.data ?? []).filter((e) => e.status === "pending").length;
 
   if (query.isPending) return <Screen><ScreenHeader title="Booking" onBack={() => router.replace("/customer/bookings")} /><ListSkeleton rows={4} /></Screen>;
   if (query.isError || !query.data || !booking) {
@@ -272,7 +274,11 @@ export default function BookingStatusScreen() {
 
       {status === "completed" ? (
         <>
-          <InfoBanner message={`All done. Pay ${pro} ${formatInr(booking.total_amount ?? 0)} directly by UPI or cash.`} />
+          {paymentState(booking.payment_status) === "paid" ? null : (
+            <InfoBanner message={`All done. Pay ${pro} ${formatInr(booking.total_amount ?? 0)} directly by UPI or cash${canPayOnline(booking, pendingExtras) ? ", or pay online here" : ""}.`} />
+          )}
+          <BookingPayment booking={booking} pro={pro} serviceName={booking.sub_item_name ?? serviceName ?? "your booking"} pendingExtras={pendingExtras}
+            refetch={async () => (await query.refetch()).data?.booking.payment_status} />
           <RateYourPro bookingId={booking.id} providerId={booking.provider_id} userId={userId} proName={pro}
             customerName={profile.data?.full_name ?? fullName} serviceName={booking.sub_item_name ?? serviceName ?? null} />
           <CustomerDispute bookingId={booking.id} completedAt={booking.completed_at} />

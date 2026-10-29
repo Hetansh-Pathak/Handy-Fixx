@@ -75,7 +75,7 @@
     "build:provider:release": "eas build --profile provider-production --platform android",
     "typecheck": "tsc --noEmit",
     "export:android": "EXPO_OFFLINE=1 expo export --platform android",
-    "test:e2e-web": "node e2e-web/auth-flow.cjs && node e2e-web/booking-flow.cjs && node e2e-web/provider-flow.cjs && node e2e-web/status-flow.cjs && node e2e-web/wallet-flow.cjs && node e2e-web/features-flow.cjs && node e2e-web/services-flow.cjs"
+    "test:e2e-web": "node e2e-web/auth-flow.cjs && node e2e-web/booking-flow.cjs && node e2e-web/provider-flow.cjs && node e2e-web/status-flow.cjs && node e2e-web/wallet-flow.cjs && node e2e-web/features-flow.cjs && node e2e-web/services-flow.cjs && node e2e-web/booking-payment-flow.cjs"
   },
   "private": true
 }

@@ -43,4 +43,6 @@ SELECT * FROM (
     EXISTS (SELECT 1 FROM pg_proc p WHERE p.proname = 'record_arrival')
   UNION ALL SELECT 20, '20261117 response speed for ranking',
     to_regclass('public.provider_response_log') IS NOT NULL
+  UNION ALL SELECT 21, '20261122 booking payment orders (pay in the app, Section 1)',
+    to_regclass('public.booking_payment_orders') IS NOT NULL
 ) t ORDER BY n;

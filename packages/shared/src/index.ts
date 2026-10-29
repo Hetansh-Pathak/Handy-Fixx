@@ -16,6 +16,7 @@ export * from "./booking/attachments";
 export * from "./booking/cancellation";
 export * from "./booking/dispute";
 export * from "./booking/review";
+export * from "./booking/payment";
 export * from "./account/deletion";
 export * from "./chat/phone-block";
 export * from "./chat/chat";

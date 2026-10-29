@@ -243,6 +243,26 @@ async function installMock(page) {
     if (p === "/rest/v1/wallet_transactions") return json(route, 200, db.ledger);
     if (p === "/rest/v1/payout_requests") return json(route, 200, db.payouts);
     if (p === "/rest/v1/wallet_settings") return json(route, 200, { min_payout: db.minPayout });
+    if (p === "/functions/v1/create-booking-payment-order") {
+      // mirrors the proposed function: caller must be the customer, amount from the booking (never from the app),
+      // reuse an open order for the same booking and amount, never marks anything paid
+      const b = body();
+      const u = userFromAuth(req);
+      db.calls.push({ fn: "create-booking-payment-order", body: b });
+      const row = db.storedBookings.find((r) => r.id === b.booking_id);
+      if (!row || !u || row.customer_id !== u.id) return json(route, 404, { error: "Booking not found" });
+      if (db.bookingPaymentRefusal) return json(route, 409, { error: db.bookingPaymentRefusal });
+      const pendingExtra = ((db.tables.booking_extras) || []).some((e) => e.booking_id === row.id && e.status === "pending");
+      const unpaid = (row.payment_status || "unpaid") === "unpaid";
+      if (row.status !== "completed" || !unpaid || pendingExtra || !(Number(row.total_amount) > 0)) {
+        return json(route, 409, { error: row.status !== "completed" ? "You can pay online once the job is completed." : "This booking is already paid." });
+      }
+      const amount = Math.round(Number(row.total_amount) * 100);
+      db.bookingOrders = db.bookingOrders || [];
+      let order = db.bookingOrders.find((o) => o.booking_id === row.id && o.status === "created" && o.amount_paise === amount);
+      if (!order) { order = { id: "order_bk" + (db.bookingOrders.length + 1), booking_id: row.id, amount_paise: amount, status: "created" }; db.bookingOrders.push(order); }
+      return json(route, 200, { order_id: order.id, amount_paise: amount, key_id: "rzp_test_x", prefill: {} });
+    }
     if (p === "/functions/v1/create-wallet-topup-order") {
       const b = body();
       db.calls.push({ fn: "create-wallet-topup-order", body: b });
@@ -319,7 +339,7 @@ async function installMock(page) {
       return route.fulfill({ status: 201, headers: CORS });
     }
     // Tables added by later slices (working hours, reviews, chat, notifications, identity check): small in-memory tables.
-    const simple = ["provider_availability", "reviews", "messages", "customer_notifications", "provider_notifications", "provider_kyc"];
+    const simple = ["provider_availability", "reviews", "messages", "customer_notifications", "provider_notifications", "provider_kyc", "booking_extras"];
     const name = simple.find((t) => p === "/rest/v1/" + t);
     if (name) {
       const rows = (db.tables[name] ??= []);

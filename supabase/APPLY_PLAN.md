@@ -27,6 +27,8 @@ Superseded, do NOT apply: `20261002000003_server_side_fee_trigger`.
 | 6 | `20261109` pro area for Nearest (`6_`), `20261112` late-cancel limit (`9_`), `20261111` delete account (`8_`, + function) | Low | Any time |
 | – | Edge Function proposals in `proposals/functions/` (`create-wallet-topup-order`, `razorpay-webhook`, `verify-wallet-payment`) | Payments | Deploy with or right after 5; see `docs/PAYMENTS_SETUP.md` |
 
+| 7 | `20261122000000` booking payment orders (`21_`) | Low: new table, new column, new CHECK, new function; changes no existing function | Then deploy `create-booking-payment-order` (from `supabase/proposals/functions/`). Only useful together with Payments Section 2 (webhook marks paid) |
+
 Not yet reviewed whether still needed: `20261103` contact, `20261104` avatars, `20261105` attachment read fix, `20261106` catalogue.
 
 ## Checks after each
