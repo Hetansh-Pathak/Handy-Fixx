@@ -75,11 +75,13 @@ npx playwright install chromium
 
 > **Do not run `npm audit fix` (especially not `--force`).** The audit warnings are in build tools that are never inside the phone app, and `--force` downgrades Expo and breaks the install. If it already happened: `git checkout -- package.json package-lock.json`, delete `node_modules`, then `npm ci` (all in `apps\mobile`).
 
-2. Start the app (folder `apps\mobile`), in PowerShell:
+2. Start the app with fake data (folder `apps\mobile`). It sets everything itself and **puts your `.env.local` aside while it runs** (your own settings, for example the "arrived" switch, would otherwise change what the tests see). Press Ctrl+C to stop it; your `.env.local` is then put back automatically:
 
 ```powershell
-$env:EXPO_PUBLIC_SUPABASE_URL="https://mock.supabase.co"; $env:EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY="anon-key"; $env:EXPO_PUBLIC_ENABLE_SPIKE="0"; npx expo start --web --port 8099 --clear
+npm run web:e2e
 ```
+
+Wait for "Waiting on http://localhost:8099" (first start takes 1 to 3 minutes).
 
 3. Open a **second** terminal (folder `apps\mobile`) and run the automatic browser tests:
 

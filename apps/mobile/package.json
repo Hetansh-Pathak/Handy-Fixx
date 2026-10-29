@@ -63,6 +63,7 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "web": "expo start --web",
+    "web:e2e": "node e2e-web/serve.cjs",
     "web:customer": "cross-env EXPO_PUBLIC_APP_VARIANT=customer expo start --web --port 8081",
     "web:provider": "cross-env EXPO_PUBLIC_APP_VARIANT=provider expo start --web --port 8082",
     "start:customer": "cross-env EXPO_PUBLIC_APP_VARIANT=customer expo start --dev-client",
