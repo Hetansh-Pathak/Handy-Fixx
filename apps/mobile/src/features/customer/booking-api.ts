@@ -101,10 +101,11 @@ export type BookingRow = {
   provider_eta_minutes: number | null;
   cancellation_reason: string | null;
   completed_at: string | null;
+  started_at: string | null;
 };
 
 const BOOKING_COLUMNS =
-  "id, status, created_at, booking_date, booking_time, address, city, pincode, special_instructions, sub_item_id, sub_item_name, provider_id, service_id, provider_amount, platform_fee, total_amount, latitude, longitude, provider_eta_minutes, cancellation_reason, completed_at";
+  "id, status, created_at, booking_date, booking_time, address, city, pincode, special_instructions, sub_item_id, sub_item_name, provider_id, service_id, provider_amount, platform_fee, total_amount, latitude, longitude, provider_eta_minutes, cancellation_reason, completed_at, started_at";
 
 export async function fetchBooking(id: string): Promise<{ booking: BookingRow; serviceName: string | null; serviceSlug: string | null; providerName: string | null } | null> {
   const supabase = getSupabase();

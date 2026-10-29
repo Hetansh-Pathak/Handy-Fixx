@@ -223,6 +223,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   check("once a pro accepts, the booking offers a chat", true);
   await C.T("Message Asha").click();
   await C.see("Chat with Asha");
+  await C.waitBody("No messages yet", 10000).catch(() => undefined); // the list loads after the header
   check("a new chat explains it is empty", await C.has("No messages yet"));
   await C.L("Message").fill("Hello, I will be home at 6");
   await C.L("Send message").click();

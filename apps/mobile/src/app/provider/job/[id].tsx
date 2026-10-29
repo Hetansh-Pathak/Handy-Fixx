@@ -11,12 +11,13 @@ import { Text } from "@/components/text";
 import { Body, Button, Card, ErrorBanner, HeroCard, InfoBanner, Screen, ScreenHeader, TextField, Title, ListSkeleton } from "@/components/ui";
 import { AttachmentGallery } from "@/features/attachments/components";
 import { ChatButton } from "@/features/chat/components";
+import { ClosingProblemCard } from "@/features/closing/components";
 import { useSession } from "@/features/auth/session-provider";
 import { ProviderDispute } from "@/features/disputes/components";
 import { ProviderExtras } from "@/features/extras/components";
-import { applyBookingPatch, completeWithCode, fetchFeeRecord, fetchProviderBooking, serviceNameOf, type ProviderBooking } from "@/features/provider/api";
+import { applyBookingPatch, completeWithCode, fetchFeeRecord, fetchProviderBooking, recordArrival, serviceNameOf, type ProviderBooking } from "@/features/provider/api";
 import { useProviderRuntime } from "@/features/provider/provider-runtime";
-import { startJobTracking, stopJobTracking, ensureBackgroundLocation } from "@/features/provider/tracking";
+import { currentPoint, startJobTracking, stopJobTracking, ensureBackgroundLocation } from "@/features/provider/tracking";
 import { env } from "@/lib/env";
 
 const ACTIVE: BookingStatus[] = ["confirmed", "on_the_way", "arrived", "in_progress"];
@@ -104,7 +105,11 @@ export default function JobScreen() {
           setNotice(e instanceof Error && e.message !== "Location permission denied." ? "Live location needs the phone app." : "Live location is off. Allow location so the customer can see you.");
         }
       }
-      if (action === "arrived" || action === "start_job") await stopJobTracking().catch(() => undefined);
+      if (action === "arrived" || action === "start_job") {
+        await stopJobTracking().catch(() => undefined);
+        // Arrival evidence for disputes: time and place, recorded once, in the background (never blocks the job).
+        void currentPoint().then((point) => recordArrival(booking.id, point));
+      }
       await reload();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong. Try again.");
@@ -209,6 +214,8 @@ export default function JobScreen() {
           To finish, you will need the customer's {COMPLETION_CODE_LENGTH}-digit completion code (OTP). It is on their booking screen; ask for it only when the work is done.
         </Text>
       ) : null}
+
+      <ClosingProblemCard role="provider" bookingId={booking.id} status={status} startedAt={booking.started_at} otherName={booking.customer_name?.split(" ")[0]} />
 
       {userId && (status === "in_progress" || status === "completed") ? <ProviderExtras bookingId={booking.id} status={status} userId={userId} /> : null}
 

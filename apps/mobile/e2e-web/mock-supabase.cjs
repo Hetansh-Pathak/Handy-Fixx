@@ -260,6 +260,15 @@ async function installMock(page) {
       db.ledger.unshift({ id: "l-po" + db.payouts.length, type: "payout", amount: -amt, note: "Withdrawal request", created_at: row.requested_at });
       return json(route, 200, { ok: true, payout_id: row.id, amount: amt });
     }
+    if (p === "/rest/v1/rpc/record_arrival") {
+      const b = body();
+      db.arrivals = db.arrivals || [];
+      const row = db.storedBookings.find((r) => r.id === b.p_booking_id);
+      if (!row || !["arrived", "in_progress"].includes(row.status)) return json(route, 200, { success: false, error: "Arrival is recorded after you tap I've arrived" });
+      if (db.arrivals.some((a) => a.booking_id === b.p_booking_id)) return json(route, 200, { success: true, already_recorded: true });
+      db.arrivals.push({ booking_id: b.p_booking_id, lat: b.p_lat, lng: b.p_lng, at: new Date().toISOString() });
+      return json(route, 200, { success: true, already_recorded: false, with_position: b.p_lat != null });
+    }
     if (p === "/rest/v1/rpc/complete_booking_with_code") {
       const b = body();
       const row = db.storedBookings.find((r) => r.id === b.p_booking_id);

@@ -21,13 +21,14 @@ export type ProviderBooking = {
   total_amount: number | null;
   parts_amount: number | null;
   completed_at: string | null;
+  started_at: string | null;
   sub_item_name: string | null;
   special_instructions: string | null;
   services: { name: string } | { name: string }[] | null;
 };
 
 const BOOKING_COLUMNS =
-  "id, status, created_at, booking_date, booking_time, address, city, pincode, customer_name, customer_phone, latitude, longitude, provider_amount, total_amount, parts_amount, completed_at, sub_item_name, special_instructions, services(name)";
+  "id, status, created_at, booking_date, booking_time, address, city, pincode, customer_name, customer_phone, latitude, longitude, provider_amount, total_amount, parts_amount, completed_at, started_at, sub_item_name, special_instructions, services(name)";
 
 export const serviceNameOf = (b: ProviderBooking): string => {
   const s = Array.isArray(b.services) ? b.services[0] : b.services;
@@ -37,6 +38,19 @@ export const serviceNameOf = (b: ProviderBooking): string => {
 /** The database may raise a readable rule (e.g. "Wallet below the fee…"): show it as written. */
 function readable(error: { message: string; code?: string }): Error {
   return new Error(friendlyDbError(error));
+}
+
+/**
+ * Evidence for disputes (PDF p.10-11): the time and place of "I've arrived". Best effort and written once by the
+ * database (a second call changes nothing). Until proposal 20261116 is applied the function does not exist; the error is
+ * ignored, because this must never stop or slow a job.
+ */
+export async function recordArrival(bookingId: string, point: { latitude: number; longitude: number } | null): Promise<void> {
+  try {
+    await getSupabase().rpc("record_arrival", { p_booking_id: bookingId, p_lat: point?.latitude ?? null, p_lng: point?.longitude ?? null });
+  } catch {
+    /* evidence is optional for the job itself */
+  }
 }
 
 /** Going online/offline. The database can keep a pro offline (not approved), so it returns the real value. */

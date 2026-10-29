@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
+import DisputeEvidence from '@/components/admin/DisputeEvidence';
 import { cn } from '@/lib/utils';
 
 const sb = supabase as any;
@@ -190,6 +191,7 @@ const AdminDisputes: React.FC = () => {
               ))}
             </div>
           )}
+          {active && <DisputeEvidence bookingId={active.booking_id} />}
           <div className="grid grid-cols-2 gap-2">
             {OUTCOMES.map((o) => (
               <button key={o.value} type="button" onClick={() => setOutcome(o.value)}

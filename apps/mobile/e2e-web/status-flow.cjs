@@ -115,6 +115,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
   // ── 4. in progress: the code card ────────────────────────────────────────────
   b1.status = "in_progress";
+  b1.started_at = new Date().toISOString();
   pushBookingChange(b1, "UPDATE");
   await waitBody("Job completion code", 8000);
   await page.waitForFunction(() => document.querySelector('[aria-label="Completion code"]')?.textContent?.trim() === "4321", null, { timeout: 8000 }).catch(() => undefined);
@@ -122,6 +123,12 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   check("once the job starts the customer sees the 4-digit code with a warning to share it only when happy", codeText.trim() === "4321" && (await has("only when the work is done and you are happy")));
   check("the live map is gone once the pro is working", !(await has("Open in Google Maps")));
   await shot("43-code");
+  check("a job that just started shows no 'Problem closing the job?' prompt", !(await has("Problem closing the job?")));
+  b1.started_at = new Date(Date.now() - 3 * 3600000).toISOString();
+  pushBookingChange(b1, "UPDATE");
+  await waitBody("Problem closing the job?", 20000)
+    .then(async () => check("after 2 hours without the code the customer sees 'Problem closing the job?' with a way to contact HandyFix", (await has("contact HandyFix")) && (await T("Email HandyFix").count()) >= 1))
+    .catch(async () => check("after 2 hours without the code the customer sees 'Problem closing the job?' with a way to contact HandyFix", false, (await body()).slice(0, 300)));
 
   // ── 5. done ──────────────────────────────────────────────────────────────────
   b1.status = "completed";

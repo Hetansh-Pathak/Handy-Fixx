@@ -11,7 +11,7 @@
 | 2 | One config for fee, launch and wallet numbers in shared (`PLATFORM_RULES`, `feePreview`) + read-only admin "Fees & rules" page. Editable DB config table NOT built (needs owner approval) | done |
 | 3 | DONE (see PROGRESS.md). Locked requests: pro sees the request and earning, address and phone hidden, "Top up ₹X to accept" (lock = spendable balance cannot cover the held fee; no tiers; silent alert; max 3 cards + counter); DB twin of the accept rule is already in `20261114` | |
 | 4 | In-app customer payment + same-day payout (Razorpay Payouts) | deferred until the owner confirms Payouts + the refund rule |
-| 5 | Remaining PDF items not yet built (A2-A7 in PROGRESS.md NEXT, problem-closing prompt, dispute evidence, quote/visit fee, push, ranking, pincode and cancel rules) | |
+| 5 | Remaining PDF items: **done** problem-closing prompt (5a) and dispute evidence arrival + chat (5b, DB proposal 20261116 not applied); still open: quote/visit fee, push, ranking and admin flags, pincode and cancel rules, A2-A7 in PROGRESS.md NEXT | in progress |
 | 6 | Polish and release checks (screen-by-screen, small screens, screen readers, full check run) | |
 
 Pro own rates and Labour & Shifting were built on 2026-10-29 (a60e734), so they are no longer in the plan.

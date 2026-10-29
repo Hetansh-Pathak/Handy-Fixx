@@ -126,6 +126,13 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   await T("Start job").click();
   await see("Enter customer's code");
   check("start job moves to in progress", db.storedBookings.find((b) => b.id === r1.id).status === "in_progress" && (await has("Step 3 of 3")));
+  for (let i = 0; i < 24 && !(db.arrivals || []).some((a) => a.booking_id === r1.id); i += 1) await sleep(250);
+  check("starting the job records the arrival (time and position) for dispute evidence", (db.arrivals || []).some((a) => a.booking_id === r1.id && typeof a.lat === "number" && typeof a.lng === "number"), JSON.stringify(db.arrivals || []));
+  check("a job that just started shows no 'Problem closing the job?' prompt", !(await has("Problem closing the job?")));
+  db.storedBookings.find((b) => b.id === r1.id).started_at = new Date(Date.now() - 3 * 3600000).toISOString();
+  await waitBody("Problem closing the job?", 20000)
+    .then(async () => check("after 2 hours in progress the pro sees 'Problem closing the job?' and is told not to ask for the code early", (await has("Do not ask for the code before the work is finished")) && (await count("Email HandyFix")) >= 1))
+    .catch(async () => check("after 2 hours in progress the pro sees 'Problem closing the job?' and is told not to ask for the code early", false, (await body()).slice(0, 300)));
   await L("Customer's code").fill("12");
   await T("Enter customer's code").click();
   check("a short code is rejected before calling the server", (await body()).includes("Enter the 4-digit code"));

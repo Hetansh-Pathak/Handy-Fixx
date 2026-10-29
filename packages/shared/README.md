@@ -42,6 +42,8 @@ Time-dependent functions take `now: Date` as an argument. Never call `new Date()
 | `provider/job-flow` | Button per step, the booking patch each button writes, decline, progress (x of 4 or 3), phone visibility, pro-side status wording | PDF p.7, legacy provider portal |
 | `provider/request` | Open-request window (30 s), oldest-first pick, earning/fee/keep shown on the alert | PDF p.7 |
 | `provider/request-access` | Locked requests: `requestAccess` (open or locked by wallet), `partitionByAccess` (3 locked cards + counter), `whereForProvider` (address hidden until accepted) | owner 2026-10-29 |
+| `booking/closing-problem` | "Problem closing the job?" after 2 h in progress without the code: rule, plain-words prompt, admin cutoff | PDF p.10 |
+| `booking/arrival-evidence` | Arrival vs job address distance for disputes, map link | PDF p.11 |
 | `provider/wallet-view` | Live wallet summary → fee-rule state, launch status from approval date, accept-block text | PDF p.6-8 |
 | `provider/eta` | Distance → ETA minutes | new |
 | `catalog/availability` | Online + fresh-heartbeat rule (90 s), offers-service, serves-area | legacy `ServiceDetail` |

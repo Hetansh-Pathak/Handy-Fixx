@@ -22,6 +22,8 @@ export * from "./booking/request-timer";
 export * from "./booking/tracking";
 export * from "./booking/request-outcome";
 export * from "./booking/grouping";
+export * from "./booking/closing-problem";
+export * from "./booking/arrival-evidence";
 export * from "./providers/ranking";
 export * from "./provider/job-flow";
 export * from "./provider/eta";

@@ -15,6 +15,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
+import { closingProblem, closingProblemCutoff } from '@handyfix/shared';
 import { cn, formatDate, timeAgo, shortId, STATUS_STYLES, STATUS_LABELS, CANCEL_REASONS } from '@/lib/utils';
 
 const PAGE_SIZE = 20;
@@ -38,6 +39,7 @@ interface Booking {
   customer_phone: string | null;
   cancelled_at: string | null;
   cancellation_reason: string | null;
+  started_at?: string | null;
   created_at: string;
   updated_at: string;
 
@@ -114,7 +116,9 @@ const Bookings: React.FC = () => {
           services:service_id (name, category)
         `, { count: 'exact' });
 
-      if (statusFilter !== 'all') query = query.eq('status', statusFilter);
+      // "Needs help" = in progress for 2 hours or more without the customer's code (PDF p.10).
+      if (statusFilter === 'stuck') query = query.eq('status', 'in_progress').lt('started_at', closingProblemCutoff(new Date()));
+      else if (statusFilter !== 'all') query = query.eq('status', statusFilter);
       if (cityFilter !== 'all') query = query.eq('city', cityFilter);
       if (search.trim()) {
         // id is a uuid, so ilike on it errors; match it exactly only when a full uuid is typed
@@ -344,6 +348,7 @@ const Bookings: React.FC = () => {
             <TabsTrigger value="confirmed" className="text-xs">Confirmed</TabsTrigger>
             <TabsTrigger value="on_the_way" className="text-xs">On the way</TabsTrigger>
             <TabsTrigger value="in_progress" className="text-xs">In progress</TabsTrigger>
+            <TabsTrigger value="stuck" className="text-xs">Needs help</TabsTrigger>
             <TabsTrigger value="completed" className="text-xs">Completed</TabsTrigger>
             <TabsTrigger value="cancelled" className="text-xs">Cancelled</TabsTrigger>
           </TabsList>
@@ -421,6 +426,9 @@ const Bookings: React.FC = () => {
                       <Badge className={cn('text-[10px]', STATUS_STYLES[b.status] ?? '')}>
                         {STATUS_LABELS[b.status] ?? b.status}
                       </Badge>
+                      {closingProblem({ status: b.status, startedAt: b.started_at, now: new Date() }).active && (
+                        <Badge className="mt-1 block w-fit bg-amber-500/15 text-[10px] text-amber-600">No code after 2 h</Badge>
+                      )}
                     </td>
                     <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
                       <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => openDrawer(b)}>
@@ -467,6 +475,13 @@ const Bookings: React.FC = () => {
                   </Badge>
                 </div>
               </SheetHeader>
+
+              {closingProblem({ status: selectedBooking.status, startedAt: selectedBooking.started_at, now: new Date() }).active && (
+                <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-700">
+                  <p className="font-semibold">Problem closing the job?</p>
+                  <p>This job has been in progress for over 2 hours and the completion code has not been entered. Contact the customer and the pro, then cancel or reassign if needed.</p>
+                </div>
+              )}
 
               {/* Action Buttons Header */}
               {['pending', 'confirmed', 'on_the_way', 'in_progress'].includes(selectedBooking.status) && (

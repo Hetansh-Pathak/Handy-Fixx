@@ -64,6 +64,21 @@ export async function stopJobTracking(): Promise<void> {
 }
 
 /**
+ * The pro's position right now, for the arrival record. Needs the location permission already granted (it asks nothing
+ * itself) and gives up after 6 seconds; null means "time only". Never throws.
+ */
+export async function currentPoint(): Promise<{ latitude: number; longitude: number } | null> {
+  const lookup = (async () => {
+    const perm = await Location.getForegroundPermissionsAsync();
+    if (!perm.granted) return null;
+    const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+    return pos ? { latitude: pos.coords.latitude, longitude: pos.coords.longitude } : null;
+  })().catch(() => null);
+  // The limit covers the permission check too: a call that never answers must not delay the arrival record.
+  return Promise.race([lookup, new Promise<null>((resolve) => setTimeout(() => resolve(null), 6000))]);
+}
+
+/**
  * Tells customers roughly where this pro works (rounded to about 1 km) while online, for "Nearest".
  * Needs the foreground permission only; quietly does nothing without it.
  */

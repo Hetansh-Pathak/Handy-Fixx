@@ -13,6 +13,7 @@ import { Body, Button, Card, ErrorBanner, HeroCard, InfoBanner, Screen, ScreenHe
 import { useThemeColors } from "@/theme/theme";
 import { AttachmentGallery } from "@/features/attachments/components";
 import { ChatButton } from "@/features/chat/components";
+import { ClosingProblemCard } from "@/features/closing/components";
 import { loadCustomerProfile } from "@/features/auth/api";
 import { useSession } from "@/features/auth/session-provider";
 import {
@@ -215,6 +216,8 @@ export default function BookingStatusScreen() {
           </Card>
         </View>
       ) : null}
+
+      <ClosingProblemCard role="customer" bookingId={booking.id} status={status} startedAt={booking.started_at} otherName={providerName} />
 
       <CustomerExtras bookingId={booking.id} status={status} pro={pro} total={Number(booking.total_amount ?? 0)} />
 
