@@ -7,8 +7,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-
-const LOGO_URL = '/logo.png';
+import { AdminLogo, ThemeSwitch } from '@/components/admin/Brand';
 
 interface SidebarItem {
   to: string;
@@ -60,13 +59,7 @@ const AdminLayout: React.FC = () => {
     <div className="flex flex-col h-full">
       {/* Logo */}
       <div className={cn("flex items-center gap-3 p-4 border-b border-border/50", collapsed && "justify-center")}>
-        <img src={LOGO_URL} alt="HandyFix" className="h-8 w-8 rounded-lg object-contain shrink-0" />
-        {!collapsed && (
-          <div>
-            <p className="font-bold text-sm text-foreground">HandyFix</p>
-            <p className="text-[10px] text-primary font-semibold tracking-wider uppercase">Admin Panel</p>
-          </div>
-        )}
+        <AdminLogo size={30} compact={collapsed} />
       </div>
 
       {/* Nav items */}
@@ -82,7 +75,7 @@ const AdminLayout: React.FC = () => {
                     cn(
                       'w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 cursor-pointer relative',
                       isActive
-                        ? 'bg-primary/10 text-primary font-bold border-l-4 border-primary rounded-l-none'
+                        ? 'bg-primary text-primary-foreground font-bold shadow-sm'
                         : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
                     )
                   }
@@ -92,7 +85,7 @@ const AdminLayout: React.FC = () => {
                   {item.badge !== undefined && item.badge > 0 && (
                     <span className={cn(
                       "ml-auto px-2 py-0.5 rounded-full text-xs font-bold bg-destructive text-destructive-foreground shrink-0 flex items-center justify-center min-w-[20px] h-5",
-                      collapsed && "absolute -top-1 -right-1 px-1 py-0 text-[10px] min-w-[16px] h-4"
+                      collapsed && "absolute -top-1 -right-1 px-1 py-0 text-xs min-w-[16px] h-4"
                     )}>
                       {item.badge}
                     </span>
@@ -122,7 +115,7 @@ const AdminLayout: React.FC = () => {
     <div className="min-h-screen bg-background flex">
       {/* Desktop sidebar */}
       <aside className={cn(
-        "hidden md:flex flex-col border-r border-border/50 bg-card transition-all duration-300 shrink-0",
+        "hidden md:flex flex-col border-r border-border/50 bg-sidebar/70 backdrop-blur-xl transition-all duration-300 shrink-0",
         collapsed ? "w-16" : "w-64"
       )}>
         <SidebarContent />
@@ -140,7 +133,7 @@ const AdminLayout: React.FC = () => {
             <motion.aside
               initial={{ x: -240 }} animate={{ x: 0 }} exit={{ x: -240 }}
               transition={{ type: 'spring', stiffness: 400, damping: 40 }}
-              className="fixed left-0 top-0 bottom-0 w-64 bg-card border-r border-border/50 z-50 md:hidden"
+              className="fixed left-0 top-0 bottom-0 w-64 bg-sidebar/95 backdrop-blur-xl border-r border-border/50 z-50 md:hidden"
             >
               <SidebarContent />
             </motion.aside>
@@ -151,7 +144,7 @@ const AdminLayout: React.FC = () => {
       {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Top bar */}
-        <header className="sticky top-0 z-30 flex items-center justify-between h-14 px-4 bg-card/80 backdrop-blur-xl border-b border-border/50">
+        <header className="sticky top-0 z-30 flex items-center justify-between h-14 px-4 bg-card/70 backdrop-blur-xl border-b border-border/50">
           <div className="flex items-center gap-3">
             <button
               onClick={() => setMobileOpen(true)}
@@ -164,6 +157,7 @@ const AdminLayout: React.FC = () => {
             </span>
           </div>
           <div className="flex items-center gap-2">
+            <ThemeSwitch />
             <span className="text-xs text-muted-foreground hidden sm:block truncate max-w-[200px]">
               {user?.email}
             </span>

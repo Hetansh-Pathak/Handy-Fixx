@@ -24,8 +24,10 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   const target = checkIndex !== -1 && process.argv[checkIndex + 1] ? resolve(process.argv[checkIndex + 1]) : defaultTarget;
   const fresh = await generate();
   if (checkIndex !== -1) {
+    // Line endings are ignored: a Windows checkout (core.autocrlf=true) has CRLF where the repo stores LF.
+    const lf = (text) => text.replace(/\r\n/g, "\n");
     const current = await readFile(target, "utf8").catch(() => "");
-    if (current !== fresh) { console.error("shared-push.js is out of date. Run: npm run push:build"); process.exit(1); }
+    if (lf(current) !== lf(fresh)) { console.error("shared-push.js is out of date. Run: npm run push:build"); process.exit(1); }
     console.log("shared-push.js is up to date");
   } else {
     await writeFile(target, fresh, "utf8");

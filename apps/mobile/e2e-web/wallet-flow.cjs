@@ -52,7 +52,8 @@ const check = (name, ok, extra = "") => {
   await see("Verify your identity to start");
   Object.assign(db.providerRows[0], { status: "active", kyc_status: "approved", kyc_reviewed_at: new Date(Date.now() - 200 * 86400000).toISOString(), total_jobs: 40, upi_id: "ravi@okaxis" });
   const pid = db.providerRows[0].id;
-  const today = new Date().toISOString().slice(0, 10);
+  // India date, like the app ("today" is India time; UTC would be yesterday after 18:30 UTC).
+  const today = new Date(Date.now() + 330 * 60000).toISOString().slice(0, 10);
   db.storedBookings.push(
     { id: "w1", provider_id: pid, status: "completed", booking_date: today, provider_amount: 300, total_amount: 300, created_at: new Date().toISOString() },
     { id: "w2", provider_id: pid, status: "completed", booking_date: today, provider_amount: 200, total_amount: 200, created_at: new Date().toISOString() },

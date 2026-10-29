@@ -115,7 +115,7 @@ const AdminWatchlist: React.FC = () => {
                     {w.customer_name ?? 'Customer'} → {w.service_providers?.full_name ?? 'no pro'}{w.service_providers?.phone ? ` · ${w.service_providers.phone}` : ''}
                   </p>
                 </div>
-                <Badge className="bg-amber-500/15 text-amber-600">Waiting {waitLabel(minutesWaiting(w.created_at, new Date()))}</Badge>
+                <Badge className="bg-amber-500/15 text-amber-700 dark:text-amber-300">Waiting {waitLabel(minutesWaiting(w.created_at, new Date()))}</Badge>
               </div>
             ))}
             <div className="px-4 py-2 text-xs text-muted-foreground">
@@ -144,7 +144,7 @@ const AdminWatchlist: React.FC = () => {
                 {f.phone ? <p className="text-xs text-muted-foreground">{f.phone}</p> : null}
                 <ul className="space-y-1">
                   {f.flags.map((flag) => (
-                    <li key={flag.code} className={cn('text-xs', flag.severity === 'high' ? 'text-red-600' : 'text-amber-600')}>{flag.message}</li>
+                    <li key={flag.code} className={cn('text-xs', flag.severity === 'high' ? 'text-red-600 dark:text-red-400' : 'text-amber-700 dark:text-amber-300')}>{flag.message}</li>
                   ))}
                 </ul>
                 <p className="text-xs text-muted-foreground">

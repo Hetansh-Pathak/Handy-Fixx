@@ -59,18 +59,33 @@ export function interpretPayout(data: unknown): PayoutRequestResult {
   return { ok: false, message: payoutErrorMessage(d.reason, d.min_payout === undefined ? undefined : Number(d.min_payout)) };
 }
 
-/** Earnings from completed jobs: what the customers paid the pro (service bill), not the wallet. */
+/** India is UTC+5:30 all year (no daylight saving). */
+const IST_OFFSET_MS = 330 * 60_000;
+
+/** "2026-10-28T20:45:04Z" → "2026-10-29": the calendar day in India. Null for a missing or bad value. */
+export function indiaDay(value: string | Date | null | undefined): string | null {
+  if (!value) return null;
+  const ms = (value instanceof Date ? value : new Date(value)).getTime();
+  return Number.isFinite(ms) ? new Date(ms + IST_OFFSET_MS).toISOString().slice(0, 10) : null;
+}
+
+/**
+ * Earnings from completed jobs: what the customers paid the pro (service bill), not the wallet.
+ * A job counts on the India-time day it was COMPLETED (booked for tomorrow but finished at 2 AM today is today's money);
+ * rows without `completed_at` fall back to the booked date, then creation. "Today" and "this month" are India time too:
+ * using UTC put everything finished between midnight and 5:30 AM on the wrong day.
+ */
 export function earningsSummary(
-  bookings: { status: string; provider_amount: number | string | null; created_at?: string | null; booking_date?: string | null }[],
+  bookings: { status: string; provider_amount: number | string | null; created_at?: string | null; booking_date?: string | null; completed_at?: string | null }[],
   now: Date,
 ): { jobs: number; total: number; monthJobs: number; monthTotal: number; todayTotal: number } {
-  const month = now.toISOString().slice(0, 7);
-  const today = now.toISOString().slice(0, 10);
+  const today = indiaDay(now) ?? "";
+  const month = today.slice(0, 7);
   const s = { jobs: 0, total: 0, monthJobs: 0, monthTotal: 0, todayTotal: 0 };
   for (const b of bookings) {
     if (b.status !== "completed") continue;
     const amount = Number(b.provider_amount) || 0;
-    const day = b.booking_date ?? b.created_at?.slice(0, 10) ?? "";
+    const day = indiaDay(b.completed_at) ?? b.booking_date ?? indiaDay(b.created_at) ?? "";
     s.jobs += 1;
     s.total += amount;
     if (day.startsWith(month)) { s.monthJobs += 1; s.monthTotal += amount; }
