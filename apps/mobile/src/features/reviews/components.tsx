@@ -16,7 +16,7 @@ export function Stars({ value, size = 20, onPick }: { value: number; size?: numb
         const filled = n <= value;
         const icon = <Star size={size} color={filled ? colors.sun : colors.line} fill={filled ? colors.sun : "transparent"} strokeWidth={1.8} />;
         return onPick ? (
-          <Pressable key={n} accessibilityRole="radio" accessibilityLabel={`${n} ${n === 1 ? "star" : "stars"}`} accessibilityState={{ selected: n === value }}
+          <Pressable key={n} accessibilityRole="radio" accessibilityLabel={`${n} ${n === 1 ? "star" : "stars"}`} aria-checked={n === value} accessibilityState={{ checked: n === value, selected: n === value }}
             onPress={() => onPick(n)} hitSlop={4} className="min-h-[48px] min-w-[48px] items-center justify-center">{icon}</Pressable>
         ) : <View key={n}>{icon}</View>;
       })}

@@ -19,7 +19,7 @@ export function AppearancePicker() {
         {OPTIONS.map(({ value, label, icon: Icon }) => {
           const selected = appearance === value;
           return (
-            <Pressable key={value} accessibilityRole="radio" accessibilityState={{ checked: selected }} accessibilityLabel={`Appearance: ${label}`}
+            <Pressable key={value} accessibilityRole="radio" aria-checked={selected} accessibilityState={{ checked: selected }} accessibilityLabel={`Appearance: ${label}`}
               onPress={() => setAppearance(value)}
               className={`min-h-[64px] flex-1 items-center justify-center gap-1 rounded-tile border ${selected ? "border-brand bg-brand" : "border-line bg-tint"} active:opacity-80`}>
               <Icon size={20} color={selected ? colors.onBrand : colors.tintFg} />

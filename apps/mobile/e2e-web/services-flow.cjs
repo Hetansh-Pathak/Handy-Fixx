@@ -3,6 +3,8 @@
 const { chromium } = require("playwright");
 const path = require("path");
 const { installMock, installRealtime, db, BASE } = require("./mock-supabase.cjs");
+// This suite is about a pro ticking jobs: keep its catalogue at the two original plumbing jobs (the check-up visit is covered in booking-flow).
+db.subItems = db.subItems.filter((s) => s.id !== "si-visit");
 
 const OUT = path.join(__dirname, "shots");
 require("fs").mkdirSync(OUT, { recursive: true });

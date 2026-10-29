@@ -51,14 +51,14 @@ export default function AllServices() {
             <MapPin size={18} color={colors.muted} />
             <TextInput accessibilityLabel="Your area" value={area} onChangeText={setArea} placeholder="Your city or 6-digit pincode"
               placeholderTextColor={colors.mutedSoft} autoCapitalize="words" style={{ fontFamily: "PlusJakartaSans_400Regular" }}
-              className="min-h-[48px] flex-1 text-base text-fg" />
+              className="min-h-[48px] min-w-0 flex-1 text-base text-fg" />
           </View>
           <CitySuggestions query={area} onPick={setArea} />
           <View className="flex-row items-center gap-2 rounded-tile border border-line bg-card px-3">
             <Search size={18} color={colors.muted} />
             <TextInput accessibilityLabel="Search services" value={search} onChangeText={setSearch} placeholder="Plumbing, cleaning…"
               placeholderTextColor={colors.mutedSoft} autoCapitalize="none" style={{ fontFamily: "PlusJakartaSans_400Regular" }}
-              className="min-h-[48px] flex-1 text-base text-fg" />
+              className="min-h-[48px] min-w-0 flex-1 text-base text-fg" />
           </View>
         </View>
 

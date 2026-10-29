@@ -12,7 +12,7 @@
 | 3 | DONE (see PROGRESS.md). Locked requests: pro sees the request and earning, address and phone hidden, "Top up ₹X to accept" (lock = spendable balance cannot cover the held fee; no tiers; silent alert; max 3 cards + counter); DB twin of the accept rule is already in `20261114` | |
 | 4 | In-app customer payment + same-day payout (Razorpay Payouts) | deferred until the owner confirms Payouts + the refund rule |
 | 5 | Remaining PDF items: **done** problem-closing prompt (5a) and dispute evidence arrival + chat (5b, DB proposal 20261116 not applied); **done** ranking bands + response speed + admin Watchlist (5c, DB proposal 20261117 not applied); still open: quote/visit fee, push, pincode and cancel rules, A2-A7 in PROGRESS.md NEXT | in progress |
-| 6 | Polish and release checks (screen-by-screen, small screens, screen readers, full check run) | |
+| 6 | Polish and release checks (screen-by-screen, small screens, screen readers, full check run) | **in progress**: part 1 done (measured accessibility + 320 px pass, see PROGRESS.md); still needs a phone walk-through, large-text check, Hindi text |
 
 Pro own rates and Labour & Shifting were built on 2026-10-29 (a60e734), so they are no longer in the plan.
 

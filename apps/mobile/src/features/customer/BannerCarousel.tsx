@@ -88,7 +88,7 @@ export function BannerCarousel({ availableSlugs }: { availableSlugs: ReadonlySet
                 <View className="flex-1 justify-between gap-3">
                   <View className="gap-1.5">
                     <Text className={`text-2xl font-extrabold ${fg}`}>{b.title}</Text>
-                    <Text className={`text-sm leading-5 ${b.dark ? "text-white/80" : "text-muted"}`}>{b.body}</Text>
+                    <Text className={`text-sm leading-5 ${b.dark ? "text-white" : "text-muted"}`}>{b.body}</Text>
                   </View>
                   {canBook ? (
                     <Pressable accessibilityRole="button" onPress={() => router.push({ pathname: "/customer/service/[slug]", params: { slug: b.slug! } })}
@@ -105,10 +105,10 @@ export function BannerCarousel({ availableSlugs }: { availableSlugs: ReadonlySet
           })}
         </ScrollView>
       ) : <View className="min-h-[176px] rounded-panel bg-field" />}
-      <View className="flex-row justify-center gap-1">
+      <View className="flex-row justify-center">
         {BANNERS.map((b, i) => (
-          <Pressable key={b.key} accessibilityRole="button" accessibilityLabel={`Show offer ${i + 1} of ${BANNERS.length}`} hitSlop={8}
-            onPress={() => goTo(i)} className="h-6 justify-center px-1">
+          <Pressable key={b.key} accessibilityRole="button" accessibilityLabel={`Show offer ${i + 1} of ${BANNERS.length}`}
+            onPress={() => goTo(i)} className="h-11 justify-center px-2.5">
             <View className={`h-2 rounded-full ${i === index ? "w-6 bg-brand" : "w-2 bg-line"}`} />
           </Pressable>
         ))}

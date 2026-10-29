@@ -76,10 +76,10 @@ export default function CustomerHome() {
         <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: 32 }}>
           <View className="flex-row items-center justify-between px-5 py-3">
             <Logo size={34} />
-            <View className="flex-row items-center gap-2">
+            <View className="min-w-0 shrink flex-row items-center gap-2">
               <Pressable accessibilityRole="button" accessibilityLabel={area.trim() ? `Area: ${area.trim()}` : "Choose your area"}
                 onPress={() => areaInput.current?.focus()}
-                className="min-h-[44px] max-w-[130px] flex-row items-center gap-1 rounded-full bg-tint px-3 active:opacity-80">
+                className="min-h-[44px] min-w-0 shrink max-w-[130px] flex-row items-center gap-1 rounded-full bg-tint px-3 active:opacity-80">
                 <MapPin size={14} color={colors.tintFg} />
                 <Text className="text-xs font-semibold text-tint-fg" numberOfLines={1}>{area.trim() || "Your area"}</Text>
               </Pressable>
@@ -114,7 +114,7 @@ export default function CustomerHome() {
                 returnKeyType="go"
                 onSubmitEditing={showServices}
                 style={{ fontFamily: "PlusJakartaSans_400Regular" }}
-                className="min-h-[44px] flex-1 px-2 text-base text-fg"
+                className="min-h-[44px] min-w-0 flex-1 px-2 text-base text-fg"
               />
               {/* Go: the Services tab lists everything for this area (the area is shared through useArea). */}
               <Pressable accessibilityRole="button" accessibilityLabel={area.trim() ? `Show services in ${area.trim()}` : "Show all services"}

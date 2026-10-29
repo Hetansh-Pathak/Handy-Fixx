@@ -82,6 +82,8 @@ const check = (name, ok, extra = "") => {
   await T("Book a check-up visit · ₹129").click();
   await see("The visit fee is always charged");
   check("choosing a check-up says the visit fee is always charged and the repair is approved extra work", (await body()).includes("adds it as extra work"));
+  const jobRadios = await page.evaluate(() => [...document.querySelectorAll('[role="radio"]')].map((e) => e.getAttribute("aria-checked")));
+  check("the job cards expose their checked state to screen readers", jobRadios.length >= 2 && jobRadios.every((v) => v === "true" || v === "false"), JSON.stringify(jobRadios));
   await T("Tap repair").click();
   await see("Asha Patel");
   check("only available, in-area pros are shown (offline, stale heartbeat and other-city pros hidden)",

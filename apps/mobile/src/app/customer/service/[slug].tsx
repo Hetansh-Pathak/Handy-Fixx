@@ -134,11 +134,11 @@ export default function ServiceScreen() {
               const selected = s.id === subId;
               const visit = isCheckupVisit(s.name);
               return (
-                <Pressable key={s.id} accessibilityRole="radio" accessibilityState={{ selected }} onPress={() => setSubId(selected ? null : s.id)}
+                <Pressable key={s.id} accessibilityRole="radio" aria-checked={selected} accessibilityState={{ checked: selected, selected }} onPress={() => setSubId(selected ? null : s.id)}
                   className={`w-[48%] gap-1 rounded-panel border-2 p-4 ${selected ? "border-brand bg-brand-soft" : visit ? "border-dashed border-brand/50 bg-card" : "border-line bg-card"}`}>
                   <View className="flex-row items-start justify-between">
                     <Text className="text-3xl">{s.icon ?? "🛠️"}</Text>
-                    {visit ? <Text className="rounded-full bg-brand/15 px-2 py-0.5 text-xs font-bold uppercase text-brand">Visit</Text> : null}
+                    {visit ? <Text className="rounded-full bg-tint px-2 py-0.5 text-xs font-bold uppercase text-tint-fg">Visit</Text> : null}
                   </View>
                   <Text className="mt-1 text-base font-semibold text-fg">{s.name}</Text>
                   {s.description ? <Text className="text-xs leading-4 text-muted" numberOfLines={2}>{s.description}</Text> : null}

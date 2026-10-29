@@ -2,7 +2,7 @@
 
 Runs the **real app** (React Native Web in Chromium) against a **fake Supabase HTTP API** built into
 the script, so it needs no Supabase project, phone or network. Two suites:
-- `auth-flow.cjs`: sign-up and sign-in validation, route guards, role pick (including "an account with bookings cannot become a pro"), the customer profile, email OTP, sign-out, session persistence, forgot / reset password.
+- `auth-flow.cjs`: sign-up and sign-in validation (and that every radio button exposes its checked state), route guards, role pick (including "an account with bookings cannot become a pro"), the customer profile, email OTP, sign-out, session persistence, forgot / reset password.
 - `booking-flow.cjs`: services and search (response-time line shown only with enough replies), sub-items, availability and area rules, per-pro prices and sorting, the 3-step booking with validation, the email-verification gate, the saved-price check (PDF and legacy 12% modes) and cancel.
 
 - `provider-flow.cjs`: approval gate, going online (heartbeat), the "Problem closing the job?" prompt after 2 hours and the arrival record, locked requests (wallet too low: Locked popup, 3 locked cards plus a counter in Jobs > New, address hidden until accepted), a request arriving by Realtime and by the polling fallback as a popup with no timer, accept and decline on the request screen, the job steps, the completion code with wrong-code feedback, the flat fee (waived in launch, charged after), the client-side and server-side wallet block, and the jobs list by stage.

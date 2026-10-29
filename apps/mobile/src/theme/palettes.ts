@@ -63,7 +63,7 @@ export const PALETTES: Record<ThemeName, Palette> = {
     price: "#1F5BFF",
     accent: "#FFB703",
     onAccent: "#1A1100",
-    ok: "#0A7A53",
+    ok: "#087048",
     okBg: "#E3F6EE",
     warn: "#7A4E00",
     warnBg: "#FFF1CC",

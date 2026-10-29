@@ -82,8 +82,8 @@ export default function ProviderProfile() {
             <View className="flex-1 gap-0.5">
               <Text className="text-lg font-bold text-fg" numberOfLines={1}>{name}</Text>
               <Text className="text-sm text-muted">{p?.phone ?? provider?.phone ? `+91 ${p?.phone ?? provider?.phone}` : "Add your mobile number"}</Text>
-              <View className={`mt-1 self-start rounded-full px-2 py-0.5 ${kyc === "approved" ? "bg-ok/15" : "bg-brand/15"}`}>
-                <Text className={`text-xs font-semibold ${kyc === "approved" ? "text-ok" : "text-brand"}`}>{KYC_LABEL[kyc] ?? kyc}</Text>
+              <View className={`mt-1 self-start rounded-full px-2 py-0.5 ${kyc === "approved" ? "bg-ok-bg" : "bg-tint"}`}>
+                <Text className={`text-xs font-semibold ${kyc === "approved" ? "text-ok" : "text-tint-fg"}`}>{KYC_LABEL[kyc] ?? kyc}</Text>
               </View>
             </View>
             <ChevronRight size={22} color={colors.fg} />

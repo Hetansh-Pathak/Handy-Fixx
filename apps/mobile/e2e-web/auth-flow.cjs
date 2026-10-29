@@ -58,6 +58,9 @@ const check = (name, ok, extra = "") => { results.push({ name, ok }); console.lo
   await page.getByText("Create account", { exact: true }).locator("visible=true").last().click();
   await page.waitForSelector("text=How will you use HandyFix?", { timeout: 20000 }).then(() => check("sign-up lands on role-pick (guard)", true)).catch(async () => check("sign-up lands on role-pick (guard)", false, (await text()).slice(0, 200)));
   await shot("04-role-pick");
+  // Screen readers need to hear which choice is on: every radio must expose its checked state.
+  const radios = await page.evaluate(() => [...document.querySelectorAll('[role="radio"]')].map((e) => e.getAttribute("aria-checked")));
+  check("every radio button exposes its checked state to screen readers", radios.length >= 2 && radios.every((v) => v === "true" || v === "false"), JSON.stringify(radios));
 
   // role pick: provider w/o phone should block; then customer
   await page.getByText("I'm a pro").last().click();
