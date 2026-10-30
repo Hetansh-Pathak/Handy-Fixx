@@ -36,7 +36,7 @@ const child = spawn(process.execPath, [require.resolve("expo/bin/cli"), "start",
     EXPO_PUBLIC_ARRIVED_STATUS: "0",
     EXPO_PUBLIC_PDF_PRICING_LIVE: "0",
     EXPO_PUBLIC_MAPS_ENABLED: "0",
-    EXPO_PUBLIC_APP_VARIANT: "both",
+    EXPO_PUBLIC_APP_VARIANT: ["customer", "provider"].includes(process.argv[2]) ? process.argv[2] : "both",
   },
 });
 const stop = (signal) => () => {
