@@ -6,9 +6,10 @@ import { useAdminAuth } from '@/contexts/AdminAuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import ThemeToggle from '@/components/admin/ThemeToggle';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
-const LOGO_URL = '/logo.png';
+const LOGO_URL = '/logo.svg';
 
 interface SidebarItem {
   to: string;
@@ -60,10 +61,10 @@ const AdminLayout: React.FC = () => {
     <div className="flex flex-col h-full">
       {/* Logo */}
       <div className={cn("flex items-center gap-3 p-4 border-b border-border/50", collapsed && "justify-center")}>
-        <img src={LOGO_URL} alt="HandyFix" className="h-8 w-8 rounded-lg object-contain shrink-0" />
+        <img src={LOGO_URL} alt="apnabanda" className="h-8 w-8 rounded-lg object-contain shrink-0" />
         {!collapsed && (
           <div>
-            <p className="font-bold text-sm text-foreground">HandyFix</p>
+            <p className="font-bold text-sm text-foreground">apnabanda</p>
             <p className="text-[10px] text-primary font-semibold tracking-wider uppercase">Admin Panel</p>
           </div>
         )}
@@ -119,7 +120,7 @@ const AdminLayout: React.FC = () => {
   );
 
   return (
-    <div className="min-h-screen bg-background flex">
+    <div className="min-h-screen flex">
       {/* Desktop sidebar */}
       <aside className={cn(
         "hidden md:flex flex-col border-r border-border/50 bg-card transition-all duration-300 shrink-0",
@@ -160,13 +161,14 @@ const AdminLayout: React.FC = () => {
               <Menu className="h-5 w-5" />
             </button>
             <span className="text-xs font-semibold text-muted-foreground hidden sm:block">
-              HandyFix Operations
+              apnabanda Operations
             </span>
           </div>
           <div className="flex items-center gap-2">
             <span className="text-xs text-muted-foreground hidden sm:block truncate max-w-[200px]">
               {user?.email}
             </span>
+            <ThemeToggle />
             <Button
               variant="outline"
               size="sm"

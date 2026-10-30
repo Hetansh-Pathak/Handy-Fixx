@@ -59,7 +59,7 @@ const Login: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+    <div className="min-h-screen flex items-center justify-center p-4">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -71,10 +71,10 @@ const Login: React.FC = () => {
           {/* Logo + branding */}
           <div className="text-center space-y-3">
             <div className="mx-auto w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center shadow-gold p-2">
-              <img src="/logo.png" alt="HandyFix" className="w-12 h-12 object-contain" />
+              <img src="/logo.svg" alt="apnabanda" className="w-12 h-12 object-contain" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-foreground">HandyFix Admin</h1>
+              <h1 className="text-2xl font-bold text-foreground">apnabanda Admin</h1>
               <p className="text-sm text-muted-foreground mt-1">
                 Secure operations panel — authorised personnel only
               </p>
