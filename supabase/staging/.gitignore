@@ -1,0 +1,3 @@
+# Derived from the live catalog (structure + public service catalogue). Rebuilt on demand; never commit.
+out/
+node_modules/

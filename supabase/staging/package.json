@@ -1,0 +1,7 @@
+{
+  "name": "handyfix-staging-tools",
+  "private": true,
+  "description": "Applies SQL to the STAGING Supabase project (never the live one). Not part of the npm workspaces.",
+  "type": "module",
+  "dependencies": { "pg": "8.16.3" }
+}
