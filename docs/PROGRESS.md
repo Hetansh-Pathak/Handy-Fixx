@@ -107,6 +107,11 @@ Owner plan of 2026-10-29 ("first release, do all the things"), one slice at a ti
 7. **Release prep:** Google Maps key + `EXPO_PUBLIC_MAPS_ENABLED=1`, EAS builds, Play Store closed test, hosted privacy policy URL; delete `legacy/` at mobile parity.
 8. **Later (PDF order):** ranking by rating, distance and response speed; Featured boost and Pro subscription (~40 pros); urgent add-on, real refunds, maintenance plans (after in-app payments); society tie-ups and ads (500+ bookings).
 
+## Live rollout status (2026-11-01)
+
+- **Applied on live by the owner with `supabase/live/rollout-live.mjs`:** slice 1 (17 steps: the older proposals plus security A, D, E) and slice 2 (security B, KYC PAN encryption). Hardened functions (kyc-pan, kyc-admin-reveal-pan, kyc-retention, send-provider-otp, verify-provider-otp, send-welcome-email) deployed by the owner from `supabase/staging/out/deploy`; KYC loads again.
+- **Still to do, in order:** (1) owner tests the Pro identity check and admin KYC Review; (2) PAN migration script dry run, then `--apply` with a fresh backup; (3) proposal C (drops plain PAN and Aadhaar columns, irreversible); (4) delete stray live functions `quick-function` and `bright-handler`; (5) reset the DB passwords pasted in chat (staging, live); (6) leaked-password protection toggle; (7) bank/UPI plain text (M2); (8) Pro app rebuild for real pros; (9) push the unpushed local commits (ask first).
+
 ## BLOCKED on the owner
 
 - **Lawyer (security task):** photo retention days (30 is a placeholder), whether not collecting Aadhaar is enough, how long PAN and the PAN photo / selfie may and must be kept, the new privacy text (1.1) and Partner Agreement (v1.3), and whether pros must be told their contact and bank details were readable by anyone until proposal `20261125000000` is applied.
