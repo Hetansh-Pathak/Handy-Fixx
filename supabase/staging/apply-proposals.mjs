@@ -37,8 +37,15 @@ const STEPS = [
 ];
 
 const fromIdx = process.argv.includes("--from") ? Number(process.argv[process.argv.indexOf("--from") + 1]) : 1;
-const client = new pg.Client({ connectionString: url, ssl: { rejectUnauthorized: false } });
-await client.connect();
+const host = (() => { try { return new URL(url).host; } catch { return "(the address is not a valid URL)"; } })();
+console.log(`Starting. Connecting to ${host} ...`);
+const client = new pg.Client({ connectionString: url, ssl: { rejectUnauthorized: false }, connectionTimeoutMillis: 20000 });
+try {
+  await client.connect();
+} catch (e) {
+  console.error(`COULD NOT CONNECT: ${e.message}`);
+  process.exit(4);
+}
 await client.query("set search_path = public, extensions");
 let failed = false;
 for (const [i, [label, file]] of STEPS.entries()) {

@@ -18,8 +18,16 @@ if (url.includes(LIVE_REF)) {
   process.exit(3);
 }
 
-const client = new pg.Client({ connectionString: url, ssl: { rejectUnauthorized: false } });
-await client.connect();
+const host = (() => { try { return new URL(url).host; } catch { return "(the address is not a valid URL)"; } })();
+console.log(`Starting. Connecting to ${host} ...`);
+const client = new pg.Client({ connectionString: url, ssl: { rejectUnauthorized: false }, connectionTimeoutMillis: 20000 });
+try {
+  await client.connect();
+} catch (e) {
+  console.error(`COULD NOT CONNECT: ${e.message}`);
+  console.error("Check: the password is right and has no spaces or brackets; the address is the SESSION POOLER one of handyfix-staging; your internet works.");
+  process.exit(4);
+}
 const who = (await client.query("select current_database() db, inet_server_addr()::text addr")).rows[0];
 console.log(`Connected to ${who.db}. Applying ${file}`);
 
