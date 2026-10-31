@@ -168,7 +168,7 @@ describe("wallet on the offer card", () => {
   it("launch period: fee waived, even with an empty wallet", () => {
     const a = offerAccess({ wallet: { balance: 0, due: 0 }, price: 349, launchActive: true });
     expect(a).toMatchObject({ canAccept: true, feeWaived: true });
-    expect(offerView("offered", a)).toMatchObject({ kind: "accept", feeLine: "HandyFix fee waived (launch period)" });
+    expect(offerView("offered", a)).toMatchObject({ kind: "accept", feeLine: "apnabanda fee waived (launch period)" });
   });
 });
 

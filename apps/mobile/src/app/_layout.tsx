@@ -41,7 +41,7 @@ function Navigator() {
   }
   if (status === "error") {
     return (
-      <FullScreenMessage title="Can't reach HandyFix" message="Check your internet connection and try again.">
+      <FullScreenMessage title="Can't reach apnabanda" message="Check your internet connection and try again.">
         <Button label="Try again" onPress={() => void refresh()} />
         <Button label="Sign out" variant="secondary" onPress={() => void signOut()} />
       </FullScreenMessage>
@@ -57,10 +57,10 @@ function Navigator() {
       <FullScreenMessage
         title={isProAccount ? "This is a pro account" : "This is a customer account"}
         message={isProAccount
-          ? "Pros use the HandyFix Pro app. To book services, sign out and use a different email in this app."
-          : "Customers use the HandyFix app. To work as a pro, sign out and register a different email in this app."}
+          ? "Pros use the apnabanda Pro app. To book services, sign out and use a different email in this app."
+          : "Customers use the apnabanda app. To work as a pro, sign out and register a different email in this app."}
       >
-        {otherUrl ? <Button label={isProAccount ? "Open HandyFix Pro" : "Open HandyFix"} onPress={() => void Linking.openURL(otherUrl)} /> : null}
+        {otherUrl ? <Button label={isProAccount ? "Open apnabanda Pro" : "Open apnabanda"} onPress={() => void Linking.openURL(otherUrl)} /> : null}
         <Button label="Sign out" variant="secondary" onPress={() => void signOut()} />
       </FullScreenMessage>
     );

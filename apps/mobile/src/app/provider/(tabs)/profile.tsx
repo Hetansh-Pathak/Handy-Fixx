@@ -126,9 +126,9 @@ export default function ProviderProfile() {
           <MenuRow icon={IdCard} label="Identity check" detail={KYC_LABEL[kyc] ?? kyc} onPress={() => router.push("/provider/kyc")} />
           <MenuRow icon={Bell} label="Notifications" onPress={() => router.push("/provider/notifications")} />
           <MenuRow icon={CircleHelp} label="Help & support" detail="Fees, requests and payouts" onPress={() => router.push("/provider/help")} />
-          <MenuRow icon={Info} label="About HandyFix" onPress={() => router.push("/provider/about")} />
+          <MenuRow icon={Info} label="About apnabanda" onPress={() => router.push("/provider/about")} />
           {env.customerAppUrl ? (
-            <MenuRow icon={ShoppingBag} label="Book a service for yourself" detail="Get the HandyFix app" onPress={() => void Linking.openURL(env.customerAppUrl)} />
+            <MenuRow icon={ShoppingBag} label="Book a service for yourself" detail="Get the apnabanda app" onPress={() => void Linking.openURL(env.customerAppUrl)} />
           ) : null}
         </MenuGroup>
 
@@ -139,7 +139,7 @@ export default function ProviderProfile() {
           <MenuRow icon={Trash2} label="Delete account" danger onPress={() => router.push("/provider/delete-account")} />
         </MenuGroup>
 
-        <Text className="text-center text-xs text-muted">{email ? `${email} · ` : ""}HandyFix Pro {Constants.expoConfig?.version ?? ""}</Text>
+        <Text className="text-center text-xs text-muted">{email ? `${email} · ` : ""}apnabanda Pro {Constants.expoConfig?.version ?? ""}</Text>
       </ScrollView>
     </SafeAreaView></ScreenBackground>
   );

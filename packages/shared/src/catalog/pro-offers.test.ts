@@ -24,7 +24,7 @@ describe("offersSubItem", () => {
 
 describe("ownSubItemRate", () => {
   const band = { min: 249, max: 449 };
-  it("returns the pro's rate as a number, null for HandyFix price, zero or unknown", () => {
+  it("returns the pro's rate as a number, null for apnabanda price, zero or unknown", () => {
     expect(ownSubItemRate(offers, "p1", "leak", band)).toBe(349);
     expect(ownSubItemRate(offers, "p1", "tap", band)).toBeNull();
     expect(ownSubItemRate(offers, "p2", "tap", band)).toBeNull();
@@ -48,7 +48,7 @@ describe("readBand", () => {
 
 describe("checkOwnRate", () => {
   const band = { min: 249, max: 449 };
-  it("blank means the HandyFix price", () => {
+  it("blank means the apnabanda price", () => {
     expect(checkOwnRate("  ", band)).toEqual({ ok: true, price: null });
     expect(checkOwnRate("", { min: null, max: null })).toEqual({ ok: true, price: null });
   });
@@ -62,13 +62,13 @@ describe("checkOwnRate", () => {
     expect(checkOwnRate("abc", band).ok).toBe(false);
     expect(checkOwnRate("500", band)).toEqual({ ok: false, error: "Set a price between ₹249 and ₹449." });
     expect(checkOwnRate("200", band).ok).toBe(false);
-    expect(checkOwnRate("300", { min: null, max: null })).toEqual({ ok: false, error: "HandyFix has not set a price range for this job yet." });
+    expect(checkOwnRate("300", { min: null, max: null })).toEqual({ ok: false, error: "apnabanda has not set a price range for this job yet." });
   });
 });
 
 describe("offerRowsForService", () => {
   const subItemIds = ["a", "b", "c"];
-  it("stores nothing when every job is ticked at the HandyFix price", () => {
+  it("stores nothing when every job is ticked at the apnabanda price", () => {
     expect(offerRowsForService({ subItemIds, ticked: new Set(subItemIds), rates: new Map() })).toEqual([]);
   });
   it("stores the ticked jobs when some are left out", () => {

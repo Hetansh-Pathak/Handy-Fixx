@@ -189,7 +189,7 @@ export default function ServiceScreen() {
           <Text className="text-base font-semibold text-fg">No pros online{area.trim() ? ` in ${area.trim()}` : ""} right now</Text>
           <Body muted>
             {providers.data.offlineCount
-              ? `${providers.data.offlineCount} ${providers.data.offlineCount === 1 ? "pro covers" : "pros cover"} ${area.trim() || "this service"} but ${providers.data.offlineCount === 1 ? "is" : "are"} offline. Pros appear here while they have the HandyFix Pro app open and are online.`
+              ? `${providers.data.offlineCount} ${providers.data.offlineCount === 1 ? "pro covers" : "pros cover"} ${area.trim() || "this service"} but ${providers.data.offlineCount === 1 ? "is" : "are"} offline. Pros appear here while they have the apnabanda Pro app open and are online.`
               : area.trim()
                 ? `No pro covers ${area.trim()} for this service yet. Try a nearby city or your 6-digit pincode.`
                 : "Pros appear here while they have the app open. Try again in a moment."}

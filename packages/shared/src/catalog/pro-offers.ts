@@ -72,7 +72,7 @@ export function checkOwnRate(input: string, band: StoredBand): OwnRateCheck {
   if (!/^\d+$/.test(text)) return { ok: false, error: "Enter whole rupees, for example 349." };
   const price = Number(text);
   const range = readBand(band);
-  if (!range) return { ok: false, error: "HandyFix has not set a price range for this job yet." };
+  if (!range) return { ok: false, error: "apnabanda has not set a price range for this job yet." };
   if (!checkRate(price, range).ok) return { ok: false, error: `Set a price between ₹${range.min} and ₹${range.max}.` };
   return { ok: true, price };
 }

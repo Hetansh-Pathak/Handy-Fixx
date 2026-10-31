@@ -1,6 +1,6 @@
-# HandyFix
+# apnabanda
 
-HandyFix is a home-services marketplace that connects customers with verified local professionals. The repository is a monorepo being migrated from three Vite web apps to a single **React Native + Expo** mobile app (customer and provider roles) with a web admin panel, shared TypeScript logic and a Supabase backend.
+apnabanda is a home-services marketplace that connects customers with verified local professionals. The repository is a monorepo being migrated from three Vite web apps to a single **React Native + Expo** mobile app (customer and provider roles) with a web admin panel, shared TypeScript logic and a Supabase backend.
 
 > **Migration status:** Phases 0 to 2 (clean baseline, monorepo, shared logic) are done and `apps/mobile` exists as an app shell with native-risk check screens (Phase 3: run `apps/mobile/SPIKE.md` on a real Android phone). The old web apps were removed on 2026-11-01; `apps/mobile` is the customer and Pro app.
 
@@ -14,7 +14,7 @@ HandyFix is a home-services marketplace that connects customers with verified lo
 - Create an account, sign in, and reset a password
 - Book a provider and view booking confirmations
 - Manage profile, notifications, and booking history
-- Apply to become a HandyFix professional
+- Apply to become a apnabanda professional
 - Live map view of assigned provider location
 
 ### Provider application (`provider-app`)
@@ -94,14 +94,14 @@ supabase functions deploy verify-customer-otp
 supabase secrets set \
   BREVO_API_KEY=<your-brevo-api-key> \
   BREVO_SENDER_EMAIL=<verified-sender@yourdomain.com> \
-  BREVO_SENDER_NAME=HandyFix
+  BREVO_SENDER_NAME=apnabanda
 ```
 
 | Secret | Required | Description |
 |---|---|---|
 | `BREVO_API_KEY` | ✅ | Brevo SMTP & API key (v3) |
 | `BREVO_SENDER_EMAIL` | ✅ | Sender address verified in Brevo |
-| `BREVO_SENDER_NAME` | optional | Display name (default: `HandyFix`) |
+| `BREVO_SENDER_NAME` | optional | Display name (default: `apnabanda`) |
 
 ### 4. Install and run
 

@@ -67,7 +67,7 @@ export async function uploadProviderAvatar(args: { userId: string; providerId: s
 
   const up = await supabase.storage.from(AVATAR_BUCKET).upload(path, bytes, { contentType: mime, upsert: false });
   if (up.error) {
-    throw new Error(notSwitchedOn(up.error.message) ? "Profile photos are not switched on yet. Ask the HandyFix team to enable them." : up.error.message);
+    throw new Error(notSwitchedOn(up.error.message) ? "Profile photos are not switched on yet. Ask the apnabanda team to enable them." : up.error.message);
   }
   const url = supabase.storage.from(AVATAR_BUCKET).getPublicUrl(path).data.publicUrl;
   const { error } = await supabase.from("service_providers").update({ avatar_url: url }).eq("id", args.providerId);

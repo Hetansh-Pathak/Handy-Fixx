@@ -27,7 +27,7 @@ describe("partner terms", () => {
   });
 
   it("is a new version, because the data wording changed (no Aadhaar, encrypted PAN)", () => {
-    expect(TERMS_VERSION).toBe("v1.3");
+    expect(TERMS_VERSION).toBe("v1.4");
   });
 
   it("does not ask for Aadhaar and says the PAN is stored encrypted", () => {

@@ -31,7 +31,7 @@ export default function LocationCheck() {
       distanceInterval: 10,
       pausesUpdatesAutomatically: false,
       foregroundService: {
-        notificationTitle: "HandyFix: sharing your location",
+        notificationTitle: "apnabanda: sharing your location",
         notificationBody: "The customer can see you are on the way.",
         notificationColor: "#1F5BFF",
       },

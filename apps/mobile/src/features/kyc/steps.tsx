@@ -19,7 +19,7 @@ const ICONS: Record<number, LucideIcon> = { 1: User, 2: Calendar, 3: Camera, 4: 
 
 const COPY: Record<number, { title: string; hint: string }> = {
   1: { title: "What is your full name?", hint: "Write it exactly as it is on your PAN card." },
-  2: { title: "When were you born?", hint: "You must be 18 or older to work on HandyFix." },
+  2: { title: "When were you born?", hint: "You must be 18 or older to work on apnabanda." },
   3: { title: "Your selfie", hint: "A clear photo of your face. We compare it with the photo on your PAN card." },
   4: { title: "PAN card", hint: "Needed for tax rules and to pay your withdrawals. We store the number encrypted and show only its last 4 characters." },
   5: { title: "Where can you work?", hint: "Add every city or pincode you can reach. Customers there can book you." },
@@ -215,7 +215,7 @@ function ReviewStep({ onEdit, onTerms }: { onEdit: (step: number) => void; onTer
           {draft.termsAccepted ? <Check size={18} color={colors.onBrand} /> : null}
         </View>
         <Text className="flex-1 text-sm leading-5 text-fg">
-          I confirm that everything I submitted is genuine and belongs to me, and I agree to the HandyFix Pro Partner Agreement.
+          I confirm that everything I submitted is genuine and belongs to me, and I agree to the apnabanda Pro Partner Agreement.
         </Text>
       </Pressable>
       <TextLink label="Read the Partner Agreement" onPress={onTerms} />

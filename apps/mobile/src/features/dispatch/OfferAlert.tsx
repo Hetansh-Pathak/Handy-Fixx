@@ -1,4 +1,4 @@
-import { formatInr, offerCardAccess, offerView, offerWhenLine, offerWhereLine, type AcceptOutcome } from "@handyfix/shared";
+import { formatInr, offerCardAccess, offerView, offerWhenLine, offerWhereLine, type AcceptOutcome, PLATFORM_FEE_LABEL } from "@handyfix/shared";
 import { useQuery } from "@tanstack/react-query";
 import { setAudioModeAsync, useAudioPlayer } from "expo-audio";
 import { BellRing, CircleCheck, Clock, MapPin, Wallet } from "lucide-react-native";
@@ -98,7 +98,7 @@ export function OfferAlert({ bookingId, more, onAccepted, onRecharge, onClose }:
                     <Text className="text-4xl font-extrabold text-price">{formatInr(c.price)}</Text>
                   </View>
                   <View className="flex-row justify-between border-t border-line pt-2">
-                    <Text className="text-sm text-muted">HandyFix fee</Text>
+                    <Text className="text-sm text-muted">{PLATFORM_FEE_LABEL}</Text>
                     <Text className="text-sm text-fg">{c.launchActive ? `${formatInr(c.fee)} waived` : formatInr(c.fee)}</Text>
                   </View>
                 </View>

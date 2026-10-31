@@ -85,7 +85,7 @@ export async function fetchKycRecord(providerId: string): Promise<KycRecord> {
 }
 
 const storageProblem = (message: string): string => {
-  if (/bucket not found/i.test(message)) return "Document upload is not switched on yet. Ask the HandyFix team to enable it.";
+  if (/bucket not found/i.test(message)) return "Document upload is not switched on yet. Ask the apnabanda team to enable it.";
   if (/row-level security|not authorized|unauthorized/i.test(message)) {
     return "Your application can no longer be edited. It may already be under review.";
   }

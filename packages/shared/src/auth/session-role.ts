@@ -38,4 +38,4 @@ export function canBecomeProvider(input: { customerBookingCount: number }): Prov
 }
 
 export const PROVIDER_BLOCKED_MESSAGE =
-  "This account has been used to book services. To work as a HandyFix Pro, sign up with a different email.";
+  "This account has been used to book services. To work as a apnabanda Pro, sign up with a different email.";

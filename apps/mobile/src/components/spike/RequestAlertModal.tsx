@@ -1,6 +1,4 @@
-import {
-  checkCanAccept, feeForServiceBill, formatInr, REQUEST_TIMEOUT_SECONDS, requestProgress, secondsRemaining,
-} from "@handyfix/shared";
+import { checkCanAccept, feeForServiceBill, formatInr, REQUEST_TIMEOUT_SECONDS, requestProgress, secondsRemaining, PLATFORM_FEE_LABEL } from "@handyfix/shared";
 import { setAudioModeAsync, useAudioPlayer } from "expo-audio";
 import { useEffect, useRef, useState } from "react";
 import { Modal, Vibration, View } from "react-native";
@@ -64,7 +62,7 @@ export function RequestAlertModal({
           <Text className="text-sm text-muted">Today · 5:00 PM · 2.4 km away · {REQUEST_TIMEOUT_SECONDS}s to accept</Text>
           <View className="mt-4 w-full gap-2 rounded-tile border border-line bg-card p-4">
             <Row label="You earn" value={formatInr(RATE)} strong />
-            <Row label="HandyFix fee" value={launchActive ? `${formatInr(fee)} waived` : formatInr(fee)} />
+            <Row label={PLATFORM_FEE_LABEL} value={launchActive ? `${formatInr(fee)} waived` : formatInr(fee)} />
           </View>
         </View>
         <View className="gap-3">

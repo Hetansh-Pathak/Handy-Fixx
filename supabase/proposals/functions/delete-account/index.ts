@@ -52,7 +52,7 @@ Deno.serve(async (req) => {
   if (provider) {
     const { data: wallet } = await asUser.rpc("get_wallet_summary");
     const summary = (Array.isArray(wallet) ? wallet[0] : wallet) as { available?: number; dues?: number } | null;
-    if (Number(summary?.dues ?? 0) > 0) return json(409, { error: "You have HandyFix fees due. Top up your wallet to clear them first." });
+    if (Number(summary?.dues ?? 0) > 0) return json(409, { error: "You have apnabanda fees due. Top up your wallet to clear them first." });
     if (Number(summary?.available ?? 0) > 0) return json(409, { error: "You still have money in your wallet. Withdraw it first." });
   }
 

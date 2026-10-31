@@ -62,7 +62,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   await P.L("Password").fill("secret123");
   await P.L("Confirm password").fill("secret123");
   await P.T("Create account").click();
-  await P.see("How will you use HandyFix?");
+  await P.see("How will you use apnabanda?");
   await P.T("I'm a pro").click();
   await P.L("Mobile number").fill("98765 43211");
   await P.T("Continue").click();
@@ -169,7 +169,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   // reviews
   await P.go("/provider/reviews");
   await P.see("No reviews yet");
-  check("an empty reviews page explains where reviews come from", await P.has("real jobs done through HandyFix"));
+  check("an empty reviews page explains where reviews come from", await P.has("real jobs done through apnabanda"));
   const pid = db.providerRows[0].id;
   (db.tables.reviews ??= []).push(
     { id: "r1", provider_id: pid, rating: 5, comment: "Fixed it fast.", reviewer_name: "Priya Sharma", service_name: "Plumbing", created_at: new Date().toISOString() },
@@ -206,7 +206,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   await C.L("Password").fill("secret123");
   await C.L("Confirm password").fill("secret123");
   await C.T("Create account").click();
-  await C.see("How will you use HandyFix?");
+  await C.see("How will you use apnabanda?");
   await C.T("I need a service").click();
   await C.T("Continue").click();
   await C.waitBody("What do you need fixed today?");

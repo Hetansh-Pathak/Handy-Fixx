@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Checks (and with --fix repairs) the local Supabase settings of every HandyFix app.
+// Checks (and with --fix repairs) the local Supabase settings of every apnabanda app.
 //
 //   node scripts/env-doctor.mjs          check only, changes nothing
 //   node scripts/env-doctor.mjs --fix    create or repair the missing .env.local files
@@ -50,7 +50,7 @@ async function countServices(url, key) {
 }
 
 let problems = 0;
-console.log(fix ? "HandyFix env doctor (fix mode)\n" : "HandyFix env doctor (check only; add --fix to repair)\n");
+console.log(fix ? "apnabanda env doctor (fix mode)\n" : "apnabanda env doctor (check only; add --fix to repair)\n");
 if (!CANON_URL || !CANON_KEY) {
   console.log("! apps/admin/.env.example has no project URL/key, so I cannot repair files automatically.\n");
 }
@@ -106,7 +106,7 @@ for (const app of apps) {
       } else {
         status = `PROBLEM: ${host} answers but has 0 active services (wrong or empty project?)`;
         problems++;
-        if (CANON_URL && url !== CANON_URL) notes.push(`the HandyFix project is ${CANON_URL}`);
+        if (CANON_URL && url !== CANON_URL) notes.push(`the apnabanda project is ${CANON_URL}`);
       }
     } catch (e) {
       status = `PROBLEM: cannot read services from ${url} (${e instanceof Error ? e.message : e})`;

@@ -129,7 +129,7 @@ export default function WalletScreen() {
         ) : null}
         {rt.launch.active
           ? <Text className="text-sm text-ok">{launchLine(rt.launch)}. No fee is taken.</Text>
-          : <Text className="text-sm text-muted">HandyFix fee: {FEE_RULE_LABEL}. Reserved when you accept, taken when the job completes. Customers pay you directly or online in the app.</Text>}
+          : <Text className="text-sm text-muted">apnabanda fee: {FEE_RULE_LABEL}. Reserved when you accept, taken when the job completes. Customers pay you directly or online in the app.</Text>}
       </HeroCard>
 
       <Card>
@@ -175,7 +175,7 @@ export default function WalletScreen() {
         <Line label="Today" value={formatInr(earnings.todayTotal)} />
         <Line label="This month" value={`${formatInr(earnings.monthTotal)} · ${earnings.monthJobs} job${earnings.monthJobs === 1 ? "" : "s"}`} />
         <Line label="All time" value={`${formatInr(earnings.total)} · ${earnings.jobs} job${earnings.jobs === 1 ? "" : "s"}`} />
-        <Text className="text-xs text-muted">What customers paid for completed jobs (directly or online), before the HandyFix fee.</Text>
+        <Text className="text-xs text-muted">What customers paid for completed jobs (directly or online), before the apnabanda fee.</Text>
       </Card>
 
       <Card>

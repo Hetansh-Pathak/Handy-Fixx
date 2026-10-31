@@ -46,7 +46,7 @@ const check = (name, ok, extra = "") => {
   await L("Password").fill("secret123");
   await L("Confirm password").fill("secret123");
   await T("Create account").click();
-  await see("How will you use HandyFix?");
+  await see("How will you use apnabanda?");
   await T("I'm a pro").click();
   await L("Mobile number").fill("98765 43211");
   await T("Continue").click();
@@ -83,7 +83,7 @@ const check = (name, ok, extra = "") => {
   await see("Tap repair");
   const text = await body();
   check("the alert shows the job, 'about 1.5 km away', the area, Now, the note, the earning and the fee",
-    ["about 1.5 km away · jamnagar, 361008", "now", "kitchen tap drips", "you earn", "₹199", "handyfix fee", "₹15"].every((t) => text.includes(t)), text.slice(0, 400));
+    ["about 1.5 km away · jamnagar, 361008", "now", "kitchen tap drips", "you earn", "₹199", "apnabanda fee", "₹15"].every((t) => text.includes(t)), text.slice(0, 400));
   check("never the customer's address, name or phone before accepting", !/mg road|flat 4|meera|98765 ?00001/.test(text));
   check("no countdown: one Accept button, and 'Later'", (await page.getByText("Accept", { exact: true }).locator("visible=true").count()) >= 1 && (await has("No timer")) && !/\b\d+ ?s left\b/.test(text));
   await shot("90-pro-offer-dark");

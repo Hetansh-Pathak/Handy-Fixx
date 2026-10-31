@@ -253,9 +253,9 @@ export function ProviderRuntime({ children }: { children: ReactNode }) {
           try {
             const perm = await ensureBackgroundLocation();
             if (perm === "granted") await startPresence(providerId);
-            else setNotice("Keep HandyFix open to receive requests. Allow location “all the time” to stay online when the app is closed.");
+            else setNotice("Keep apnabanda open to receive requests. Allow location “all the time” to stay online when the app is closed.");
           } catch {
-            setNotice("Keep HandyFix open to receive requests (background mode needs the phone app).");
+            setNotice("Keep apnabanda open to receive requests (background mode needs the phone app).");
           }
         }
       }

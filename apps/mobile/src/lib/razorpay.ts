@@ -25,7 +25,7 @@ export type CheckoutResult =
 export type CheckoutOptions = { description?: string; webMessage?: string };
 
 export async function openCheckout(order: CheckoutOrder, options: CheckoutOptions = {}): Promise<CheckoutResult> {
-  if (Platform.OS === "web") throw new Error(options.webMessage ?? "Top-up works in the HandyFix phone app.");
+  if (Platform.OS === "web") throw new Error(options.webMessage ?? "Top-up works in the apnabanda phone app.");
   const { default: RazorpayCheckout } = await import("react-native-razorpay");
   try {
     const data: Partial<CheckoutPayment> = await RazorpayCheckout.open({

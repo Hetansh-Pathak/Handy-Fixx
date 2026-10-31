@@ -93,11 +93,11 @@ serve(async (req: Request) => {
     const closeBy = Math.floor(Date.now() / 1000) + 30 * 60; // 30 minutes
     const qr = await razorpay("/payments/qr_codes", "POST", {
       type: "upi_qr",
-      name: `HandyFix #${booking.id.slice(0, 8).toUpperCase()}`,
+      name: `apnabanda #${booking.id.slice(0, 8).toUpperCase()}`,
       usage: "single_use",
       fixed_amount: true,
       payment_amount: Math.round(total * 100),
-      description: `HandyFix booking #${booking.id.slice(0, 8).toUpperCase()}`,
+      description: `apnabanda booking #${booking.id.slice(0, 8).toUpperCase()}`,
       close_by: closeBy,
       notes: { booking_id: booking.id, provider_id: provider.id, purpose: "booking_payment" },
     });

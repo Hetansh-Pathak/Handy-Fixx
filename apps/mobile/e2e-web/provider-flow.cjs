@@ -69,7 +69,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   await L("Password").fill("secret123");
   await L("Confirm password").fill("secret123");
   await T("Create account").click();
-  await see("How will you use HandyFix?");
+  await see("How will you use apnabanda?");
   await T("I'm a pro").click();
   await L("Mobile number").fill("98765 43211");
   await T("Continue").click();
@@ -103,13 +103,13 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   check("a request arrives by Realtime well before the 8 s polling fallback", dt < 6000, `${dt} ms`);
   const popupText = await body();
   check("the popup shows the request, what the pro earns and the 3% fee (waived in launch), with no timer",
-    popupText.includes("Kitchen tap leaks") && popupText.includes("You earn ₹349") && popupText.includes("HandyFix fee ₹10 waived") && popupText.includes("No timer") && !/seconds/i.test(popupText), popupText.slice(0, 260));
+    popupText.includes("Kitchen tap leaks") && popupText.includes("You earn ₹349") && popupText.includes("apnabanda fee ₹10 waived") && popupText.includes("No timer") && !/seconds/i.test(popupText), popupText.slice(0, 260));
   await sleep(700);
   await shot("32-request-popup");
   await openRequest();
   const alertText = await body();
   check("the request screen shows the earning and the fee before deciding (fee waived in launch)",
-    alertText.includes("You earn ₹349") && alertText.includes("HandyFix fee ₹10 waived") && alertText.includes("You keep ₹349"), alertText.slice(0, 260));
+    alertText.includes("You earn ₹349") && alertText.includes("apnabanda fee ₹10 waived") && alertText.includes("You keep ₹349"), alertText.slice(0, 260));
   check("the customer's phone is not shown before accepting", !alertText.includes("9876500001"));
   await T("Accept").click();
   await see("Ready to start");
@@ -131,7 +131,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   check("a job that just started shows no 'Problem closing the job?' prompt", !(await has("Problem closing the job?")));
   db.storedBookings.find((b) => b.id === r1.id).started_at = new Date(Date.now() - 3 * 3600000).toISOString();
   await waitBody("Problem closing the job?", 20000)
-    .then(async () => check("after 2 hours in progress the pro sees 'Problem closing the job?' and is told not to ask for the code early", (await has("Do not ask for the code before the work is finished")) && (await count("Email HandyFix")) >= 1))
+    .then(async () => check("after 2 hours in progress the pro sees 'Problem closing the job?' and is told not to ask for the code early", (await has("Do not ask for the code before the work is finished")) && (await count("Email apnabanda")) >= 1))
     .catch(async () => check("after 2 hours in progress the pro sees 'Problem closing the job?' and is told not to ask for the code early", false, (await body()).slice(0, 300)));
   await L("Customer's code").fill("12");
   await T("Enter customer's code").click();
@@ -145,7 +145,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   await see("Job completed");
   const doneText = await body();
   check("the right code completes the job; the fee is shown as waived and nothing is charged in launch",
-    db.storedBookings.find((b) => b.id === r1.id).status === "completed" && doneText.includes("HandyFix fee ₹10 waived") && doneText.includes("You keep ₹349") && db.wallet.available === 0);
+    db.storedBookings.find((b) => b.id === r1.id).status === "completed" && doneText.includes("apnabanda fee ₹10 waived") && doneText.includes("You keep ₹349") && db.wallet.available === 0);
   await shot("34-job-completed");
   await T("Done").click();
 
@@ -181,7 +181,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   await openRequest();
   const blockedText = await body();
   check("with an empty wallet the request says to recharge the ₹49 pack and Accept is disabled",
-    blockedText.includes("Recharge ₹49 to accept. Your wallet is below the ₹10 fee.") && blockedText.includes("HandyFix fee ₹10") && !blockedText.includes("waived"), blockedText.slice(0, 260));
+    blockedText.includes("Recharge ₹49 to accept. Your wallet is below the ₹10 fee.") && blockedText.includes("apnabanda fee ₹10") && !blockedText.includes("waived"), blockedText.slice(0, 260));
   const acceptBtn = page.locator('[aria-disabled="true"]:visible', { hasText: /^Accept$/ });
   check("Accept is disabled", (await acceptBtn.count()) >= 1);
   check("a Recharge button leads to the wallet", (await count("Recharge ₹49 to accept")) >= 1);
@@ -215,7 +215,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   pushBookingChange(r4);
   await alertUp(6000);
   await openRequest();
-  check("with ₹200 the fee is charged (not waived) and Accept works", (await body()).includes("HandyFix fee ₹10") && !(await body()).includes("waived"));
+  check("with ₹200 the fee is charged (not waived) and Accept works", (await body()).includes("apnabanda fee ₹10") && !(await body()).includes("waived"));
   await T("Accept").click();
   await see("Ready to start");
   check("accepting holds the ₹10 fee (spendable ₹190, held ₹10)", db.wallet.available === 190 && db.wallet.held === 10, JSON.stringify(db.wallet));
@@ -227,7 +227,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   await T("Enter customer's code").click();
   await see("Job completed");
   const paid = await body();
-  check("completing a job outside the launch period charges the held 3% fee", db.wallet.available === 190 && db.wallet.held === 0 && paid.includes("HandyFix fee ₹10") && paid.includes("You keep ₹339"), JSON.stringify(db.wallet));
+  check("completing a job outside the launch period charges the held 3% fee", db.wallet.available === 190 && db.wallet.held === 0 && paid.includes("apnabanda fee ₹10") && paid.includes("You keep ₹339"), JSON.stringify(db.wallet));
   await T("Done").click();
   await see("Jobs");
   await T("Home", true).click();

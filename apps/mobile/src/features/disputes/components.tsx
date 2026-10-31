@@ -61,7 +61,7 @@ function DisputeSummary({ d, side, onAppeal, onReply }: {
       {d.decision_note ? <Text className="text-sm text-muted">Admin's reason: {d.decision_note}</Text> : null}
       {actions.canReply && onReply ? <NoteForm label="Your side (photos and notes help)" button="Send reply" min={DISPUTE_REPLY_MIN} onSubmit={onReply} /> : null}
       {actions.canAppeal ? <NoteForm label="Appeal once: why should a second admin look again?" button="Appeal" min={DISPUTE_APPEAL_MIN} onSubmit={onAppeal} /> : null}
-      <Text className="text-xs text-muted">HandyFix attached the job timeline (price, trip, arrival, code time and approved extras). Everything is kept in the audit log.</Text>
+      <Text className="text-xs text-muted">apnabanda attached the job timeline (price, trip, arrival, code time and approved extras). Everything is kept in the audit log.</Text>
     </Card>
   );
 }
@@ -124,7 +124,7 @@ export function CustomerDispute({ bookingId, completedAt }: { bookingId: string;
         {reasons.map((r) => <Chip key={r} label={DISPUTE_REASON_LABEL[r]} selected={reason === r} onPress={() => { setReason(r); setError(null); }} />)}
       </View>
       {reason && isSafetyReport(reason) ? (
-        <InfoBanner message="Safety reports skip the queue: the pro is suspended at once while HandyFix looks into it. If you are in danger, call 112." />
+        <InfoBanner message="Safety reports skip the queue: the pro is suspended at once while apnabanda looks into it. If you are in danger, call 112." />
       ) : null}
       <TextField label="Describe what happened" value={details} onChangeText={setDetails} multiline maxLength={1000} placeholder="The tap still leaks after the repair." />
       <Button label="Send report" loading={busy} onPress={() => void submit()} />

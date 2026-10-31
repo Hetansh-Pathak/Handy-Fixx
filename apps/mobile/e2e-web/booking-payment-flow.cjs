@@ -45,7 +45,7 @@ const check = (name, ok, extra = "") => {
   await L("Password").fill("secret123");
   await L("Confirm password").fill("secret123");
   await T("Create account").click();
-  await T("How will you use HandyFix?", false).waitFor({ state: "visible" });
+  await T("How will you use apnabanda?", false).waitFor({ state: "visible" });
   await T("I need a service").click();
   await T("Continue").click();
   await waitBody("What do you need fixed today?");

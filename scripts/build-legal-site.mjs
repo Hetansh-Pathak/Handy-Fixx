@@ -32,9 +32,9 @@ for (const d of docs) await writeFile(resolve(out, files[d.key]), legal.renderLe
 
 const e = legal.escapeHtml;
 await writeFile(resolve(out, "index.html"), `<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>HandyFix</title>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>apnabanda</title>
 <style>:root{color-scheme:light dark}body{font:16px/1.6 system-ui,sans-serif;max-width:640px;margin:0 auto;padding:32px 16px}a{color:#1745c7}@media (prefers-color-scheme:dark){body{background:#05070d;color:#f4f7ff}a{color:#a8c6ff}}</style></head>
-<body><h1>HandyFix</h1><p>Verified home-service professionals in your city.</p><ul>
+<body><h1>apnabanda</h1><p>Verified home-service professionals in your city.</p><ul>
 ${docs.map((d) => `<li><a href="${files[d.key]}">${e(d.title)}</a></li>`).join("\n")}
 </ul><p>Questions: <a href="mailto:${e(ctx.supportEmail)}">${e(ctx.supportEmail)}</a></p></body></html>
 `, "utf8");

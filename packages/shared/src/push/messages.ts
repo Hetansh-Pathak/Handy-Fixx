@@ -1,3 +1,4 @@
+import { APP_NAME, APP_NAME_PRO } from "../brand";
 /**
  * What a phone notification says, for each event HandyFix already records in provider_notifications and
  * customer_notifications. One source of truth: the Edge Function that sends the push (supabase/proposals/functions/
@@ -50,19 +51,19 @@ export function bookingIdOf(row: PushNotificationRow): string | undefined {
 type Spec = { kind: string; title: string; body: string; loud?: boolean; useRowBody?: boolean };
 
 const PROVIDER: Record<string, Spec> = {
-  new_booking: { kind: "new_request", title: "New job request", body: "Open HandyFix Pro to see the details, then accept or decline.", loud: true },
+  new_booking: { kind: "new_request", title: "New job request", body: `Open ${APP_NAME_PRO} to see the details, then accept or decline.`, loud: true },
   booking_cancelled: { kind: "booking_cancelled", title: "Booking cancelled", body: "A customer cancelled a booking. Nothing was charged." },
   new_review: { kind: "new_review", title: "New review", body: "A customer reviewed your work." },
   kyc_approved: { kind: "kyc_approved", title: "You are approved", body: "Your identity check passed. Go online to start getting requests." },
-  kyc_rejected: { kind: "kyc_rejected", title: "Your application needs a fix", body: "Open HandyFix Pro to see what to change." },
+  kyc_rejected: { kind: "kyc_rejected", title: "Your application needs a fix", body: `Open ${APP_NAME_PRO} to see what to change.` },
 };
 
 const CUSTOMER: Record<string, Spec> = {
-  booking_confirmed: { kind: "booking_confirmed", title: "Your pro accepted", body: "Your booking is confirmed. Open HandyFix to follow it." },
-  provider_on_the_way: { kind: "on_the_way", title: "Your pro is on the way", body: "Open HandyFix to follow them live." },
+  booking_confirmed: { kind: "booking_confirmed", title: "Your pro accepted", body: `Your booking is confirmed. Open ${APP_NAME} to follow it.` },
+  provider_on_the_way: { kind: "on_the_way", title: "Your pro is on the way", body: `Open ${APP_NAME} to follow them live.` },
   job_started: { kind: "job_started", title: "Your pro started the job", body: "Approve any extra work in the app. Share your code only when the work is done." },
   job_completed: { kind: "job_completed", title: "Job completed", body: "How did it go? Rate your pro in the app." },
-  booking_cancelled: { kind: "booking_cancelled", title: "Booking cancelled", body: "Open HandyFix to book again or pick another pro." },
+  booking_cancelled: { kind: "booking_cancelled", title: "Booking cancelled", body: `Open ${APP_NAME} to book again or pick another pro.` },
   new_message: { kind: "new_message", title: "New message", body: "Your pro sent you a message.", useRowBody: true },
 };
 

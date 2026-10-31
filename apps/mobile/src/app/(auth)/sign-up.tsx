@@ -34,7 +34,7 @@ export default function SignUp() {
   return (
     <AuthShell>
       <Title>Create your account</Title>
-      <Body muted>{env.appVariant === "provider" ? "Join HandyFix Pro and start receiving jobs." : env.appVariant === "customer" ? "Book trusted pros for any home service." : "One account, one role. You choose customer or pro on the next step."}</Body>
+      <Body muted>{env.appVariant === "provider" ? "Join apnabanda Pro and start receiving jobs." : env.appVariant === "customer" ? "Book trusted pros for any home service." : "One account, one role. You choose customer or pro on the next step."}</Body>
       <ErrorBanner message={error} />
       <InfoBanner message={notice} />
       <TextField label="Full name" value={form.values.fullName} onChangeText={form.set("fullName")} error={form.errors.fullName}

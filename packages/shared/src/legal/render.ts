@@ -1,3 +1,4 @@
+import { APP_NAME } from "../brand";
 import { accountDeletion } from "./deletion";
 import { privacyPolicy } from "./privacy";
 import { termsOfUse } from "./terms";
@@ -34,7 +35,7 @@ export function renderLegalHtml(doc: LegalDoc, ctx: LegalContext, nav: { key: Le
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>${escapeHtml(doc.title)} · HandyFix</title>
+<title>${escapeHtml(doc.title)} · ${APP_NAME}</title>
 <meta name="description" content="${escapeHtml(doc.intro.slice(0, 150))}">
 <style>
 :root{color-scheme:light dark;--bg:#f6f8fc;--card:#fff;--fg:#0b1b3a;--muted:#45557a;--line:#e1e8f7;--brand:#1745c7}

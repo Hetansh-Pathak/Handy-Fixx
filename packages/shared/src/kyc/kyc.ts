@@ -14,7 +14,7 @@ export const KYC_STEP_LABELS: Record<number, string> = {
   8: "Review & Submit",
 };
 
-export const TERMS_VERSION = "v1.3";
+export const TERMS_VERSION = "v1.4";
 
 export const KYC_ALLOWED_MIME = ["image/jpeg", "image/png", "image/webp", "application/pdf"] as const;
 export const KYC_MAX_FILE_SIZE = 5 * 1024 * 1024;

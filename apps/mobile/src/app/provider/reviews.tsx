@@ -31,7 +31,7 @@ export default function ProviderReviews() {
         <View className="items-center gap-2 py-16">
           <Star size={40} color={colors.mutedSoft} />
           <Text className="text-lg font-semibold text-fg">No reviews yet</Text>
-          <Text className="text-center text-base text-muted">After a customer closes a job with their code, they can rate you. Reviews only come from real jobs done through HandyFix.</Text>
+          <Text className="text-center text-base text-muted">After a customer closes a job with their code, they can rate you. Reviews only come from real jobs done through apnabanda.</Text>
         </View>
       ) : null}
 

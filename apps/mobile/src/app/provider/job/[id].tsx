@@ -1,8 +1,4 @@
-import {
-  canDecline, COMPLETION_CODE_LENGTH, declinePatch, formatBookingWhen,
-  formatInr, interpretCompletion, isCompletionCode, isPatchAction, isRequestOpen, jobProgress, phoneVisibleToProvider, PROVIDER_ACTION_LABEL,
-  proPaymentLine, providerActionPatch, providerStatusLabel, providerStep, requestAccess, requestEconomics, settleJob, whereForProvider, type BookingStatus, type PatchAction, type Settlement,
-} from "@handyfix/shared";
+import { canDecline, COMPLETION_CODE_LENGTH, declinePatch, formatBookingWhen, formatInr, interpretCompletion, isCompletionCode, isPatchAction, isRequestOpen, jobProgress, phoneVisibleToProvider, PROVIDER_ACTION_LABEL, proPaymentLine, providerActionPatch, providerStatusLabel, providerStep, requestAccess, requestEconomics, settleJob, whereForProvider, type BookingStatus, type PatchAction, type Settlement, APP_NAME, PLATFORM_FEE_LABEL } from "@handyfix/shared";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
@@ -100,7 +96,7 @@ export default function JobScreen() {
           const perm = await ensureBackgroundLocation();
           if (perm === "denied") throw new Error("Location permission denied.");
           await startJobTracking({ bookingId: booking.id, userId, providerId, destination });
-          if (perm === "foreground_only") setNotice("Keep HandyFix open so the customer can follow you. Allow location “all the time” to share while it is closed.");
+          if (perm === "foreground_only") setNotice(`Keep ${APP_NAME} open so the customer can follow you. Allow location “all the time” to share while it is closed.`);
         } catch (e) {
           // The trip has started either way; sharing the position is best effort.
           setNotice(e instanceof Error && e.message !== "Location permission denied." ? "Live location needs the phone app." : "Live location is off. Allow location so the customer can see you.");
@@ -183,7 +179,7 @@ export default function JobScreen() {
           <Text className="text-sm font-semibold text-muted">You earn</Text>
           <Text className="text-4xl font-extrabold text-price">{formatInr(economics.earning)}</Text>
           <View className="my-1 h-px bg-line" />
-          <Line label="HandyFix fee" value={economics.feeWaived ? `${formatInr(economics.fee)} waived` : formatInr(economics.fee)} />
+          <Line label={PLATFORM_FEE_LABEL} value={economics.feeWaived ? `${formatInr(economics.fee)} waived` : formatInr(economics.fee)} />
           <Line label="You keep" value={formatInr(economics.youKeep)} />
           <Text className="text-xs text-muted">The customer pays you directly by UPI or cash. The fee is reserved in your wallet when you accept and taken only when the job completes.</Text>
         </HeroCard>
@@ -251,13 +247,13 @@ export default function JobScreen() {
           {feeRecord.data ? (
             <>
               <Line label="Service bill for the fee" value={formatInr(feeRecord.data.service_bill)} />
-              <Line label="HandyFix fee" value={feeRecord.data.waived > 0 ? `${formatInr(feeRecord.data.slab_fee)} waived` : formatInr(feeRecord.data.charged)} />
+              <Line label={PLATFORM_FEE_LABEL} value={feeRecord.data.waived > 0 ? `${formatInr(feeRecord.data.slab_fee)} waived` : formatInr(feeRecord.data.charged)} />
               {feeRecord.data.refunded > 0 ? <Line label="Fee returned" value={formatInr(feeRecord.data.refunded)} /> : null}
               <Line label="You keep" value={formatInr(Number(booking.total_amount ?? price) - feeRecord.data.charged + feeRecord.data.refunded)} strong />
             </>
           ) : settlement ? (
             <>
-              <Line label="HandyFix fee" value={settlement.waived > 0 ? `${formatInr(settlement.fee)} waived` : formatInr(settlement.deducted)} />
+              <Line label={PLATFORM_FEE_LABEL} value={settlement.waived > 0 ? `${formatInr(settlement.fee)} waived` : formatInr(settlement.deducted)} />
               <Line label="You keep" value={formatInr(settlement.providerNet)} strong />
             </>
           ) : null}

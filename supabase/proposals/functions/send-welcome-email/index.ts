@@ -19,14 +19,14 @@ const html = (nameHtml: string, email: string, isLogin: boolean) => `<!doctype h
 <html><head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" /></head>
 <body style="margin:0;background:#0f0f0f;font-family:Segoe UI,Arial,sans-serif"><div style="max-width:600px;margin:auto;padding:40px 20px">
 <div style="background:#1a1a1a;border:1px solid #2a2a2a;border-radius:16px;overflow:hidden">
-<div style="padding:36px 32px;text-align:center;background:linear-gradient(135deg,#d4a017,#f5c842)"><h1 style="margin:0;color:#0f0f0f;font-size:28px">HandyFix</h1>
+<div style="padding:36px 32px;text-align:center;background:linear-gradient(135deg,#d4a017,#f5c842)"><h1 style="margin:0;color:#0f0f0f;font-size:28px">apnabanda</h1>
 <p style="margin:8px 0 0;color:#0f0f0f;font-size:14px">Your Trusted Home Services Marketplace</p></div>
 <div style="padding:32px"><p style="margin:0 0 12px;color:#f5f5f5;font-size:20px;font-weight:700">${isLogin ? `Welcome back, ${nameHtml}!` : `Welcome aboard, ${nameHtml}!`}</p>
 <p style="color:#a0a0a0;font-size:15px;line-height:1.7">${isLogin
-  ? "You have signed in to HandyFix. Your home services are ready whenever you need them."
-  : "Your HandyFix account is ready. Book verified, skilled professionals in your area."}</p>
+  ? "You have signed in to apnabanda. Your home services are ready whenever you need them."
+  : "Your apnabanda account is ready. Book verified, skilled professionals in your area."}</p>
 <p style="color:#ccc;font-size:14px">Email: <span style="color:#f5c842">${escapeHtml(email)}</span></p></div>
-<div style="padding:24px 32px;border-top:1px solid #222;text-align:center;color:#555;font-size:12px">© 2026 HandyFix. If this was not you, contact support.</div>
+<div style="padding:24px 32px;border-top:1px solid #222;text-align:center;color:#555;font-size:12px">© 2026 apnabanda. If this was not you, contact support.</div>
 </div></div></body></html>`;
 
 serve(createWelcomeHandler({
@@ -50,9 +50,9 @@ serve(createWelcomeHandler({
       method: "POST",
       headers: { "api-key": Deno.env.get("BREVO_API_KEY") ?? "", "Content-Type": "application/json", accept: "application/json" },
       body: JSON.stringify({
-        sender: { name: Deno.env.get("BREVO_SENDER_NAME") ?? "HandyFix", email: Deno.env.get("BREVO_SENDER_EMAIL") },
+        sender: { name: Deno.env.get("BREVO_SENDER_NAME") ?? "apnabanda", email: Deno.env.get("BREVO_SENDER_EMAIL") },
         to: [{ email: to }],
-        subject: isLogin ? "Welcome back to HandyFix" : "Welcome to HandyFix",
+        subject: isLogin ? "Welcome back to apnabanda" : "Welcome to apnabanda",
         htmlContent: html(nameHtml, to, isLogin),
       }),
     });

@@ -26,7 +26,7 @@ export async function startPresence(providerId: string): Promise<void> {
     distanceInterval: 0,
     pausesUpdatesAutomatically: false,
     foregroundService: {
-      notificationTitle: "HandyFix: you are online",
+      notificationTitle: "apnabanda: you are online",
       notificationBody: "New job requests will appear on your screen.",
       notificationColor: SERVICE_COLOR,
     },
@@ -49,7 +49,7 @@ export async function startJobTracking(args: Omit<JobTrackingState, "lastEta">):
     distanceInterval: 15,
     pausesUpdatesAutomatically: false,
     foregroundService: {
-      notificationTitle: "HandyFix: sharing your location",
+      notificationTitle: "apnabanda: sharing your location",
       notificationBody: "Your customer can see you are on the way.",
       notificationColor: SERVICE_COLOR,
     },

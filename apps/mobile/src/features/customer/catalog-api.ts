@@ -113,7 +113,7 @@ export async function searchProviders(args: ProviderSearchArgs): Promise<{ listi
     if (price === null) continue; // never show a card with no price
     listings.push({
       id: p.id,
-      fullName: p.full_name?.trim() || "HandyFix Pro",
+      fullName: p.full_name?.trim() || "apnabanda Pro",
       avatarUrl: p.avatar_url,
       bio: p.bio,
       experienceYears: p.experience_years,

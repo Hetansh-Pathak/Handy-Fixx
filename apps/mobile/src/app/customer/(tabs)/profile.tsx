@@ -72,12 +72,12 @@ function ProfileMenu({ userId }: { userId: string }) {
           <MenuRow icon={House} label="Saved address" detail={address || "Add your home address"} onPress={editProfile} />
           <MenuRow icon={CircleHelp} label="Help & support" onPress={() => router.push("/customer/help")} />
           <MenuRow icon={ShieldCheck} label="Safety" onPress={() => router.push("/customer/safety")} />
-          <MenuRow icon={Info} label="About HandyFix" onPress={() => router.push("/customer/about")} />
+          <MenuRow icon={Info} label="About apnabanda" onPress={() => router.push("/customer/about")} />
         </MenuGroup>
 
         {env.proAppUrl ? (
           <MenuGroup>
-            <MenuRow icon={BriefcaseBusiness} label="Become a HandyFix Pro" detail="Earn with your skills" onPress={() => void Linking.openURL(env.proAppUrl)} />
+            <MenuRow icon={BriefcaseBusiness} label="Become a apnabanda Pro" detail="Earn with your skills" onPress={() => void Linking.openURL(env.proAppUrl)} />
           </MenuGroup>
         ) : null}
 
@@ -88,7 +88,7 @@ function ProfileMenu({ userId }: { userId: string }) {
           <MenuRow icon={Trash2} label="Delete account" danger onPress={() => router.push("/customer/delete-account")} />
         </MenuGroup>
 
-        <Text className="text-center text-xs text-muted">HandyFix {Constants.expoConfig?.version ?? ""}</Text>
+        <Text className="text-center text-xs text-muted">apnabanda {Constants.expoConfig?.version ?? ""}</Text>
       </ScrollView>
     </SafeAreaView></ScreenBackground>
   );

@@ -30,7 +30,7 @@ export type KycPanDeps = {
 };
 
 const DUPLICATE = "This PAN is already linked to another provider account. Check the number, or contact support if you think this is a mistake.";
-const BLOCKED = "We cannot accept this application. Please contact HandyFix support.";
+const BLOCKED = "We cannot accept this application. Please contact apnabanda support.";
 
 export function createKycPanHandler(deps: KycPanDeps): (req: Request) => Promise<Response> {
   return async (req) => {
@@ -41,7 +41,7 @@ export function createKycPanHandler(deps: KycPanDeps): (req: Request) => Promise
       try {
         ring = await loadKeyring(deps.env);
       } catch {
-        return json({ error: "PAN saving is not switched on yet. Ask the HandyFix team." }, 500);
+        return json({ error: "PAN saving is not switched on yet. Ask the apnabanda team." }, 500);
       }
       const userId = await deps.getUserId(req.headers.get("Authorization") ?? "");
       if (!userId) return json({ error: "Please sign in again." }, 401);

@@ -34,8 +34,8 @@ const TRUST = [
 ] as const;
 
 const REVIEWS = [
-  { name: "Priya Sharma", role: "Homeowner", text: "HandyFix saved my weekend! The plumber arrived in 30 minutes and fixed everything perfectly. Highly recommend!" },
-  { name: "Rahul Mehta", role: "Business Owner", text: "I use HandyFix for all my office repairs. Reliable, fast, and their pricing is always transparent." },
+  { name: "Priya Sharma", role: "Homeowner", text: "apnabanda saved my weekend! The plumber arrived in 30 minutes and fixed everything perfectly. Highly recommend!" },
+  { name: "Rahul Mehta", role: "Business Owner", text: "I use apnabanda for all my office repairs. Reliable, fast, and their pricing is always transparent." },
   { name: "Kavya Iyer", role: "Apartment Renter", text: "Finally a service app that actually works. Knew exactly when my pro would arrive. The cleaning was spotless!" },
 ];
 
@@ -161,7 +161,7 @@ export default function CustomerHome() {
 
           {/* How it works */}
           <View className="gap-4 px-5 pt-12">
-            <SectionHeading title="How HandyFix works" subtitle="Three simple steps to a fixed home" />
+            <SectionHeading title="How apnabanda works" subtitle="Three simple steps to a fixed home" />
             {STEPS.map((step, i) => (
               <View key={step.title} className="flex-row items-center gap-4 rounded-panel border border-line bg-card p-4">
                 <View className="h-11 w-11 items-center justify-center rounded-full bg-brand"><Text className="text-lg font-bold text-onbrand">{i + 1}</Text></View>
@@ -194,8 +194,8 @@ export default function CustomerHome() {
           <View className="mx-5 mt-12 gap-3 rounded-hero bg-strip p-6">
             <Text className="text-sm font-semibold uppercase tracking-wider text-accent">Join 2,000+ pros</Text>
             <Text className="text-2xl font-extrabold text-strip-fg">Turn your skills into daily income</Text>
-            <Text className="text-base leading-6 text-strip-fg opacity-80">Pros keep what customers pay them. HandyFix charges a small fee per completed job, and nothing for missed requests.</Text>
-            {env.proAppUrl ? <Button label="Get the HandyFix Pro app" onPress={() => void Linking.openURL(env.proAppUrl)} /> : null}
+            <Text className="text-base leading-6 text-strip-fg opacity-80">Pros keep what customers pay them. apnabanda charges a small fee per completed job, and nothing for missed requests.</Text>
+            {env.proAppUrl ? <Button label="Get the apnabanda Pro app" onPress={() => void Linking.openURL(env.proAppUrl)} /> : null}
           </View>
         </ScrollView>
       </SafeAreaView>

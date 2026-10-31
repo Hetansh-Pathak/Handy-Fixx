@@ -7,7 +7,7 @@ export function privacyPolicy(ctx: LegalContext): LegalDoc {
     title: "Privacy Policy",
     version: LEGAL_VERSION,
     updated: LEGAL_UPDATED,
-    intro: `${operator(ctx)} runs HandyFix, which helps people in your city book verified home-service professionals, and HandyFix Pro, the app those professionals use. This policy explains what we collect, why, who sees it and what you can do. We collect only what we need to run the service.`,
+    intro: `${operator(ctx)} runs apnabanda, which helps people in your city book verified home-service professionals, and apnabanda Pro, the app those professionals use. This policy explains what we collect, why, who sees it and what you can do. We collect only what we need to run the service.`,
     sections: [
       {
         heading: "1. What we collect",
@@ -33,8 +33,8 @@ export function privacyPolicy(ctx: LegalContext): LegalDoc {
         heading: "3. Who can see what",
         body: [
           "A pro sees a customer's name, the booked time and the area of a request before accepting. The full address and phone number are shown only after the pro accepts. A customer sees a pro's name, photo, rating, price and approximate area; the pro's phone number is shown only after the booking is confirmed.",
-          "Chat is private between the customer and the pro on that booking. Phone numbers cannot be sent in chat. HandyFix staff can read chats and the booking record only when needed to help with a problem or dispute.",
-          "Identity documents are kept in private storage and are opened only by the HandyFix team reviewing an application or a dispute. They are never shown to customers.",
+          "Chat is private between the customer and the pro on that booking. Phone numbers cannot be sent in chat. apnabanda staff can read chats and the booking record only when needed to help with a problem or dispute.",
+          "Identity documents are kept in private storage and are opened only by the apnabanda team reviewing an application or a dispute. They are never shown to customers.",
         ],
       },
       {
@@ -67,7 +67,7 @@ export function privacyPolicy(ctx: LegalContext): LegalDoc {
       },
       {
         heading: "8. Children",
-        body: ["HandyFix is for adults. Customers must be 18 or older to book, and pros must be 18 or older to register. We do not knowingly collect information from children."],
+        body: ["apnabanda is for adults. Customers must be 18 or older to book, and pros must be 18 or older to register. We do not knowingly collect information from children."],
       },
       {
         heading: "9. Changes",

@@ -18,7 +18,7 @@ const json = (body: unknown, status = 200) => new Response(JSON.stringify(body),
 const otpEmail = (code: string, email: string) => `<!doctype html>
 <html><head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <style>body{margin:0;background:#0f0f0f;font-family:Segoe UI,Arial,sans-serif}.wrapper{max-width:600px;margin:auto;padding:40px 20px}.card{overflow:hidden;background:#1a1a1a;border:1px solid #2a2a2a;border-radius:16px}.header{padding:40px 32px;text-align:center;background:linear-gradient(135deg,#d4a017,#f5c842)}.header h1{margin:0;color:#0f0f0f;font-size:28px;font-weight:800}.header p{margin:8px 0 0;color:#0f0f0f;font-size:14px}.body{padding:36px 32px}.title{margin:0 0 12px;color:#f5f5f5;font-size:20px;font-weight:700}.text{color:#a0a0a0;font-size:15px;line-height:1.7}.code{margin:28px 0;padding:20px;border:1px solid #55420e;border-radius:12px;background:#222;text-align:center;color:#f5c842;font-size:36px;font-weight:800;letter-spacing:10px}.footer{padding:24px 32px;border-top:1px solid #222;text-align:center;color:#555;font-size:12px}</style>
-</head><body><div class="wrapper"><div class="card"><div class="header"><h1>HandyFix</h1><p>Your Trusted Home Services Marketplace</p></div><div class="body"><p class="title">Verify your provider email</p><p class="text">Use this code to verify <strong style="color:#f5f5f5">${email}</strong>. It expires in 10 minutes.</p><div class="code">${code}</div><p class="text">If you did not request this code, you can safely ignore this email.</p></div><div class="footer">© 2026 HandyFix. All rights reserved.</div></div></div></body></html>`;
+</head><body><div class="wrapper"><div class="card"><div class="header"><h1>apnabanda</h1><p>Your Trusted Home Services Marketplace</p></div><div class="body"><p class="title">Verify your provider email</p><p class="text">Use this code to verify <strong style="color:#f5f5f5">${email}</strong>. It expires in 10 minutes.</p><div class="code">${code}</div><p class="text">If you did not request this code, you can safely ignore this email.</p></div><div class="footer">© 2026 apnabanda. All rights reserved.</div></div></div></body></html>`;
 
 serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -31,7 +31,7 @@ serve(async (req: Request) => {
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
     const brevoKey = Deno.env.get("BREVO_API_KEY");
     const senderEmail = Deno.env.get("BREVO_SENDER_EMAIL");
-    const senderName = Deno.env.get("BREVO_SENDER_NAME") ?? "HandyFix";
+    const senderName = Deno.env.get("BREVO_SENDER_NAME") ?? "apnabanda";
     if (!url || !anonKey || !serviceRoleKey || !brevoKey || !senderEmail) return json({ error: "Email verification is not configured" }, 500);
 
     const authHeader = req.headers.get("Authorization") ?? "";
@@ -65,7 +65,7 @@ serve(async (req: Request) => {
       body: JSON.stringify({
         sender: { name: senderName, email: senderEmail },
         to: [{ email: normalizedEmail }],
-        subject: "Your HandyFix verification code",
+        subject: "Your apnabanda verification code",
         htmlContent: otpEmail(otp_code, normalizedEmail),
       }),
     });

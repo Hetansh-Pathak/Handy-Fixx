@@ -7,12 +7,12 @@ export function termsOfUse(ctx: LegalContext): LegalDoc {
     title: "Terms of Use",
     version: LEGAL_VERSION,
     updated: LEGAL_UPDATED,
-    intro: `These terms are between you and ${operator(ctx)}. By creating an account or using the HandyFix apps you agree to them. If you do not agree, please do not use the apps.`,
+    intro: `These terms are between you and ${operator(ctx)}. By creating an account or using the apnabanda apps you agree to them. If you do not agree, please do not use the apps.`,
     sections: [
       {
-        heading: "1. What HandyFix is",
+        heading: "1. What apnabanda is",
         body: [
-          "HandyFix is a marketplace. We help customers find and book verified home-service professionals (\"pros\"). Pros are independent: they are not our employees, and they decide whether to accept a job. We check identity documents before a pro can work, but we do not supervise the work itself.",
+          "apnabanda is a marketplace. We help customers find and book verified home-service professionals (\"pros\"). Pros are independent: they are not our employees, and they decide whether to accept a job. We check identity documents before a pro can work, but we do not supervise the work itself.",
         ],
       },
       {
@@ -24,7 +24,7 @@ export function termsOfUse(ctx: LegalContext): LegalDoc {
       {
         heading: "3. Prices and payment",
         body: [
-          "The price shown when you book is the price you pay. It is locked when you book. It can grow only if the pro adds extra work or parts in the app and you approve them with one tap. HandyFix adds no fee for customers.",
+          "The price shown when you book is the price you pay. It is locked when you book. It can grow only if the pro adds extra work or parts in the app and you approve them with one tap. apnabanda adds no fee for customers.",
           "You pay the pro directly (by UPI or cash) after the work is done, unless the app tells you that payment happens in the app. A check-up visit has a visit fee that is always charged; if you want the repair, the pro adds it as extra work that you approve.",
           "Never pay or promise anything outside the app for a booking made through the app.",
         ],
@@ -57,7 +57,7 @@ export function termsOfUse(ctx: LegalContext): LegalDoc {
       {
         heading: "8. Our responsibility",
         body: [
-          "We work to keep the apps available and accurate, but they may sometimes be unavailable or contain mistakes. HandyFix is not responsible for the quality, timing or safety of work done by pros beyond helping resolve problems as described above. To the extent the law allows, our liability to you is limited to the amount you paid for the booking in question. Nothing here limits rights you have under the law that cannot be limited.",
+          "We work to keep the apps available and accurate, but they may sometimes be unavailable or contain mistakes. apnabanda is not responsible for the quality, timing or safety of work done by pros beyond helping resolve problems as described above. To the extent the law allows, our liability to you is limited to the amount you paid for the booking in question. Nothing here limits rights you have under the law that cannot be limited.",
         ],
       },
       {

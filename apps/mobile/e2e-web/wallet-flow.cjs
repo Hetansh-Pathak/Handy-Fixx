@@ -45,7 +45,7 @@ const check = (name, ok, extra = "") => {
   await L("Password").fill("secret123");
   await L("Confirm password").fill("secret123");
   await T("Create account").click();
-  await see("How will you use HandyFix?");
+  await see("How will you use apnabanda?");
   await T("I'm a pro").click();
   await L("Mobile number").fill("98765 43211");
   await T("Continue").click();
@@ -71,7 +71,7 @@ const check = (name, ok, extra = "") => {
   await see("Open wallet");
   await T("Open wallet").click();
   await waitBody("Recharge");
-  await waitBody("HandyFix fee");
+  await waitBody("apnabanda fee");
   const w = await body();
   check("the headline is how many jobs the balance covers (₹250 / ₹12 fee on a ₹400 job = 20)", (await L("Jobs covered").innerText()) === "Covers about 20 more jobs");
   check("the rupee balance is shown under it, with no dues when there are none", (await L("Wallet balance").innerText()) === "₹250 available" && !w.includes("You owe"));
@@ -112,7 +112,7 @@ const check = (name, ok, extra = "") => {
   await L("Recharge ₹99").click();
   await waitBody("phone app");
   check("tapping a pack asks the server for an order for exactly that pack", db.calls.some((c) => c.fn === "create-wallet-topup-order" && c.body.pack === 99 && c.body.amount === undefined));
-  check("on web the native checkout is explained instead of crashing", await has("Top-up works in the HandyFix phone app"));
+  check("on web the native checkout is explained instead of crashing", await has("Top-up works in the apnabanda phone app"));
 
   db.wallet = { available: 238, dues: 0, held: 12 };
   await openWallet();

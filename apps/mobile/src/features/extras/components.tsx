@@ -215,7 +215,7 @@ export function ProviderExtras({ bookingId, status, userId }: { bookingId: strin
                 <View className="flex-1"><Button label="Gallery" variant="secondary" onPress={() => void pick(false)} /></View>
               </View>
               {errors.billPhoto ? <Text className="text-sm text-danger">{errors.billPhoto}</Text> : null}
-              <Text className="text-xs text-muted">Parts are not part of your HandyFix fee.</Text>
+              <Text className="text-xs text-muted">Parts are not part of your apnabanda fee.</Text>
             </View>
           ) : null}
           {errors.status ? <Text className="text-sm text-danger">{errors.status}</Text> : null}

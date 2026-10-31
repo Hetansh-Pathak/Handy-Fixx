@@ -19,7 +19,7 @@ export function deletionBlockers(input: {
     out.push(`You have ${n} ${n === 1 ? "booking" : "bookings"} in progress. Finish or cancel ${n === 1 ? "it" : "them"} first.`);
   }
   if (input.role === "provider") {
-    if ((input.walletDue ?? 0) > 0) out.push("You have HandyFix fees due. Top up your wallet to clear them first.");
+    if ((input.walletDue ?? 0) > 0) out.push("You have apnabanda fees due. Top up your wallet to clear them first.");
     if ((input.walletBalance ?? 0) > 0) out.push("You still have money in your wallet. Withdraw it first, because it cannot be paid out after deletion.");
   }
   return out;

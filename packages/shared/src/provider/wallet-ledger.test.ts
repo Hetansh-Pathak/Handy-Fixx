@@ -17,9 +17,11 @@ describe("indiaDay", () => {
 describe("describeLedgerEntry", () => {
   it("shows a fee as a red minus with a readable label", () => {
     const l = describeLedgerEntry({ id: "1", type: "cash_fee", amount: "-15.00", created_at: "2026-10-01T00:00:00Z", note: " Job fee " });
-    expect(l).toMatchObject({ label: "HandyFix fee", credit: false, amountText: "-₹15", note: "Job fee" });
+    expect(l).toMatchObject({ label: "apnabanda fee", credit: false, amountText: "-₹15", note: "Job fee" });
   });
   it("shows a top-up as a plus", () => {
+    // a note the database wrote before the rename is shown with the new name
+    expect(describeLedgerEntry({ id: "3", type: "cash_fee", amount: -15, created_at: "x", note: "HandyFix fee (3%) for completed job" }).note).toBe("apnabanda fee (3%) for completed job");
     expect(describeLedgerEntry({ id: "2", type: "topup", amount: 500, created_at: "x" })).toMatchObject({ label: "Wallet top-up", credit: true, amountText: "+₹500", note: null });
   });
   it("copes with an unknown type and a bad amount", () => {

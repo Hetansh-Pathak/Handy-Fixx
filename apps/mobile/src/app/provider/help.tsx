@@ -16,15 +16,15 @@ const packs = `${amounts.slice(0, -1).join(", ")} or ${amounts[amounts.length - 
 
 // Answers follow the business model (3% fee on completed jobs only, prepaid wallet, customer pays the pro).
 const FAQ = [
-  { q: "What does HandyFix charge?", a: `A fee on completed jobs only: ${FEE_RULE_LABEL}. It is worked out from the service bill (parts are not counted), reserved in your wallet when you accept and taken when the job completes. Cancelled or declined jobs cost nothing.` },
+  { q: "What does apnabanda charge?", a: `A fee on completed jobs only: ${FEE_RULE_LABEL}. It is worked out from the service bill (parts are not counted), reserved in your wallet when you accept and taken when the job completes. Cancelled or declined jobs cost nothing.` },
   { q: "Is there a free period?", a: `Yes. Your first ${LAUNCH_PERIOD.jobs} jobs or first ${LAUNCH_PERIOD.months} month${LAUNCH_PERIOD.months === 1 ? "" : "s"} after approval are fee-free, whichever ends first.` },
   { q: "Does declining cost me anything?", a: "No. Declining or missing a request costs ₹0. The customer is offered the next best pros." },
   { q: "How do customers pay me?", a: "Directly, by UPI or cash, after the job. The price is locked at booking and only grows if the customer approves extra work." },
   { q: "Why am I not getting requests?", a: "You must be approved, online, and have the app open. Check that your work areas and services are filled in. Closing the app hides you from customers." },
   { q: "How do I finish a job?", a: "Ask the customer for the 4-digit completion code shown in their app and enter it on the job screen." },
   { q: "How do I top up or withdraw?", a: `Recharge from the Wallet tab with a ${packs} pack. To withdraw, your identity check must be approved and your UPI or bank details saved under Payout details on the Wallet tab.` },
-  { q: "What is the identity check?", a: "HandyFix checks your ID before you can go online. Your name and mobile are matched against it, so contact support to change them after you submit." },
-  { q: "What if a customer complains?", a: "Customers can raise a problem within 24 hours of a job (48 hours for repair quality). HandyFix reviews it and decides within 48 hours." },
+  { q: "What is the identity check?", a: "apnabanda checks your ID before you can go online. Your name and mobile are matched against it, so contact support to change them after you submit." },
+  { q: "What if a customer complains?", a: "Customers can raise a problem within 24 hours of a job (48 hours for repair quality). apnabanda reviews it and decides within 48 hours." },
 ];
 
 export default function ProviderHelp() {
@@ -33,7 +33,7 @@ export default function ProviderHelp() {
   const { provider } = useSession();
   const [open, setOpen] = useState<number | null>(provider?.kyc_status === "approved" ? 0 : FAQ.length - 2);
   const [terms, setTerms] = useState(false);
-  const mail = () => void Linking.openURL(`mailto:${env.supportEmail}?subject=${encodeURIComponent("HandyFix Pro help")}`);
+  const mail = () => void Linking.openURL(`mailto:${env.supportEmail}?subject=${encodeURIComponent("apnabanda Pro help")}`);
 
   return (
     <Screen>

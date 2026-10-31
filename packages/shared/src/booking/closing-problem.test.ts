@@ -28,17 +28,17 @@ describe("closingProblem", () => {
 });
 
 describe("closingPrompt", () => {
-  it("tells the customer to share the code only when happy, and to contact HandyFix otherwise", () => {
+  it("tells the customer to share the code only when happy, and to contact apnabanda otherwise", () => {
     const p = closingPrompt("customer", "Rajesh");
     expect(p.title).toBe("Problem closing the job?");
     expect(p.body).toContain("Rajesh");
-    expect(p.body).toContain("contact HandyFix");
+    expect(p.body).toContain("contact apnabanda");
     expect(p.body).toContain("Never share the code before the work is done");
   });
-  it("tells the pro to ask for the code only after the work, and to contact HandyFix otherwise", () => {
+  it("tells the pro to ask for the code only after the work, and to contact apnabanda otherwise", () => {
     const p = closingPrompt("provider", "Meera");
     expect(p.body).toContain("Meera");
-    expect(p.body).toContain("contact HandyFix");
+    expect(p.body).toContain("contact apnabanda");
     expect(p.body).toContain("Do not ask for the code before the work is finished");
   });
   it("falls back to plain words without a name", () => {

@@ -46,7 +46,7 @@ const check = (name, ok, extra = "") => {
   await P.L("Password").fill("secret123");
   await P.L("Confirm password").fill("secret123");
   await P.T("Create account").click();
-  await P.see("How will you use HandyFix?");
+  await P.see("How will you use apnabanda?");
   await P.T("I'm a pro").click();
   await P.L("Mobile number").fill("98765 43211");
   await P.T("Continue").click();
@@ -68,7 +68,7 @@ const check = (name, ok, extra = "") => {
   check("turning a service on ticks every job in it", true);
   await P.T("Choose jobs and prices").click();
   await P.see("Tap repair");
-  check("the jobs are listed with their HandyFix prices", (await P.body()).includes("₹199") && (await P.body()).includes("₹349"));
+  check("the jobs are listed with their apnabanda prices", (await P.body()).includes("₹199") && (await P.body()).includes("₹349"));
   check("an own price is offered only for a job with an admin band", (await P.page.locator('[aria-label="Your price for Pipe leak"]:visible').count()) === 1 &&
     (await P.page.locator('[aria-label="Your price for Tap repair"]:visible').count()) === 0 && (await P.body()).includes("Allowed ₹249 to ₹449"));
 
@@ -106,11 +106,11 @@ const check = (name, ok, extra = "") => {
   await P.L("Your price for Pipe leak").fill("");
   await P.T("Save services").click();
   for (let i = 0; i < 50 && db.providerSubItems.length !== 0; i++) await new Promise((r) => setTimeout(r, 100));
-  check("ticking every job at the HandyFix price removes the stored rows", db.providerSubItems.length === 0, JSON.stringify(db.providerSubItems));
+  check("ticking every job at the apnabanda price removes the stored rows", db.providerSubItems.length === 0, JSON.stringify(db.providerSubItems));
 
   db.subItemsTableMissing = true;
   await P.page.goto(`${BASE}/provider/services`, { waitUntil: "networkidle" });
-  await P.see("switches on with the next HandyFix update");
+  await P.see("switches on with the next apnabanda update");
   check("before the database change, the screen still saves services and hides jobs", (await P.count("Choose jobs and prices")) === 0);
   db.subItemsTableMissing = false;
 
@@ -129,7 +129,7 @@ const check = (name, ok, extra = "") => {
   await C.L("Password").fill("secret123");
   await C.L("Confirm password").fill("secret123");
   await C.T("Create account").click();
-  await C.see("How will you use HandyFix?");
+  await C.see("How will you use apnabanda?");
   await C.T("I need a service").click();
   await C.T("Continue").click();
   await C.see("What do you need fixed today?");
@@ -144,7 +144,7 @@ const check = (name, ok, extra = "") => {
   await C.T("Pipe leak").click();
   await C.see("Asha Patel");
   await C.shot("81-customer-pro-rate");
-  check("for a ticked job the pro shows their own rate; others show the HandyFix price",
+  check("for a ticked job the pro shows their own rate; others show the apnabanda price",
     (await C.page.locator("text=/^₹399$/").locator("visible=true").count()) >= 1 && (await C.count("Ravi Shah", false)) >= 1);
 
   check("no uncaught page errors", errors.length === 0, errors.slice(0, 3).join(" | "));

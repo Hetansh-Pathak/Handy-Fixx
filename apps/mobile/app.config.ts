@@ -4,7 +4,7 @@ import type { ExpoConfig } from "expo/config";
 const GOLD = "#C16430"; // brand terracotta (notification accent)
 const BLACK = "#0A0A0A"; // launcher icon background (the logo tile is dark)
 const CANVAS = "#05070D"; // splash + window background: the apnabanda "Black + Blur" canvas (the native splash cannot follow the theme)
-const MIC_REASON = "HandyFix uses the microphone so you can record a voice note describing the problem for your pro.";
+const MIC_REASON = "apnabanda uses the microphone so you can record a voice note describing the problem for your pro.";
 
 // FCM / Google services file. On EAS, upload it as a file secret and expose its path via
 // GOOGLE_SERVICES_JSON; locally drop it next to this file. Absent = config still validates.
@@ -83,10 +83,10 @@ const config: ExpoConfig = {
     [
       "expo-location",
       {
-        locationWhenInUsePermission: "HandyFix uses your location to show nearby pros and track your pro's arrival.",
+        locationWhenInUsePermission: "apnabanda uses your location to show nearby pros and track your pro's arrival.",
         // The manifest permission is app-wide, but the app only ASKS for background location
         // after someone picks the provider role (see packages/shared auth/roles).
-        locationAlwaysAndWhenInUsePermission: "HandyFix shares your live location with the customer while you travel to a job.",
+        locationAlwaysAndWhenInUsePermission: "apnabanda shares your live location with the customer while you travel to a job.",
         isAndroidBackgroundLocationEnabled: !isCustomer,
         isAndroidForegroundServiceEnabled: !isCustomer,
       },
@@ -109,10 +109,10 @@ const config: ExpoConfig = {
       enableBackgroundPlayback: false,
     }],
     ["expo-image-picker", {
-      photosPermission: "HandyFix lets you add photos of the problem so your pro knows what to bring.",
+      photosPermission: "apnabanda lets you add photos of the problem so your pro knows what to bring.",
       cameraPermission: isPro
-        ? "HandyFix Pro uses the camera for your identity selfie, your ID photos and the bill photo for parts."
-        : "HandyFix uses the camera so you can photograph the problem for your pro.",
+        ? "apnabanda Pro uses the camera for your identity selfie, your ID photos and the bill photo for parts."
+        : "apnabanda uses the camera so you can photograph the problem for your pro.",
       // `false` here strips RECORD_AUDIO from the manifest, which the customer's voice note needs.
       microphonePermission: isPro ? false : MIC_REASON,
     }],

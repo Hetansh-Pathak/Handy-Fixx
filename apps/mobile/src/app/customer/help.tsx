@@ -10,7 +10,7 @@ import { useThemeColors } from "@/theme/theme";
 
 // Answers follow the business model: ₹0 customer fee, pay the pro directly, price locked at booking.
 const FAQ = [
-  { q: "How do I pay?", a: "Pay your pro directly by UPI or cash after the job is done. HandyFix charges customers no booking fee." },
+  { q: "How do I pay?", a: "Pay your pro directly by UPI or cash after the job is done. apnabanda charges customers no booking fee." },
   { q: "Can the price change?", a: "No. The price you see is locked when you book. It only goes up if you approve extra work the pro suggests." },
   { q: "What if the pro does not accept?", a: "Your pro is notified and reviews your request, photos and voice note before accepting. If they decline, or you would rather not wait, we show you the next best pros for the same time." },
   { q: "How do I cancel?", a: "Open the booking and tap Cancel. You can cancel while it is waiting for the pro or confirmed. If your pro has already accepted and the start is less than 2 hours away, it counts as a late cancellation: 3 late cancellations in 30 days pause booking for a week." },
@@ -23,7 +23,7 @@ export default function Help() {
   const colors = useThemeColors();
   const router = useRouter();
   const [open, setOpen] = useState<number | null>(0);
-  const mail = () => void Linking.openURL(`mailto:${env.supportEmail}?subject=${encodeURIComponent("HandyFix help")}`);
+  const mail = () => void Linking.openURL(`mailto:${env.supportEmail}?subject=${encodeURIComponent("apnabanda help")}`);
 
   return (
     <Screen>

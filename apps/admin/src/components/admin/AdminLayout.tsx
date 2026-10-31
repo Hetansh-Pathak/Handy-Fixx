@@ -154,7 +154,7 @@ const AdminLayout: React.FC = () => {
               <Menu className="h-5 w-5" />
             </button>
             <span className="text-xs font-semibold text-muted-foreground hidden sm:block">
-              HandyFix Operations
+              apnabanda Operations
             </span>
           </div>
           <div className="flex items-center gap-2">

@@ -138,7 +138,7 @@ function EditForm({ providerId }: { providerId: string }) {
         <Button label="Choose services and jobs" variant="secondary" onPress={() => router.push("/provider/services")} />
       </Section>
 
-      <Section title="Payout details" hint="Where HandyFix sends your wallet withdrawals. Fill UPI, bank, or both.">
+      <Section title="Payout details" hint="Where apnabanda sends your wallet withdrawals. Fill UPI, bank, or both.">
         <TextField label="UPI ID" value={values.upiId} onChangeText={set("upiId")} error={errors.upiId}
           autoCapitalize="none" autoCorrect={false} placeholder="name@bank" />
         <TextField label="Account holder name" value={values.bankAccountName} onChangeText={set("bankAccountName")} error={errors.bankAccountName} autoCapitalize="words" />

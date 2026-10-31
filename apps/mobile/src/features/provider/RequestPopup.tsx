@@ -1,4 +1,4 @@
-import { formatBookingWhen, formatInr, type RequestAccess, type RequestEconomics } from "@handyfix/shared";
+import { formatBookingWhen, formatInr, type RequestAccess, type RequestEconomics, PLATFORM_FEE_LABEL } from "@handyfix/shared";
 import { useQuery } from "@tanstack/react-query";
 import { BellRing, Briefcase, Image as ImageIcon, Lock, Mic } from "lucide-react-native";
 import { Modal, Pressable, StyleSheet, View } from "react-native";
@@ -53,7 +53,7 @@ export function RequestPopup({ request, economics, access, more, onView, onRecha
               <Text className="text-4xl font-extrabold text-price">{formatInr(economics.earning)}</Text>
             </View>
             <View className="flex-row justify-between border-t border-line pt-2">
-              <Text className="text-sm text-muted">HandyFix fee</Text>
+              <Text className="text-sm text-muted">{PLATFORM_FEE_LABEL}</Text>
               <Text className="text-sm text-fg">{economics.feeWaived ? `${formatInr(economics.fee)} waived` : formatInr(economics.fee)}</Text>
             </View>
           </View>

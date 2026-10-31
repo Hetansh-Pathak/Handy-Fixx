@@ -11,7 +11,7 @@ export default function ProviderLayout() {
   // A suspended pro is locked out of the app (same rule as the old provider portal).
   if (provider?.status === "suspended") {
     return (
-      <FullScreenMessage title="Account suspended" message="Your account has been suspended. Contact HandyFix support for help.">
+      <FullScreenMessage title="Account suspended" message="Your account has been suspended. Contact apnabanda support for help.">
         <Button label="Sign out" variant="secondary" onPress={() => void signOut()} />
       </FullScreenMessage>
     );

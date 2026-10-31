@@ -74,7 +74,7 @@ export default function RolePick() {
 
   return (
     <AuthShell>
-      <Title>{single === "provider" ? "Set up your pro account" : "How will you use HandyFix?"}</Title>
+      <Title>{single === "provider" ? "Set up your pro account" : "How will you use apnabanda?"}</Title>
       {single ? <Body muted>Pros receive job requests and pay a small flat fee only when a job completes. Identity verification is required.</Body>
         : <Body muted>Pick one. An account is either a customer or a pro, so use a different email if you ever need both.</Body>}
       <InfoBanner message={roleResolution && roleResolution.role === null && roleResolution.reason === "incomplete_provider" ? "Let's finish setting up your pro account." : null} />

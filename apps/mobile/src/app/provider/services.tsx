@@ -147,7 +147,7 @@ function MyServicesScreen({ providerId }: { providerId: string }) {
     <Screen>
       <ScreenHeader title="My services" onBack={back} />
       <Body muted>Turn on the services you do, then untick any job you don't do. You only get requests for ticked jobs.</Body>
-      <InfoBanner message={jobsOn ? null : "Choosing single jobs switches on with the next HandyFix update. Until then you get every job in the services you turn on."} />
+      <InfoBanner message={jobsOn ? null : "Choosing single jobs switches on with the next apnabanda update. Until then you get every job in the services you turn on."} />
       <ErrorBanner message={error} />
 
       {(services.data ?? []).map((s) => (

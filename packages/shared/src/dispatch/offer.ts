@@ -1,3 +1,4 @@
+import { PLATFORM_FEE_LABEL } from "../brand";
 import { formatInr, type Rupees } from "../money/money";
 import type { OfferAccess } from "./eligibility";
 
@@ -62,12 +63,12 @@ export function offerView(status: OfferStatus, access: OfferAccess): OfferView {
       break;
   }
   if (access.canAccept) {
-    return { kind: "accept", button: "Accept", feeLine: access.feeWaived ? "HandyFix fee waived (launch period)" : `HandyFix fee ${formatInr(access.fee)}, taken when the job completes` };
+    return { kind: "accept", button: "Accept", feeLine: access.feeWaived ? `${PLATFORM_FEE_LABEL} waived (launch period)` : `${PLATFORM_FEE_LABEL} ${formatInr(access.fee)}, taken when the job completes` };
   }
   return {
     kind: "top_up",
     button: `Top up ${formatInr(access.topUp)} to accept`,
-    feeLine: `HandyFix fee ${formatInr(access.fee)}. Your wallet is too low to accept.`,
+    feeLine: `${PLATFORM_FEE_LABEL} ${formatInr(access.fee)}. Your wallet is too low to accept.`,
     topUp: access.topUp,
   };
 }

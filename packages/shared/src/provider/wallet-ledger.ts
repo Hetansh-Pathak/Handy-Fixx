@@ -1,3 +1,4 @@
+import { brandServerText, PLATFORM_FEE_LABEL } from "../brand";
 import { formatInr } from "../money/money";
 
 /** Ledger entry types in `wallet_transactions` (see the wallet ledger migration). */
@@ -17,7 +18,7 @@ export type LedgerEntry = {
 
 const LEDGER_LABEL: Record<string, string> = {
   online_credit: "Paid online",
-  cash_fee: "HandyFix fee",
+  cash_fee: PLATFORM_FEE_LABEL,
   topup: "Wallet top-up",
   payout: "Withdrawal",
   payout_reversal: "Withdrawal returned",
@@ -43,7 +44,8 @@ export function describeLedgerEntry(entry: LedgerEntry, now: Date = new Date()):
     amount,
     credit,
     amountText: `${credit ? "+" : "-"}${formatInr(Math.abs(amount))}`,
-    note: entry.note?.trim() ? entry.note.trim() : null,
+    // notes written by the database before the rename still say HandyFix
+    note: entry.note?.trim() ? brandServerText(entry.note.trim()) : null,
     createdAt: entry.created_at,
   };
 }

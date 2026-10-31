@@ -35,15 +35,15 @@ const check = (name, ok, extra = "") => { results.push({ name, ok }); console.lo
 
   if (variant === "customer") {
     await waitBody("What do you need fixed today?");
-    check("the customer app skips the role question and opens the home screen", !(await has("How will you use HandyFix?")) && (await has("Your Home, Fixed Fast")));
+    check("the customer app skips the role question and opens the home screen", !(await has("How will you use apnabanda?")) && (await has("What do you need fixed today?")));
     const userId = db.users["t@example.com"].id;
     db.providerRows.push({ id: "p-x", user_id: userId, full_name: "Test User", status: "pending", kyc_status: "not_started", phone: "9876543210", email: "t@example.com", is_online: false });
     await page.goto(`${BASE}/`, { waitUntil: "networkidle" });
     await waitBody("This is a pro account");
-    check("a pro who opens the customer app is told to use the Pro app (no broken screen)", (await has("Pros use the HandyFix Pro app")) && (await has("Sign out")));
+    check("a pro who opens the customer app is told to use the Pro app (no broken screen)", (await has("Pros use the apnabanda Pro app")) && (await has("Sign out")));
   } else {
     await waitBody("Set up your pro account");
-    check("the Pro app asks only for the pro details (no role choice)", !(await has("I need a service")) && !(await has("How will you use HandyFix?")) && (await has("Mobile number")));
+    check("the Pro app asks only for the pro details (no role choice)", !(await has("I need a service")) && !(await has("How will you use apnabanda?")) && (await has("Mobile number")));
     await L("Mobile number").fill("98765 43211");
     await T("Continue").click();
     await waitBody("Verify your identity to start");

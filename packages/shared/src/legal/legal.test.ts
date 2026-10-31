@@ -46,7 +46,7 @@ describe("what the documents say matches how the apps work", () => {
   });
   const deletion = text(legalDoc("deletion", ctx));
   it("deletion: says how, what is erased and what is kept", () => {
-    for (const w of ["Profile", "Delete account", "Delete my HandyFix account", "15 days", "PAN", "What we keep"]) expect(deletion.toLowerCase()).toContain(w.toLowerCase());
+    for (const w of ["Profile", "Delete account", "Delete my apnabanda account", "15 days", "PAN", "What we keep"]) expect(deletion.toLowerCase()).toContain(w.toLowerCase());
   });
 });
 
@@ -62,7 +62,7 @@ describe("HTML rendering", () => {
     expect(html.startsWith("<!doctype html>")).toBe(true);
     expect(html).toContain('name="viewport"');
     expect(html).toContain("prefers-color-scheme:dark");
-    expect(html).toContain("<title>Privacy Policy · HandyFix</title>");
+    expect(html).toContain("<title>Privacy Policy · apnabanda</title>");
     expect(html).toContain('<a href="terms.html">Terms of Use</a>');
     expect(html).toContain('<span aria-current="page">Privacy Policy</span>');
     expect(html).toContain('<a href="mailto:support@handyfix.in">support@handyfix.in</a>');

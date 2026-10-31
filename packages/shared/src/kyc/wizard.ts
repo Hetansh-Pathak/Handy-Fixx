@@ -48,7 +48,7 @@ function dobProblem(dob: string, now: Date): string | null {
   if (!dob) return "Enter your date of birth.";
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dob);
   if (!m || !isRealDate(Number(m[1]), Number(m[2]), Number(m[3]))) return "Enter a valid date of birth.";
-  if (!isAdult(dob, now)) return "You must be 18 or older to work on HandyFix.";
+  if (!isAdult(dob, now)) return "You must be 18 or older to work on apnabanda.";
   return null;
 }
 

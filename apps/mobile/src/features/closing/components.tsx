@@ -27,8 +27,8 @@ export function ClosingProblemCard({ role, bookingId, status, startedAt, otherNa
     <Card>
       <Text accessibilityRole="header" className="text-lg font-semibold text-fg">{prompt.title}</Text>
       <Body muted>{prompt.body}</Body>
-      <Button label="Email HandyFix" variant="secondary" onPress={() => void Linking.openURL(`mailto:${env.supportEmail}?subject=${subject}`)} />
-      {env.supportPhone ? <Button label={`Call HandyFix ${env.supportPhone}`} variant="secondary" onPress={() => void Linking.openURL(`tel:${env.supportPhone}`)} /> : null}
+      <Button label="Email apnabanda" variant="secondary" onPress={() => void Linking.openURL(`mailto:${env.supportEmail}?subject=${subject}`)} />
+      {env.supportPhone ? <Button label={`Call apnabanda ${env.supportPhone}`} variant="secondary" onPress={() => void Linking.openURL(`tel:${env.supportPhone}`)} /> : null}
     </Card>
   );
 }

@@ -61,7 +61,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   await L("Password").fill("secret123");
   await L("Confirm password").fill("secret123");
   await T("Create account").click();
-  await T("How will you use HandyFix?", false).waitFor({ state: "visible" });
+  await T("How will you use apnabanda?", false).waitFor({ state: "visible" });
   await T("I need a service").click();
   await T("Continue").click();
   await waitBody("What do you need fixed today?");
@@ -127,8 +127,8 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   b1.started_at = new Date(Date.now() - 3 * 3600000).toISOString();
   pushBookingChange(b1, "UPDATE");
   await waitBody("Problem closing the job?", 20000)
-    .then(async () => check("after 2 hours without the code the customer sees 'Problem closing the job?' with a way to contact HandyFix", (await has("contact HandyFix")) && (await T("Email HandyFix").count()) >= 1))
-    .catch(async () => check("after 2 hours without the code the customer sees 'Problem closing the job?' with a way to contact HandyFix", false, (await body()).slice(0, 300)));
+    .then(async () => check("after 2 hours without the code the customer sees 'Problem closing the job?' with a way to contact apnabanda", (await has("contact apnabanda")) && (await T("Email apnabanda").count()) >= 1))
+    .catch(async () => check("after 2 hours without the code the customer sees 'Problem closing the job?' with a way to contact apnabanda", false, (await body()).slice(0, 300)));
 
   // ── 5. done ──────────────────────────────────────────────────────────────────
   b1.status = "completed";

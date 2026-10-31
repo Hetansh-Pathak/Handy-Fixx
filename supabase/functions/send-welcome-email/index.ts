@@ -33,7 +33,7 @@ serve(async (req: Request) => {
     const isLogin = event === "login";
     const brevoKey = Deno.env.get("BREVO_API_KEY");
     const senderEmail = Deno.env.get("BREVO_SENDER_EMAIL");
-    const senderName = Deno.env.get("BREVO_SENDER_NAME") ?? "HandyFix";
+    const senderName = Deno.env.get("BREVO_SENDER_NAME") ?? "apnabanda";
 
     // ── Option A: Use Brevo API if key + sender are configured ─────────────
     if (brevoKey && senderEmail) {
@@ -43,7 +43,7 @@ serve(async (req: Request) => {
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>${isLogin ? "Welcome back to HandyFix" : "Welcome to HandyFix"}</title>
+    <title>${isLogin ? "Welcome back to apnabanda" : "Welcome to apnabanda"}</title>
     <style>
       body { margin: 0; padding: 0; background: #0f0f0f; font-family: 'Segoe UI', Arial, sans-serif; }
       .wrapper { max-width: 600px; margin: 0 auto; padding: 40px 20px; }
@@ -74,7 +74,7 @@ serve(async (req: Request) => {
 
         <!-- Header -->
         <div class="header">
-          <h1>🏠 HandyFix</h1>
+          <h1>🏠 apnabanda</h1>
           <p>Your Trusted Home Services Marketplace</p>
         </div>
 
@@ -82,14 +82,14 @@ serve(async (req: Request) => {
         <div class="body">
           <p class="greeting">${isLogin ? `Welcome back, ${name}! 👋` : `Welcome aboard, ${name}! 🎉`}</p>
           <p class="text">
-            ${isLogin ? "You have successfully signed in to HandyFix. Your trusted home services are ready whenever you need them." : "Your HandyFix account has been successfully created. You're now part of India's most trusted home services marketplace — connecting you with verified, skilled professionals in your area."}
+            ${isLogin ? "You have successfully signed in to apnabanda. Your trusted home services are ready whenever you need them." : "Your apnabanda account has been successfully created. You're now part of India's most trusted home services marketplace — connecting you with verified, skilled professionals in your area."}
           </p>
 
           <!-- Account info -->
           <div class="info-box">
             <p>📧 Email: <span>${email}</span></p>
             <p>🔐 Status: <span>✅ Active</span></p>
-            <p>📍 Platform: <span>HandyFix</span></p>
+            <p>📍 Platform: <span>apnabanda</span></p>
           </div>
 
           <!-- CTA -->
@@ -128,7 +128,7 @@ serve(async (req: Request) => {
 
         <!-- Footer -->
         <div class="footer">
-          <p>© 2026 HandyFix. All rights reserved.</p>
+          <p>© 2026 apnabanda. All rights reserved.</p>
           <p>Made with ❤️ in India</p>
           <p style="margin-top: 10px;">
             <a href="https://handyfix.in/contact" style="color: #555; text-decoration: none;">Unsubscribe</a>
@@ -150,7 +150,7 @@ serve(async (req: Request) => {
         body: JSON.stringify({
           sender: { name: senderName, email: senderEmail },
           to: [{ email }],
-          subject: isLogin ? `Welcome back to HandyFix, ${name}!` : `Welcome to HandyFix, ${name}! 🏠`,
+          subject: isLogin ? `Welcome back to apnabanda, ${name}!` : `Welcome to apnabanda, ${name}! 🏠`,
           htmlContent: htmlBody,
         }),
       });

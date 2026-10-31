@@ -39,13 +39,13 @@ export function closingPrompt(role: "customer" | "provider", otherName?: string 
     const pro = other || "your pro";
     return {
       title: "Problem closing the job?",
-      body: `It has been over ${CLOSING_PROBLEM_AFTER_HOURS} hours since ${pro} started. If the work is finished and you are happy, share your code with ${pro}. If it is not finished or something is wrong, contact HandyFix and we will help. Never share the code before the work is done.`,
+      body: `It has been over ${CLOSING_PROBLEM_AFTER_HOURS} hours since ${pro} started. If the work is finished and you are happy, share your code with ${pro}. If it is not finished or something is wrong, contact apnabanda and we will help. Never share the code before the work is done.`,
     };
   }
   const customer = other || "the customer";
   return {
     title: "Problem closing the job?",
-    body: `It has been over ${CLOSING_PROBLEM_AFTER_HOURS} hours since you started. Ask ${customer} for the 4-digit code once the work is done. If they cannot be reached or will not share it, contact HandyFix and the team will help. Do not ask for the code before the work is finished.`,
+    body: `It has been over ${CLOSING_PROBLEM_AFTER_HOURS} hours since you started. Ask ${customer} for the 4-digit code once the work is done. If they cannot be reached or will not share it, contact apnabanda and the team will help. Do not ask for the code before the work is finished.`,
   };
 }
 

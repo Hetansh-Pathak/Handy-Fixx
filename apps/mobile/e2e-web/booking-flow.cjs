@@ -52,7 +52,7 @@ const check = (name, ok, extra = "") => {
   await L("Password").fill("secret123");
   await L("Confirm password").fill("secret123");
   await T("Create account").click();
-  await see("How will you use HandyFix?");
+  await see("How will you use apnabanda?");
   await T("I need a service").click();
   await T("Continue").click();
   await see("What do you need fixed today?");

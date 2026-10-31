@@ -60,12 +60,12 @@ const check = (name, ok, extra = "") => { results.push({ name, ok }); console.lo
   await page.waitForSelector("text=1. What we collect", { timeout: 15000 });
   const policy = await text();
   check("the privacy policy opens in the app before signing in and describes the real data (PAN stored encrypted, no Aadhaar, selfie, location, partners)",
-    policy.includes("Version 1.1") && policy.includes("do not collect your Aadhaar") && policy.includes("stored encrypted") && policy.includes("selfie") && policy.includes("Razorpay") && policy.includes("Delete account"), policy.slice(0, 200));
+    policy.includes("Version 1.2") && policy.includes("do not collect your Aadhaar") && policy.includes("stored encrypted") && policy.includes("selfie") && policy.includes("Razorpay") && policy.includes("Delete account"), policy.slice(0, 200));
   await shot("03b-privacy-policy");
   await page.goBack();
   await page.waitForSelector("text=Create your account");
   await page.getByText("Terms of Use", { exact: true }).locator("visible=true").last().click();
-  await page.waitForSelector("text=1. What HandyFix is", { timeout: 15000 });
+  await page.waitForSelector("text=1. What apnabanda is", { timeout: 15000 });
   check("the terms of use open in the app and state the price and cancellation rules", (await text()).includes("locked when you book") && (await text()).includes("stays open until a pro accepts"));
   await page.goBack();
   await page.waitForSelector("text=Create your account");
@@ -74,7 +74,7 @@ const check = (name, ok, extra = "") => { results.push({ name, ok }); console.lo
   await L("Password").fill("secret123");
   await L("Confirm password").fill("secret123");
   await page.getByText("Create account", { exact: true }).locator("visible=true").last().click();
-  await page.waitForSelector("text=How will you use HandyFix?", { timeout: 20000 }).then(() => check("sign-up lands on role-pick (guard)", true)).catch(async () => check("sign-up lands on role-pick (guard)", false, (await text()).slice(0, 200)));
+  await page.waitForSelector("text=How will you use apnabanda?", { timeout: 20000 }).then(() => check("sign-up lands on role-pick (guard)", true)).catch(async () => check("sign-up lands on role-pick (guard)", false, (await text()).slice(0, 200)));
   await shot("04-role-pick");
   // Screen readers need to hear which choice is on: every radio must expose its checked state.
   const radios = await page.evaluate(() => [...document.querySelectorAll('[role="radio"]')].map((e) => e.getAttribute("aria-checked")));
@@ -142,7 +142,7 @@ const check = (name, ok, extra = "") => { results.push({ name, ok }); console.lo
   await L("Password").fill("secret123");
   await L("Confirm password").fill("secret123");
   await page.getByText("Create account", { exact: true }).locator("visible=true").last().click();
-  await page.waitForSelector("text=How will you use HandyFix?");
+  await page.waitForSelector("text=How will you use apnabanda?");
   await page.getByText("I'm a pro").last().click();
   await L("Mobile number").fill("98765 43211");
   await page.getByText("Continue", { exact: true }).locator("visible=true").last().click();
@@ -164,7 +164,7 @@ const check = (name, ok, extra = "") => { results.push({ name, ok }); console.lo
   await L("Confirm password").fill("secret123");
   db.bookings = 2;
   await page.getByText("Create account", { exact: true }).locator("visible=true").last().click();
-  await page.waitForSelector("text=How will you use HandyFix?");
+  await page.waitForSelector("text=How will you use apnabanda?");
   await page.getByText("I'm a pro").last().click();
   await L("Mobile number").fill("9876543212");
   await page.getByText("Continue", { exact: true }).locator("visible=true").last().click();

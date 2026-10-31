@@ -7,7 +7,7 @@ describe("pushMessageFor (pro)", () => {
   it("a new request is the loud one, with the booking to open", () => {
     const m = pushMessageFor("provider", { type: "new_booking", booking_id: B, title: "New Booking Request 📋" });
     expect(m).toEqual({
-      title: "New job request", body: "Open HandyFix Pro to see the details, then accept or decline.",
+      title: "New job request", body: "Open apnabanda Pro to see the details, then accept or decline.",
       data: { kind: "new_request", audience: "provider", bookingId: B }, channelId: "requests", sound: "new_request.wav", priority: "high",
     });
   });

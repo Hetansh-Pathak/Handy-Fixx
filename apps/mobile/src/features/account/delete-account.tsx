@@ -34,7 +34,7 @@ export function DeleteAccountScreen({ role, activeBookings, walletBalance, walle
   const [error, setError] = useState<string | null>(null);
   const blockers = deletionBlockers({ role, activeBookings, walletBalance, walletDue });
   const mail = () => void Linking.openURL(
-    `mailto:${env.supportEmail}?subject=${encodeURIComponent("Delete my HandyFix account")}&body=${encodeURIComponent(`Please delete my HandyFix account (${email ?? "my email"}).`)}`,
+    `mailto:${env.supportEmail}?subject=${encodeURIComponent("Delete my apnabanda account")}&body=${encodeURIComponent(`Please delete my apnabanda account (${email ?? "my email"}).`)}`,
   );
 
   const remove = async () => {
