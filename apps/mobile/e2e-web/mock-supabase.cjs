@@ -115,7 +115,10 @@ async function installMock(page) {
       if (m === "POST") {
         if (!u || !db.verified.has(u.id)) return json(route, 403, { code: "42501", message: 'new row violates row-level security policy for table "bookings"' });
         const b = body();
-        const amount = Number(b.provider_amount);
+        db.lastInsert = b;
+        // No pro and no price sent (instant dispatch): the catalogue price, like enforce_booking_price does.
+        const catalogue = Number((db.subItems.find((x) => x.id === b.sub_item_id) || {}).base_price || (db.services.find((x) => x.id === b.service_id) || {}).base_price || 0);
+        const amount = b.provider_amount === undefined ? catalogue : Number(b.provider_amount);
         // "pdf" = the proposed trigger (price shown = price paid, no fee); "legacy12" = today's live 12% trigger.
         const fee = db.pricingMode === "legacy12" ? Math.round(amount * 0.12) : 0;
         const row = { ...b, id: "b-" + nextId++, provider_amount: amount, platform_fee: fee, total_amount: amount + fee, customer_id: u.id };
@@ -175,6 +178,41 @@ async function installMock(page) {
       const row = db.storedBookings.find((r) => r.id === bid);
       return json(route, 200, row && ["arrived", "in_progress", "confirmed", "on_the_way"].includes(row.status) ? [{ code: db.completionCode }] : []);
     }
+    // ── instant dispatch (proposal 20261124000000). Suites drive the search by changing db.dispatch[bookingId]. ──
+    if (["/rest/v1/rpc/start_dispatch", "/rest/v1/rpc/get_search_state", "/rest/v1/rpc/cancel_search", "/rest/v1/rpc/extend_search"].includes(p)) {
+      const u = userFromAuth(req);
+      const bid = body().p_booking_id;
+      const row = db.storedBookings.find((r) => r.id === bid);
+      if (!row || !u || row.customer_id !== u.id) return json(route, 400, { code: "P0001", message: "Booking not found" });
+      db.calls.push({ fn: p.split("/").pop(), body: { p_booking_id: bid } });
+      db.dispatch = db.dispatch || {};
+      const now = Date.now();
+      if (p.endsWith("start_dispatch")) {
+        if (db.dispatchRefusal) return json(route, 400, { code: "P0001", message: db.dispatchRefusal });
+        if (!row.dispatch_state) {
+          Object.assign(row, { dispatch_state: "searching", searched_since: new Date(now).toISOString(), search_ends_at: new Date(now + 120000).toISOString() });
+          db.dispatch[bid] = { ring: 1, dots: (db.dispatchDots || []).slice(), pro: null, acceptedAt: null };
+        }
+      }
+      if (p.endsWith("cancel_search")) {
+        if (row.dispatch_state === "assigned") return json(route, 200, { result: "assigned", message: "A pro already accepted. Cancel from the booking screen if you need to." });
+        Object.assign(row, { status: "cancelled", dispatch_state: "cancelled", cancellation_reason: "Cancelled by customer while searching" });
+        return json(route, 200, { result: "cancelled" });
+      }
+      if (p.endsWith("extend_search")) {
+        if (row.dispatch_state !== "no_pro") return json(route, 400, { code: "P0001", message: "This search cannot be extended." });
+        Object.assign(row, { dispatch_state: "searching", search_ends_at: new Date(now + 600000).toISOString() });
+        db.dispatch[bid].ring = 4;
+      }
+      const d = db.dispatch[bid] || { ring: 0, dots: [], pro: null };
+      return json(route, 200, {
+        booking_id: row.id, dispatch_state: row.dispatch_state || null, status: row.status, current_ring: d.ring,
+        searched_since: row.searched_since, search_ends_at: row.search_ends_at, accepted_at: d.acceptedAt, now: new Date(now).toISOString(),
+        notified: d.notified ?? d.dots.length, dots: d.dots.map((x, i) => ({ key: "k" + i, lat: x.lat, lng: x.lng })), pro: d.pro,
+        settings: { ring_radii_km: [2, 5, 10], ring_wait_seconds: [10, 10, 10], city_name: "Jamnagar", city_lat: 22.4707, city_lng: 70.0577, city_radius_km: 20, max_search_seconds: 120, extend_seconds: 600 },
+      });
+    }
+
     if (p === "/rest/v1/rpc/get_booking_provider") {
       // Current contact function: returns the pro's phone only while the booking is confirmed or underway.
       if (db.phoneRpcMissing) return json(route, 404, { code: "PGRST202", message: "Could not find the function public.get_booking_provider" });

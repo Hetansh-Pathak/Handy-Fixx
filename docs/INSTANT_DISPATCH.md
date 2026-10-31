@@ -71,6 +71,35 @@ Deprecated (kept until the owner confirms they are unused): `rankProviders`, `so
   once (exactly one wins); plus the dry-run file (runs fully, saves nothing). `dispatch-sql.test.ts` keeps the SQL and
   the shared rules in step.
 
+## Customer screens (slice 3, done; behind `EXPO_PUBLIC_INSTANT_DISPATCH=1`)
+
+The switch stays OFF until the proposal is applied (slice 5): the live database cannot dispatch yet, so today's
+"choose a pro" list keeps working. With it ON:
+
+- Service page: no pro list or sorting; pick the job, "Continue · ₹199" (one fixed price).
+- `customer/request/new`: locked price + "₹0 platform fee", **Now** by default or "Schedule for later" (existing clock
+  picker), pinned position required ("Use my current location"), address/city/pincode, notes, photos/voice note,
+  the email-verification and late-cancel pause checks, then **"Find a pro · ₹199"**. The app sends no price (the
+  database sets it), saves the booking with no pro and calls `start_dispatch`; if that refuses (outside the city, a
+  search already running) the message is shown as written and the empty booking is cancelled.
+- `customer/request/[id]` (Finding / Found / No pro): reads `get_search_state` every 2 s while searching.
+  `FindingMap` draws a stylised vector city with react-native-svg (no map key), the blue "You" pin with a glow, dashed
+  rings (2 km, 5 km, City), a radar sweep (12-slice conic fade, 3.2 s per turn, linear), three pulse rings (scale
+  0.25 to 1.35, fading, 2.6 s, staggered 0.87 s) and the notified pros as amber dots (rounded by the server plus a
+  fixed jitter) that pop in and breathe. Only transform and opacity are animated (Reanimated); with reduce-motion
+  everything stands still. Glass bottom sheet: timer chip (server clock), status line with animated dots (a live
+  region, also announced), stage chips, service card, "N pros notified…", Cancel request (confirm first, free).
+  Found: rings go, a dashed route from the pro to the customer, the pro's initials marker, "N min away", the pro card
+  (verified shield, rating, jobs, ETA, locked price), Message / Track, "Pro found in 38 s". No pro: dimmed map,
+  "Keep looking for 10 more minutes", "Schedule for later", "Cancel request".
+- `customer/booking/[id]`: a booking that is still searching opens the Finding screen (closing the app loses
+  nothing); "Choose another pro instead" and the next-best list are gone.
+- Shared: `readSearchSnapshot`, `searchElapsedSeconds`, `matchSeconds`, `ringFractions` / `mapFraction` /
+  `mapOffset` (the drawn map is not to scale: rings at fixed fractions, distances interpolated), `etaLine`.
+- Browser test `apps/mobile/e2e-web/dispatch-flow.cjs` (23 checks, `npm run test:e2e-dispatch` with the switch on).
+- Left for slice 6 (polish): the route drawing itself in, success haptic (`expo-haptics` is a native package: new
+  development build), a real dark map when `EXPO_PUBLIC_MAPS_ENABLED=1`, "Ask my previous pro first".
+
 ## Not working until push exists (slice 4b, needs the owner's Firebase project)
 
 A pro whose app is **closed** gets no offer. While the Pro app is open (or in the background with the location

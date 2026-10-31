@@ -104,6 +104,8 @@ export type BookingRow = {
   started_at: string | null;
   /** unpaid / pending / paid / refunded / partially_refunded; only the server changes it. */
   payment_status: string | null;
+  /** Instant dispatch (proposal 20261124000000): searching / assigned / no_pro / cancelled; absent before it is applied. */
+  dispatch_state?: string | null;
 };
 
 const BOOKING_COLUMNS =
@@ -111,10 +113,13 @@ const BOOKING_COLUMNS =
 
 export async function fetchBooking(id: string): Promise<{ booking: BookingRow; serviceName: string | null; serviceSlug: string | null; providerName: string | null } | null> {
   const supabase = getSupabase();
-  const { data, error } = await supabase.from("bookings").select(BOOKING_COLUMNS).eq("id", id).maybeSingle();
+  const read = (columns: string) => supabase.from("bookings").select(columns).eq("id", id).maybeSingle();
+  let { data, error } = await read(`${BOOKING_COLUMNS}, dispatch_state`);
+  // Before the dispatch proposal is applied the column does not exist: read the booking without it.
+  if (error && (error.code === "42703" || /dispatch_state/.test(error.message))) ({ data, error } = await read(BOOKING_COLUMNS));
   if (error) throw new Error(friendlyDbError(error));
   if (!data) return null;
-  const booking = data as BookingRow;
+  const booking = data as unknown as BookingRow;
 
   const [service, provider] = await Promise.all([
     booking.service_id ? supabase.from("services").select("name, slug").eq("id", booking.service_id).maybeSingle() : Promise.resolve({ data: null }),

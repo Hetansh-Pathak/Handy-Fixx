@@ -38,6 +38,12 @@ export const env = {
    * shows distance and ETA with an "Open in Google Maps" button instead of an embedded map.
    */
   mapsEnabled: process.env.EXPO_PUBLIC_MAPS_ENABLED === "1",
+  /**
+   * Set to "1" once supabase/proposals/20261124000000_instant_dispatch has been applied: customers pick a service and
+   * the server finds the pro (owner decision 2026-10-31). Until then the old "choose a pro" list stays, because the
+   * live database cannot dispatch yet.
+   */
+  instantDispatch: process.env.EXPO_PUBLIC_INSTANT_DISPATCH === "1",
   /** Native-check screens are always on in dev; set EXPO_PUBLIC_ENABLE_SPIKE=1 for other builds. */
   spikeEnabled: __DEV__ || process.env.EXPO_PUBLIC_ENABLE_SPIKE === "1",
 } as const;

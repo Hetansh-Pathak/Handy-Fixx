@@ -14,6 +14,7 @@ import { useThemeColors } from "@/theme/theme";
 import { useArea } from "@/features/customer/area-context";
 import { fetchServiceBySlug, fetchSubItems, searchProviders } from "@/features/customer/catalog-api";
 import { serviceImage } from "@/features/customer/service-images";
+import { env } from "@/lib/env";
 import type { ProviderListing, SubItemRow } from "@/features/customer/types";
 
 type SortChoice = ProviderSort;
@@ -39,7 +40,7 @@ export default function ServiceScreen() {
   // Pros come and go as they open and close the app, so the list refreshes itself.
   const providers = useQuery({
     queryKey: ["providers", serviceId, subId, area.trim().toLowerCase()],
-    enabled: !!service.data && !subItems.isPending,
+    enabled: !env.instantDispatch && !!service.data && !subItems.isPending,
     refetchInterval: 15_000,
     queryFn: () => searchProviders({ service: service.data!, subItem, area, now: new Date() }),
   });
@@ -155,6 +156,21 @@ export default function ServiceScreen() {
 
       {subItem && isCheckupVisit(subItem.name) ? <InfoBanner message={`${subItem.name}: ${CHECKUP_FEE_NOTE}`} /> : null}
 
+      {env.instantDispatch ? (
+        // Instant dispatch (owner decision 2026-10-31): no pro list. The price is the same for every pro.
+        needsSubItem ? <Body muted>Choose what you need above.</Body> : service.data ? (
+          <View className="gap-2">
+            <Button label={`Continue · ${formatInr(subItem?.base_price ?? service.data.base_price ?? 0)}`}
+              onPress={() => router.push({ pathname: "/customer/request/new", params: { service: slug, ...(subId ? { sub: subId } : {}) } })} />
+            <View className="flex-row items-center justify-center gap-1.5 py-1">
+              <Lock size={14} color={colors.muted} />
+              <Text className="text-xs text-muted">One fixed price. We find the nearest verified pro for you.</Text>
+            </View>
+          </View>
+        ) : null
+      ) : null}
+
+      {env.instantDispatch ? null : <>
       <TextField label="Your area" value={area} onChangeText={setArea} placeholder="City or 6-digit pincode" autoCapitalize="words" />
       <CitySuggestions query={area} onPick={setArea} />
 
@@ -217,6 +233,7 @@ export default function ServiceScreen() {
           <Text className="text-xs text-muted">The price you see is the price you pay</Text>
         </View>
       ) : null}
+      </>}
     </Screen>
   );
 }

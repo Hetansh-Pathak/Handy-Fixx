@@ -56,6 +56,7 @@ export * from "./dispatch/ring-plan";
 export * from "./dispatch/eligibility";
 export * from "./dispatch/offer";
 export * from "./dispatch/search";
+export * from "./dispatch/snapshot";
 export * from "./kyc/kyc";
 export * from "./kyc/sha256";
 export * from "./kyc/wizard";

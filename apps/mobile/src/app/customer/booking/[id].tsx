@@ -25,6 +25,7 @@ import { useBookingLive } from "@/features/customer/use-booking-live";
 import { CustomerDispute } from "@/features/disputes/components";
 import { BillCard, CustomerExtras, useExtras } from "@/features/extras/components";
 import { BookingPayment } from "@/features/customer/booking-payment";
+import { env } from "@/lib/env";
 import { RateYourPro } from "@/features/reviews/components";
 
 const FINISHED = ["completed", "cancelled"];
@@ -52,6 +53,11 @@ export default function BookingStatusScreen() {
   });
   const booking = query.data?.booking;
   const status = (booking?.status ?? "pending") as BookingStatus;
+  // Instant dispatch: while the server is still looking for a pro, this booking lives on the Finding screen.
+  const stillSearching = env.instantDispatch && (booking?.dispatch_state === "searching" || booking?.dispatch_state === "no_pro");
+  useEffect(() => {
+    if (stillSearching && id) router.replace({ pathname: "/customer/request/[id]", params: { id } });
+  }, [stillSearching, id, router]);
   const live = !!booking && !FINISHED.includes(booking.status);
   useBookingLive(id, live);
 
@@ -65,7 +71,8 @@ export default function BookingStatusScreen() {
   const outcome = booking
     ? requestOutcome({ status: booking.status, bookingDate: booking.booking_date, bookingTime: booking.booking_time, cancellationReason: booking.cancellation_reason }, now)
     : "waiting";
-  const wantsAlternatives = needsAlternatives(outcome) || (outcome === "waiting" && browseOthers);
+  // Instant dispatch has no "choose another pro": the server finds the next one (owner decision 2026-10-31).
+  const wantsAlternatives = !env.instantDispatch && (needsAlternatives(outcome) || (outcome === "waiting" && browseOthers));
 
   const code = useQuery({
     queryKey: ["completion-code", id],
@@ -200,7 +207,7 @@ export default function BookingStatusScreen() {
           <Body muted>
             {pro} has been notified and is reviewing your details, photos and voice note. This screen updates as soon as they accept.
           </Body>
-          {!browseOthers ? <Button label="Choose another pro instead" variant="secondary" onPress={() => setBrowseOthers(true)} /> : null}
+          {!browseOthers && !env.instantDispatch ? <Button label="Choose another pro instead" variant="secondary" onPress={() => setBrowseOthers(true)} /> : null}
         </Card>
       ) : null}
 
