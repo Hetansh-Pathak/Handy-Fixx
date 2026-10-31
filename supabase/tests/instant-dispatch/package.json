@@ -1,0 +1,13 @@
+{
+  "name": "handyfix-dispatch-sql-tests",
+  "private": true,
+  "description": "Tests proposal 20261124000000 on a throwaway real Postgres (not part of the npm workspaces).",
+  "type": "module",
+  "scripts": {
+    "test": "node test-dispatch.mjs ../../.. && node test-dryrun.mjs ../../.."
+  },
+  "dependencies": {
+    "embedded-postgres": "17.10.0-beta.17",
+    "pg": "8.16.3"
+  }
+}

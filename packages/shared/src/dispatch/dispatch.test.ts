@@ -160,6 +160,10 @@ describe("offer state machine", () => {
     const closed: OfferStatus[] = ["accepted", "taken", "expired", "withdrawn"];
     for (const s of closed) for (const e of ["accept_won", "other_won", "search_ended", "customer_cancelled"] as const) expect(offerTransition(s, e)).toBeNull();
   });
+  it("keep looking re-opens only expired offers (never taken, withdrawn or accepted ones)", () => {
+    expect(offerTransition("expired", "search_extended")).toBe("offered");
+    for (const s of ["offered", "accepted", "taken", "withdrawn"] as const) expect(offerTransition(s, "search_extended")).toBeNull();
+  });
   it("closed offers show plain words on the pro's card", () => {
     const a = offerAccess({ wallet: { balance: 100, due: 0 }, price: 349, launchActive: false });
     expect(offerView("taken", a)).toEqual({ kind: "taken", message: "Taken by another pro" });

@@ -47,7 +47,7 @@ to accept gets it. CLAUDE.md "Product decisions" is updated when the feature is 
 Deprecated (kept until the owner confirms they are unused): `rankProviders`, `sortProviders`, `orderWithFeatured`,
 `nextBestPros`, `needsAlternatives`.
 
-## Database (slice 2, proposal `20261124000000`, NOT applied)
+## Database (slice 2, done: proposal `20261124000000`, NOT applied)
 
 - `dispatch_settings` (one row), `provider_presence` (pro position from the heartbeat, server-only),
   `booking_offers` (one row per booking and pro; a pro reads only their own; Realtime), `dispatch_events` (audit trail).
@@ -55,9 +55,21 @@ Deprecated (kept until the owner confirms they are unused): `rankProviders`, `so
   `current_ring`, `ring_deadline`, `searched_since`, `search_ends_at`.
 - RPCs: `report_presence`, `start_dispatch`, `accept_dispatch_offer` (first wins, reuses the live wallet check by
   setting provider + `confirmed` together), `cancel_search`, `extend_search`, `get_offer_card`, `get_search_state`.
-- Server tick: `pg_cron` (1.6.4 on the live project supports second schedules) runs `dispatch_tick()` every few
-  seconds, so the search moves on even when the customer closes the app. A scheduled edge function runs at most once a
-  minute: too slow for 10 s rings.
+- Server tick: `pg_cron` (1.6.4 on the live project supports second schedules) runs `dispatch_tick()` every 3
+  seconds, so the search moves on even when the customer closes the app (a ring may last up to 3 s longer than 10 s).
+  A scheduled edge function runs at most once a minute: too slow for 10 s rings.
+- Works with the live triggers as they are (read-only check 2026-10-31): the price trigger already prices a booking
+  without a pro at the catalogue price; the update guard lets server functions through; accepting sets the pro and
+  `confirmed` together, so the live wallet and KYC checks, the customer notice and the completion code work unchanged.
+  The one live function it changes: `notify_provider_on_new_booking` skips dispatch bookings (it would tell the winner
+  "Accept or decline it now"). Offers notify with type `new_booking`, `data.kind = 'dispatch_offer'` (the type is an
+  enum without a dispatch value).
+- Dry run `supabase/dryrun/23_instant_dispatch_DRYRUN.sql`, apply `apply_23_…`, status `verify/10` row 23,
+  APPLY_PLAN row 9.
+- Tests: `supabase/tests/instant-dispatch` (`npm install && npm test`): 55 checks on a real throwaway Postgres 17,
+  including two pros accepting at the same instant (the second waits on the row lock, then gets "taken") and five at
+  once (exactly one wins); plus the dry-run file (runs fully, saves nothing). `dispatch-sql.test.ts` keeps the SQL and
+  the shared rules in step.
 
 ## Not working until push exists (slice 4b, needs the owner's Firebase project)
 

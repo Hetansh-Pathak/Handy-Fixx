@@ -16,17 +16,23 @@ export type OfferEvent =
   /** The search ended with nobody (time up). */
   | "search_ended"
   /** The customer cancelled the search. */
-  | "customer_cancelled";
+  | "customer_cancelled"
+  /** "Keep looking for 10 more minutes": pros whose offer expired are asked again. */
+  | "search_extended";
 
-const NEXT: Record<OfferEvent, OfferStatus> = {
+const NEXT: Record<Exclude<OfferEvent, "search_extended">, OfferStatus> = {
   accept_won: "accepted",
   other_won: "taken",
   search_ended: "expired",
   customer_cancelled: "withdrawn",
 };
 
-/** Only an open offer can change, and only once; anything else is refused (null). SQL twin: the `WHERE status = 'offered'` updates. */
+/**
+ * Only an open offer can change, and only once; anything else is refused (null). The one way back: an expired offer
+ * re-opens when the customer keeps looking. SQL twin: the `WHERE status = 'offered'` / `'expired'` updates.
+ */
 export function offerTransition(from: OfferStatus, event: OfferEvent): OfferStatus | null {
+  if (event === "search_extended") return from === "expired" ? "offered" : null;
   return from === "offered" ? NEXT[event] : null;
 }
 
