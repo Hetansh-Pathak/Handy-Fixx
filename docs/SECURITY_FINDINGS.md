@@ -19,21 +19,23 @@ Status values: **fixed in proposal** (written and tested on a throwaway Postgres
 | H1 | High | Anyone can create notifications (and phone pushes) for any user | fixed in proposal A |
 | H2 | High | `send-welcome-email` is an open mail relay with HTML injection | fixed in proposal (function) |
 | H3 | High | PAN stored in plain text; Aadhaar hash salt is public; Aadhaar photos kept | fixed in proposals B + C, 3 functions, one-time script, app (nothing applied) |
-| H4 | High | Anyone signed in can post into any booking chat | open: proposal `20261110` exists, not applied |
-| H5 | High | Anyone signed in can post a review for any pro | open: proposal `20261108` exists, not applied |
+| H4 | High | Anyone signed in can post into any booking chat | open: apply the existing proposal `20261110` (dry run `7_`); checked against the live policy names on 2026-11-01 |
+| H5 | High | Anyone signed in can post a review for any pro | open: apply the existing proposal `20261108` (dry run `5_`); checked against the live policy names on 2026-11-01 |
 | M1 | Medium | A pro can replace or delete KYC photos after submitting or after approval | fixed in proposal A |
 | M2 | Medium | Bank account numbers / UPI stored in plain text | open |
-| M3 | Medium | Booking UPDATE policies allow any column; safety rests on triggers | open (VAPT should test) |
-| M4 | Medium | Admin/KYC functions executable by `anon`; anon has table grants everywhere | fixed in proposal A (sensitive ones) |
-| M5 | Medium | Leftover OTP columns/tables readable by their owner (`customer_otp_codes`, `service_providers.phone_otp*`) | open |
+| M3 | Medium | Booking UPDATE policies allow any column; safety rests on triggers | open: the live guard trigger `guard_booking_update` limits each side to the right columns (read 2026-11-01); to be attacked by hand in the pre-test |
+| M8 | Medium | A user could create a booking whose `customer_id` was someone else (open rule `users_own_bookings_insert`): it appeared in that person's list and notified the pro | fixed in proposal D |
+| M9 | Medium | Any signed-in user could attach a file to any booking id; the booking's pro could then open it | fixed in proposal D |
+| M4 | Medium | Admin/KYC functions executable by `anon`; anon has ALL on every table; 45 trigger functions callable by anyone; new objects granted to anon by default | fixed in proposals A + D |
+| M5 | Medium | Leftover OTP columns/tables (`customer_otp_codes`, `service_providers.phone_otp*`) | `customer_otp_codes` closed in proposal D; the `phone_otp*` columns on a pro's own row are open (unused; drop later) |
 | M6 | Medium | Leaked-password protection is off | open (dashboard toggle) |
 | M7 | Medium | Stray deployed copies of OTP functions (`quick-function`, `bright-handler`) | open (owner deletes after deploy) |
 | L1 | Low | 5 functions without a fixed `search_path` | fixed in proposal A |
-| L2 | Low | `booking-attachments` / `booking-extras` buckets have no size or type limit | open |
+| L2 | Low | `booking-attachments` / `booking-extras` buckets have no size or type limit | fixed in proposal D (10 MB; attachments limited to the 13 photo / audio types; bill photos size only) |
 | L3 | Low | `pro_applications`, `contact_messages` accept anonymous inserts with no rate limit | open |
 | L4 | Low | Customer email OTP hash is an unsalted SHA-256 | open |
-| L5 | Low | GraphQL schema lists every table to `anon` | open |
-| L6 | Low | `has_role(uuid, text)` callable by anyone (tells whether a given user id is an admin) | open |
+| L5 | Low | GraphQL schema lists every table to `anon` | fixed in proposal D (anon now sees only the public catalogue tables) |
+| L6 | Low | `has_role(uuid, text)` callable by anyone (tells whether a given user id is an admin) | fixed for signed-out callers in proposal D; signed-in users keep it (every policy needs it): accepted |
 | D1 | Medium | Dependencies: runtime `zod` (high, memory exhaustion on huge collections) and `react-router-dom` (moderate) in the admin app; dev tools `vitest`, `vite`, `@expo/cli` | open (fixes are major bumps; see SECURITY_CHANGES.md) |
 | A1 | Info | SECURITY DEFINER views `public_providers`, `booking_provider_info` (advisor ERROR) | accepted |
 | A2 | Info | `auto_confirm_user` confirms every signup | accepted |

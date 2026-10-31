@@ -160,3 +160,51 @@ create schema cron;
 create table cron.job (jobid serial primary key, jobname text, schedule text, command text);
 create function cron.schedule(n text, s text, cmd text) returns bigint language sql as $$ insert into cron.job (jobname, schedule, command) values (n, s, cmd) returning jobid $$;
 create function cron.unschedule(id bigint) returns boolean language sql as $$ delete from cron.job where jobid = id returning true $$;
+
+-- ─── Proposal D (20261125000003) stand-ins: live tables, loose rules and functions it touches ─────────────────────────
+create table public.services (id uuid primary key default gen_random_uuid(), name text, base_price numeric, is_active boolean default true);
+alter table public.services enable row level security;
+create policy "public_read_services" on public.services for select using (true);
+create table public.reviews (id uuid primary key default gen_random_uuid(), provider_id uuid, customer_id uuid, rating int);
+alter table public.reviews enable row level security;
+create policy "public_read_reviews" on public.reviews for select using (true);
+create policy "Customers can create reviews" on public.reviews for insert with check (auth.uid() = customer_id);
+create table public.coupons (id uuid primary key default gen_random_uuid(), code text, is_active boolean default true);
+alter table public.coupons enable row level security;
+create policy "public_read_active_coupons" on public.coupons for select using (is_active = true);
+create table public.contact_messages (id uuid primary key default gen_random_uuid(), name text, message text);
+alter table public.contact_messages enable row level security;
+create policy "anyone_insert_contact" on public.contact_messages for insert with check (true);
+create table public.pro_applications (id uuid primary key default gen_random_uuid(), name text, phone text);
+alter table public.pro_applications enable row level security;
+create policy "anyone_insert_application" on public.pro_applications for insert with check (true);
+create table public.messages (id uuid primary key default gen_random_uuid(), booking_id uuid, sender_id uuid, content text);
+alter table public.messages enable row level security;
+create policy "messages_insert" on public.messages for insert to authenticated with check (sender_id = auth.uid());
+create table public.customer_otp_codes (id uuid primary key default gen_random_uuid(), user_id uuid, otp_code text);
+alter table public.customer_otp_codes enable row level security;
+create policy "users_manage_own_otp" on public.customer_otp_codes for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+create table public.booking_attachments (id uuid primary key default gen_random_uuid(), booking_id uuid not null, uploaded_by uuid not null, type text, storage_path text);
+alter table public.booking_attachments enable row level security;
+create policy "customers_insert_own_attachments" on public.booking_attachments for insert to authenticated with check (uploaded_by = auth.uid());
+create policy "customers_select_own_attachments" on public.booking_attachments for select to authenticated using (uploaded_by = auth.uid());
+
+-- LIVE bookings insert rules: four permissive ones; the loose one is users_own_bookings_insert (user_id only) ---------------
+create function public.is_customer_email_verified() returns boolean language sql stable security definer set search_path = public as $$ select true $$;
+CREATE FUNCTION public.sync_booking_owner() RETURNS trigger LANGUAGE plpgsql SET search_path TO 'public' AS $$
+BEGIN NEW.customer_id := COALESCE(NEW.customer_id, NEW.user_id); NEW.user_id := COALESCE(NEW.user_id, NEW.customer_id); RETURN NEW; END; $$;
+create trigger a_sync_booking_owner before insert on public.bookings for each row execute function public.sync_booking_owner();
+create policy "users_own_bookings_insert" on public.bookings for insert to authenticated with check (auth.uid() = user_id);
+create policy "bookings_insert_policy" on public.bookings for insert to authenticated with check (customer_id = auth.uid());
+create policy "bookings require verified email" on public.bookings as restrictive for insert to authenticated with check (public.is_customer_email_verified());
+create policy "users_own_bookings_select" on public.bookings for select to authenticated using (auth.uid() = user_id);
+
+-- app-facing functions (signed-in only) and the internal helper ------------------------------------------------------------
+create function public.get_wallet_summary() returns jsonb language sql stable security definer set search_path = public as $$ select '{}'::jsonb $$;
+create function public.provider_launch_active(p_provider_id uuid, p_exclude_booking uuid default null) returns boolean language sql stable security definer set search_path = public as $$ select false $$;
+revoke execute on function public.get_wallet_summary() from anon;
+-- anon is allowed to call what PUBLIC allows on the live project (Supabase default grants); has_role stays as created.
+
+insert into storage.buckets values ('booking-attachments', 'booking-attachments', false), ('booking-extras', 'booking-extras', false);
+alter table storage.buckets add column file_size_limit bigint;
+alter table storage.buckets add column allowed_mime_types text[];

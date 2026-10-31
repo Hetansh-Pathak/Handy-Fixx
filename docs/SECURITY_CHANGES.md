@@ -54,6 +54,22 @@ Drops `pan_number`, `aadhaar_last4`, `aadhaar_hash`, `aadhaar_front_path`, `aadh
 index, and (if proposal A is applied) `provider_otp_codes.otp_code`. **It refuses to run (error, nothing changed) while any
 plain PAN or Aadhaar value is left**, so it cannot lose data by running early.
 
+### D. `20261125000003_permissions_hardening` (findings M4, M5, M8, M9, L2, L5, L6)
+Written after reading every live policy, grant and function on 2026-11-01. The apps send every signed-out visitor to the sign-in
+screen, so the `anon` role (what the public key alone gives) needs almost nothing.
+| Change | Why |
+|---|---|
+| `anon` keeps SELECT on 8 public catalogue objects (services, sub-items, pro services / pricing / availability, reviews, pincode map, `public_providers`) and INSERT on the 2 public forms (`contact_messages`, `pro_applications`); nothing else | Before, `anon` had ALL on every table and row-level security was the only barrier. Coupons are no longer public. |
+| `anon` can execute no function; the 45 trigger functions can be executed by nobody; new tables / functions are no longer granted to `anon` or PUBLIC by default | Before, 43 trigger functions and 8 server functions were callable by anyone. Signed-in users keep exactly the functions they had. |
+| `provider_launch_active` closed to signed-in users | Internal helper (only server functions call it) that told anyone whether a pro is in the fee-free launch period. |
+| RESTRICTIVE insert rule on `bookings`: `customer_id` and `user_id` must be you | The open rule `users_own_bookings_insert` let a user create a booking for someone else's `customer_id` (it appeared in their list and notified the pro). |
+| RESTRICTIVE insert rule on `booking_attachments`: only on your own booking | Any signed-in user could attach a file to any booking id; the booking's pro could open it. |
+| `booking-attachments`: 10 MB and the 13 photo / audio types the app stores; `booking-extras`: 10 MB | No limits before. |
+| `customer_otp_codes` (old, unused) closed | Signed-in users could write their own rows. |
+
+Not in D (apply the existing, already-reviewed proposals separately): chat `20261110` and reviews `20261108`; both drop loose live
+policies whose names match the live database.
+
 ### One-time script (not run): `supabase/proposals/scripts/kyc-migrate-pan.ts`
 Dry run by default; `--apply` encrypts every plain PAN and clears the plain value in the same update, clears Aadhaar
 numbers / hashes / paths and deletes every `aadhaar_*` file in the bucket (also older retakes). Idempotent. Invalid,
@@ -77,6 +93,7 @@ duplicate and mismatching PANs are reported and left for a person. Logic in `kyc
 | 1 | `20261125000000_security_hardening_PROPOSAL_NOT_APPLIED.sql` | `dryrun/25_security_hardening_DRYRUN.sql` | `dryrun/apply_25_security_hardening_COMMIT.sql` |
 | 2 | `20261125000001_kyc_pan_encryption_PROPOSAL_NOT_APPLIED.sql` | `dryrun/26_kyc_pan_encryption_DRYRUN.sql` | `dryrun/apply_26_kyc_pan_encryption_COMMIT.sql` |
 | 3 | `20261125000002_kyc_drop_plain_columns_PROPOSAL_NOT_APPLIED.sql` | `dryrun/27_kyc_drop_plain_columns_DRYRUN.sql` | `dryrun/apply_27_kyc_drop_plain_columns_COMMIT.sql` |
+| any time after 1 | `20261125000003_permissions_hardening_PROPOSAL_NOT_APPLIED.sql` | `dryrun/28_permissions_hardening_DRYRUN.sql` | `dryrun/apply_28_permissions_hardening_COMMIT.sql` |
 
 Also listed in `supabase/APPLY_PLAN.md` (rows 11-13). A is independent of the others; B and the `kyc-pan` function need A's
 `otp_rate_take`; C needs B and the script.
@@ -118,7 +135,7 @@ Rollback: each SQL file ends with a ROLLBACK section (policies / grants to resto
 
 | Check | Result |
 |---|---|
-| SQL on a throwaway Postgres 17 (`supabase/tests/security`, `npm run test:sql`) | **95 / 95 passed** (proposals A, B, C applied twice and in order A-B-C-A-B-C, dry-run and apply files, attacks, retention, blocklist, unique blind index, columns gone) |
+| SQL on a throwaway Postgres 17 (`supabase/tests/security`, `npm run test:sql`) | **124 / 124 passed** (proposals A, B, C, D applied twice and in order, dry-run and apply files, attacks, retention, blocklist, unique blind index, columns gone, anon locked out, booking / attachment ownership). The tests reproduce each hole first, then show it closed; they caught two mistakes in D (new functions still granted to everyone) before it was ever applied |
 | Function code against fakes (`npm run test:edge`): OTP, welcome mail, AES-GCM round trip, tampering, wrong key, 20,000 nonces, rotation, kyc-pan / reveal / retention handlers, migration script | **31 / 31 passed**; `npm run typecheck` (strict tsc) clean |
 | `npm run test` (packages/shared Vitest) | **925 / 925 passed** (71 files) |
 | `npm run typecheck`, `npm run mobile:typecheck` | clean |

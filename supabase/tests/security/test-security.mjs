@@ -348,9 +348,113 @@ async function suiteOrder() {
     await q(P(PROPOSAL_A)); await q(P(PROPOSAL_B));
     await q(P(PROPOSAL_C));
     await q(P(PROPOSAL_A)); await q(P(PROPOSAL_B)); await q(P(PROPOSAL_C));
+    await q(P(PROPOSAL_D)); await q(P(PROPOSAL_D));
     const otp = await q(`select count(*)::int n from information_schema.columns where table_name = 'provider_otp_codes' and column_name = 'otp_code'`);
     check("O1 A -> B -> C applies, and A -> B -> C again changes nothing", true);
     check("O2 proposal C drops the plain OTP column once proposal A emptied it", otp[0].n === 0);
+  } finally {
+    await stop();
+  }
+}
+
+
+const PROPOSAL_D = "20261125000003_permissions_hardening_PROPOSAL_NOT_APPLIED.sql";
+
+// ── Proposal D: table, function and storage permissions ───────────────────────────────────────────────────────────────
+async function suiteD() {
+  const { q, as, stop } = await freshDb("d");
+  try {
+    await seed(q);
+    await q(`insert into public.services (name, base_price) values ('Plumbing', 300)`);
+    await q(`insert into public.coupons (code) values ('SAVE10')`);
+    await q(`insert into public.messages (booking_id, sender_id, content) values (gen_random_uuid(), $1, 'hi')`, [ids.customer]);
+    await q(P(PROPOSAL_A));
+
+    // The holes, reproduced BEFORE the fix
+    const holeBooking = await as("authenticated", ids.customer,
+      `insert into public.bookings (customer_id, user_id, provider_id, scheduled_date) values ($1, $2, $3, current_date) returning id`, [ids.proB, ids.customer, ids.spA]);
+    check("D0 the live hole is reproduced first: a user can create a booking whose customer_id is SOMEONE ELSE", !holeBooking.error, holeBooking.error?.message);
+    const anonBefore = await as("anon", null, `select count(*)::int n from public.messages`);
+    check("D0b ...and anon had full access to tables like messages before", !anonBefore.error);
+
+    await q(P(PROPOSAL_D));
+    await q(P(PROPOSAL_D));
+    check("D1 proposal D applies and re-runs safely (after A)", true);
+
+    // 1. Tables
+    const readOk = [];
+    for (const t of ["services", "reviews", "public_providers"]) readOk.push(!(await as("anon", null, `select * from public.${t}`)).error);
+    check("D2 anon can still read the public catalogue (services, reviews, public_providers)", readOk.every(Boolean), readOk.join());
+    const forms = await as("anon", null, `insert into public.contact_messages (name, message) values ('x', 'hello')`);
+    const form2 = await as("anon", null, `insert into public.pro_applications (name, phone) values ('x', '9')`);
+    check("D3 anon can still send the two public forms (contact, pro application)", !forms.error && !form2.error, forms.error?.message ?? form2.error?.message);
+    const closed = [];
+    for (const t of ["bookings", "messages", "coupons", "provider_kyc", "provider_notifications", "booking_attachments", "user_roles", "customer_otp_codes", "wallet_x"]) {
+      const r = await as("anon", null, `select 1 from public.${t} limit 1`);
+      closed.push(`${t}:${r.error ? "denied" : "OPEN"}`);
+    }
+    check("D4 anon is locked out of every other table (bookings, messages, coupons, KYC, notifications, ...)", closed.filter((x) => x.includes("OPEN")).length === 0, closed.join(" "));
+    const writeCatalogue = await as("anon", null, `update public.services set base_price = 1`);
+    const writeReview = await as("anon", null, `insert into public.reviews (rating) values (5)`);
+    const formRead = await as("anon", null, `select * from public.contact_messages`);
+    check("D5 anon cannot write the catalogue or reviews, or read the form tables", denied(writeCatalogue) && denied(writeReview) && denied(formRead));
+    const truncate = await as("authenticated", ids.customer, `truncate public.messages`);
+    check("D6 a signed-in user cannot TRUNCATE a table", denied(truncate), truncate.error?.message);
+    await q(`create table public.zz_future_table (id int)`);
+    check("D7 a table created later is NOT readable by anon by default", denied(await as("anon", null, `select * from public.zz_future_table`)));
+    check("D7b ...and a function created later is not callable by anon", await (async () => {
+      await q(`create function public.zz_future_fn() returns int language sql as $$ select 1 $$`);
+      return denied(await as("anon", null, `select public.zz_future_fn()`));
+    })());
+
+    // 2. Functions
+    const anonFns = await q(`select p.proname from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+      where n.nspname = 'public' and has_function_privilege('anon', p.oid, 'execute')`);
+    check("D8 anon can execute NO function in the public schema (before: 8 secdef + triggers + helpers)", anonFns.length === 0, anonFns.map((r) => r.proname).join());
+    const trig = await q(`select p.proname from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+      where n.nspname = 'public' and p.prorettype = 'trigger'::regtype
+        and (has_function_privilege('anon', p.oid, 'execute') or has_function_privilege('authenticated', p.oid, 'execute'))`);
+    check("D9 no app role can execute a trigger function directly", trig.length === 0, trig.map((r) => r.proname).join());
+    const app = await as("authenticated", ids.customer, `select public.get_wallet_summary() r`);
+    check("D10 signed-in users keep the functions they had (get_wallet_summary, has_role)", !app.error
+      && !(await as("authenticated", ids.customer, `select public.has_role($1, 'admin')`, [ids.admin])).error, app.error?.message);
+    const helper = await as("authenticated", ids.customer, `select public.provider_launch_active($1, null)`, [ids.spA]);
+    const helperSvc = await as("service_role", null, `select public.provider_launch_active($1, null)`, [ids.spA]);
+    check("D11 the internal helper provider_launch_active is closed to signed-in users but open to the server", denied(helper) && !helperSvc.error, helper.error?.message ?? helperSvc.error?.message);
+    const otpFn = await as("authenticated", ids.customer, `select public.otp_rate_take('x', ARRAY['k'], 60, 1)`);
+    check("D12 proposal A's service-only functions are still service-only", denied(otpFn));
+
+    // 3. Bookings only for yourself
+    const kept = await as("authenticated", ids.customer,
+      `insert into public.bookings (customer_id, provider_id, scheduled_date) values ($1, $2, current_date) returning id, user_id`, [ids.customer, ids.spA], true);
+    check("D13 a normal booking still works (customer_id only: the trigger fills user_id)", !kept.error && kept.rows[0]?.user_id === ids.customer, kept.error?.message);
+    const notice = await q(`select count(*)::int n from public.provider_notifications where data->>'booking_id' = $1`, [kept.rows[0]?.id ?? ""]);
+    check("D14 ...and the trigger still wrote the pro's notice with trigger functions locked", notice[0].n === 1, String(notice[0].n));
+    const forC = await as("authenticated", ids.customer, `insert into public.bookings (customer_id, user_id, scheduled_date) values ($1, $2, current_date)`, [ids.proB, ids.customer]);
+    const forU = await as("authenticated", ids.customer, `insert into public.bookings (customer_id, user_id, scheduled_date) values ($1, $2, current_date)`, [ids.customer, ids.proB]);
+    const forOnlyU = await as("authenticated", ids.customer, `insert into public.bookings (user_id, scheduled_date) values ($1, current_date)`, [ids.proB]);
+    check("D15 a booking for someone else's customer_id is refused", denied(forC), forC.error?.message);
+    check("D16 a booking for someone else's user_id is refused", denied(forU), forU.error?.message);
+    check("D17 ...also when only user_id is sent", denied(forOnlyU), forOnlyU.error?.message);
+    const own = await as("authenticated", ids.customer, `insert into public.bookings (customer_id, user_id, scheduled_date) values ($1, $1, current_date) returning id`, [ids.customer]);
+    check("D18 a booking with both ids set to yourself works", !own.error, own.error?.message);
+
+    // 4. Attachments
+    const bookingId = kept.rows[0].id;
+    const myAtt = await as("authenticated", ids.customer, `insert into public.booking_attachments (booking_id, uploaded_by, type) values ($1, $2, 'image')`, [bookingId, ids.customer]);
+    const theirAtt = await as("authenticated", ids.proB, `insert into public.booking_attachments (booking_id, uploaded_by, type) values ($1, $2, 'image')`, [bookingId, ids.proB]);
+    check("D19 a customer can attach a photo to their own booking", !myAtt.error, myAtt.error?.message);
+    check("D20 another signed-in user cannot attach a file to someone else's booking", denied(theirAtt), theirAtt.error?.message);
+
+    // 5. Storage
+    const b = await q(`select id, file_size_limit, allowed_mime_types from storage.buckets where id in ('booking-attachments','booking-extras') order by id`);
+    check("D21 booking-attachments: 10 MB and exactly the 13 photo / audio types the app stores",
+      Number(b[0].file_size_limit) === 10485760 && b[0].allowed_mime_types.length === 13 && b[0].allowed_mime_types.includes("audio/mp4") && b[0].allowed_mime_types.includes("image/heic"), JSON.stringify(b[0]));
+    check("D22 booking-extras: 10 MB limit, types left open", Number(b[1].file_size_limit) === 10485760 && b[1].allowed_mime_types === null, JSON.stringify(b[1]));
+
+    // 6. Leftover table
+    const otp = await as("authenticated", ids.customer, `insert into public.customer_otp_codes (user_id, otp_code) values ($1, '111111')`, [ids.customer]);
+    check("D23 the unused phone-OTP table is closed to signed-in users", denied(otp), otp.error?.message);
   } finally {
     await stop();
   }
@@ -389,6 +493,10 @@ try {
   sameBody(PROPOSAL_A, "25_security_hardening_DRYRUN.sql", "apply_25_security_hardening_COMMIT.sql", "A-files");
   await runDryRun("25_security_hardening_DRYRUN.sql", "A-dry",
     `select exists (select 1 from pg_policies where policyname = 'public_read_providers') ok`);
+  await suiteD();
+  sameBody(PROPOSAL_D, "28_permissions_hardening_DRYRUN.sql", "apply_28_permissions_hardening_COMMIT.sql", "D-files");
+  await runDryRun("28_permissions_hardening_DRYRUN.sql", "D-dry",
+    `select has_table_privilege('anon', 'public.bookings', 'select') ok`);
   await suiteBC();
   await suiteOrder();
   sameBody(PROPOSAL_B, "26_kyc_pan_encryption_DRYRUN.sql", "apply_26_kyc_pan_encryption_COMMIT.sql", "B-files");

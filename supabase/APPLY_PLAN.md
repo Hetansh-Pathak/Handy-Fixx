@@ -35,6 +35,7 @@ Superseded, do NOT apply: `20261002000003_server_side_fee_trigger`.
 | 11 | `20261125000000` security hardening (`25_`) | Medium: drops two open read policies on `service_providers` and four open notification insert policies, locks `confirm_user_email`, changes the provider OTP table | Independent. Needs the `OTP_HMAC_KEY` secret; deploy `send-provider-otp`, `verify-provider-otp`, `send-welcome-email` right after; delete the stray functions `quick-function`, `bright-handler`. Details: `docs/SECURITY_CHANGES.md` |
 | 12 | `20261125000001` KYC: PAN encrypted, no Aadhaar (`26_`) | High: apps lose direct access to PAN columns, `submit_kyc` replaced, new tables and a daily retention job | Needs 11. Deploy `kyc-pan`, `kyc-admin-reveal-pan`, `kyc-retention` and ship the new Pro build and admin site WITH it. Retention days = 30 placeholder (lawyer) |
 | 13 | `20261125000002` drop plain PAN + Aadhaar columns (`27_`) | **Irreversible** | Only after `supabase/proposals/scripts/kyc-migrate-pan.ts --apply`; it refuses to run while plain values remain |
+| 14 | `20261125000003` permissions (`28_`) | Medium: locks `anon` out of every table except the public catalogue, closes 45 trigger functions and all anon-callable functions, adds booking / attachment ownership rules, bucket limits | Independent; apply after 11. Then test: sign in to the customer app, the Pro app and the admin site. Dry run first |
 
 Not yet reviewed whether still needed: `20261103` contact, `20261104` avatars, `20261105` attachment read fix, `20261106` catalogue.
 
