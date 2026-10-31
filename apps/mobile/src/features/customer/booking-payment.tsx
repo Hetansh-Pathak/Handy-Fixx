@@ -17,6 +17,18 @@ export function createBookingPaymentOrder(bookingId: string): Promise<CheckoutOr
   return callEdge<CheckoutOrder>(getSupabase(), "create-booking-payment-order", { booking_id: bookingId });
 }
 
+/**
+ * Asks the server whether Razorpay's signature is genuine, so the screen can say "verified" at once. It never marks
+ * anything paid (only the webhook does). Null when the function is not deployed yet or cannot be reached.
+ */
+export async function verifyBookingPayment(ids: { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string }): Promise<{ verified: boolean; paid: boolean } | null> {
+  try {
+    return await callEdge<{ verified: boolean; paid: boolean }>(getSupabase(), "verify-booking-payment", ids);
+  } catch {
+    return null;
+  }
+}
+
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /**
@@ -74,9 +86,13 @@ export function BookingPayment({ booking, pro, serviceName, pendingExtras, refet
       if (result.status === "cancelled") { setNotice("Payment cancelled. Nothing was charged."); return; }
       if (result.status === "failed") { setError(result.message); return; }
       setNotice("Payment received, confirming…");
+      // The answer only speeds up the message; the screen still waits for payment_status from the database.
+      const check = result.payment ? await verifyBookingPayment(result.payment) : null;
+      if (check && !check.verified) setError("We could not confirm this payment yet. If money left your account, it will show here within a few minutes.");
+      else if (check?.verified) setNotice("Payment verified, updating your booking…");
       for (let i = 0; i < 15; i += 1) {
         await sleep(2000);
-        if (paymentState(await refetch()) === "paid") { setNotice(null); return; }
+        if (paymentState(await refetch()) === "paid") { setNotice(null); setError(null); return; }
       }
       setNotice(`Payment received. Confirmation can take a few minutes; you will not be charged twice. Do not pay ${pro} again.`);
     } catch (e) {

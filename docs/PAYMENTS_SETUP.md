@@ -1,7 +1,7 @@
 # Payments setup: wallet recharge packs with Razorpay
 
-For the owner. Pros recharge their HandyFix wallet with a pack (₹49, ₹99 or ₹199). Customers never pay through the app;
-they pay the pro directly. Nothing here is live until you deploy it. Older notes about the QR flow are in
+For the owner. Pros recharge their HandyFix wallet with a pack (₹49, ₹99 or ₹199). Customers pay a completed job either
+in the app (Razorpay) or to the pro directly; see "Booking payments" below. Nothing here is live until you deploy it. Older notes about the QR flow are in
 `WALLET_SETUP_GUIDE.md`.
 
 ## How money moves
@@ -22,7 +22,7 @@ they pay the pro directly. Nothing here is live until you deploy it. Older notes
 3. Settings → Webhooks → **Add New Webhook**:
    - URL: `https://<project-ref>.supabase.co/functions/v1/razorpay-webhook` (for this project: `https://jviwwhjwtyneqrguumro.supabase.co/functions/v1/razorpay-webhook`)
    - Secret: make up a long random string and keep it
-   - Active events: **payment.captured**, **order.paid**, **refund.processed** (optional: **payment.failed**, only logged)
+   - Active events: **payment.captured**, **order.paid**, **refund.processed**, **payment.failed** (booking payments mark the order failed; no money moves)
 
 ## 2. Supabase secrets (never in the app, never in git)
 
@@ -41,8 +41,8 @@ Recharge does **not** need the fee proposal 20261114000000: it only uses `wallet
 deployable versions are already in `supabase/functions/` (identical to `supabase/proposals/functions/`; a test fails if
 they drift).
 
-**Until these are deployed, every pack tap fails**: the live `create-wallet-topup-order` (v6) still expects
-`{ amount }`, the app sends `{ pack }`, so the pro sees "Enter a whole amount between ₹1 and ₹50,000".
+**Deployed 2026-10-30** (owner approved): `create-wallet-topup-order` v10, `verify-wallet-payment` v1, `razorpay-webhook`
+v10 (the Section 0 version, top-ups only). Re-run the commands below only when they change.
 
 From the repo root, signed in to the Supabase CLI (`npx supabase login` once):
 
@@ -71,6 +71,44 @@ Install a **development build** of the Pro app (Razorpay is a native module; Exp
 
 If a payment succeeds but the wallet does not move: Supabase → Edge Functions → `razorpay-webhook` → Logs. A 401 means
 the webhook secret in Razorpay and in Supabase differ.
+
+## Booking payments (customer pays a completed job in the app, Payments Sections 1-2)
+
+How it works: "Pay ₹X online" appears once the job is completed. `create-booking-payment-order` makes a Razorpay order for
+the amount the database says (`booking_payable_paise`, the app never sends an amount). After Checkout,
+`verify-booking-payment` only checks the signature for a quick "verified" message. **Only the webhook records money**:
+`record_booking_payment` credits the pro once per payment, only when the amount equals the order, marks the booking paid
+(`payment_method = online`) and, if the 3% fee was not already taken at completion, takes it now (₹0 in the launch
+period) and releases the fee hold. The pro's earning is **on hold for 48 h after completion** (dispute window,
+`wallet_settings.earning_hold_hours`), then withdrawable. A refund takes back the earning minus the fee pro rata (the fee
+part goes back to the pro); the balance may go negative if the money was already spent.
+
+Order (nothing of this is applied or deployed yet):
+
+1. Apply `20261122000000` (dry run `supabase/dryrun/21_`, then `apply_21_`).
+2. Apply `20261123000000` (dry run `22_`, then `apply_22_`). It works whether or not `20261114000000` is applied.
+3. Run `supabase/verify/11_booking_payment_selftest_NOTHING_SAVED.sql`: it ends with an error on purpose that lists
+   PASS/FAIL/SKIP lines and saves nothing. Every line must be PASS or SKIP.
+4. Deploy, in this order:
+   ```bash
+   npx supabase functions deploy razorpay-webhook --no-verify-jwt --project-ref jviwwhjwtyneqrguumro
+   npx supabase functions deploy verify-booking-payment --project-ref jviwwhjwtyneqrguumro
+   npx supabase functions deploy create-booking-payment-order --project-ref jviwwhjwtyneqrguumro
+   ```
+   (the new webhook still handles top-ups exactly as before; all three deployable copies are already in
+   `supabase/functions/`, identical to `supabase/proposals/functions/`, a test fails if they drift).
+5. In Razorpay → Webhooks, make sure **payment.failed** is ticked as well.
+
+Phone test (development builds of both apps, test mode):
+
+| Test | Do | Expect |
+|---|---|---|
+| UPI | Customer: completed job → Pay ₹X online → UPI `success@razorpay` | "Payment verified", then the card says Paid. Pro: job says "Paid online ₹X"; Wallet history "Paid online +₹X, On hold until …" and the headline shows the on-hold amount; one `fee:<booking>` row only |
+| Card | Card `4111 1111 1111 1111`, any future date, any CVV | Same as UPI |
+| Failure | UPI `failure@razorpay` | Plain reason, booking stays unpaid, order `failed`, no wallet row; paying again works |
+| Duplicate | Razorpay → Webhooks → the event → Resend | Still one credit (`payment_events` result `duplicate`) |
+| Withdraw on hold | Pro tries to withdraw the online money before 48 h | Refused (money on hold) |
+| Refund | Razorpay → Payments → Refund (full or partial) | `refund_reversal` row = earning minus fee pro rata; booking `refunded` / `partially_refunded` |
 
 ## Switching Razorpay account (for example a new test account)
 

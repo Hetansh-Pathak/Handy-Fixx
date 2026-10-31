@@ -1,5 +1,5 @@
-// DEPLOYABLE COPY of supabase/proposals/functions/razorpay-webhook (copied 2026-10-30, Section 0). NOT deployed until the owner runs the
-// deploy command in docs/PAYMENTS_SETUP.md. Keep both copies identical below this header.
+// DEPLOYABLE COPY of supabase/proposals/functions/razorpay-webhook (Payments Section 2, 2026-10-30). NOT deployed yet:
+// the live version is the Section 0 one (v10, wallet top-ups only). Keep both copies identical below this header.
 // @ts-expect-error Supabase resolves Deno URL imports at deploy time.
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 // @ts-expect-error Supabase resolves Deno URL imports at deploy time.
@@ -7,14 +7,21 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 declare const Deno: { env: { get: (name: string) => string | undefined } };
 
-// Originally: Replaces supabase/functions/razorpay-webhook (owner decision 2026-10-29).
-// Change: a payment.captured / order.paid whose notes say it is NOT a wallet top-up is ignored before touching the
-// wallet. Unchanged: HMAC check, every money write idempotent (record_wallet_topup credits once per payment and only
-// when the paid amount equals the order), refund.processed posts a refund_reversal via record_refund.
-// Events to enable in the Razorpay dashboard: payment.captured, order.paid, refund.processed (see docs/PAYMENTS_SETUP.md).
+// Originally: Payments Section 2 version (2026-10-30). Live today: the Section 0 version (wallet top-ups).
+// Deploy AFTER proposals 20261122000000 and 20261123000000 are applied:
+//   npx supabase functions deploy razorpay-webhook --no-verify-jwt --project-ref jviwwhjwtyneqrguumro
+// (Razorpay does not send a Supabase login. Security = the HMAC signature below, unchanged.)
 //
-// Deploy with:  supabase functions deploy razorpay-webhook --no-verify-jwt
-// (Razorpay does not send a Supabase login. Security = the HMAC signature below.)
+// Routing by notes.type (order notes, else payment notes):
+//   wallet_topup     -> record_wallet_topup (unchanged)
+//   booking_payment  -> record_booking_payment (credits the pro once per payment, only when the amount matches)
+//   (no notes)       -> top-up first; if it is not a top-up order, the booking payment
+//   anything else    -> logged and ignored
+// payment.failed   -> mark_booking_payment_failed (no money moves) + logged
+// refund.processed -> record_booking_refund; if it is not a booking payment, record_refund (wallet top-ups, QR) as
+//                     before. A booking refund that arrives before its capture is recorded gets a 500, so Razorpay
+//                     retries it later. Duplicate events are safe: every money write is idempotent in the database.
+// Events to enable in the Razorpay dashboard: payment.captured, order.paid, payment.failed, refund.processed.
 
 const hex = (buf: ArrayBuffer) => [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
 
@@ -41,6 +48,13 @@ async function razorpay(path: string, method: "GET" | "POST", body?: unknown) {
   if (!res.ok) throw new Error(data?.error?.description ?? `Razorpay error ${res.status}`);
   return data;
 }
+
+/** The parts of a Razorpay payment entity this function reads. */
+type RzpPayment = { id: string; order_id?: string; amount: number; method?: string; notes?: { type?: string }; error_description?: string };
+
+/** The SQL function is not in the database yet (proposal not applied). */
+const missingFunction = (e: { code?: string; message?: string } | null) =>
+  !!e && (e.code === "PGRST202" || /could not find the function/i.test(e.message ?? ""));
 
 serve(async (req: Request) => {
   if (req.method !== "POST") return new Response("ok");
@@ -70,11 +84,50 @@ serve(async (req: Request) => {
     } catch (e) { console.warn("log failed", e); }
   };
 
+  /** Pro recharged the wallet. Returns the database's result ("unknown_order" = not a top-up order). */
+  const walletTopup = async (payment: RzpPayment, quiet: boolean) => {
+    const { data, error } = await admin.rpc("record_wallet_topup", {
+      p_order_id: payment.order_id,
+      p_payment_id: payment.id,
+      p_amount_paise: payment.amount,
+    });
+    if (error) throw error;
+    const result: string = data?.result ?? "unknown";
+    if (!(quiet && result === "unknown_order")) {
+      await log({ result, provider_id: data?.provider_id ?? null, razorpay_payment_id: payment.id, amount: payment.amount / 100,
+                  note: result === "amount_mismatch" ? `Top-up amount mismatch: expected ${data?.expected}, received ${data?.received}` : null });
+    }
+    return result;
+  };
+
+  /** Customer paid a booking in the app. The database credits the pro once and only for the exact order amount. */
+  const bookingPayment = async (payment: RzpPayment, quiet: boolean) => {
+    const { data, error } = await admin.rpc("record_booking_payment", {
+      p_order_id: payment.order_id,
+      p_payment_id: payment.id,
+      p_amount_paise: payment.amount,
+      p_method: payment.method ?? null,
+    });
+    if (error) {
+      if (quiet && missingFunction(error)) return "unknown_order";
+      throw error; // 500: Razorpay retries (e.g. until 20261123000000 is applied)
+    }
+    const result: string = data?.result ?? "unknown";
+    if (quiet && result === "unknown_order") return result;
+    const note =
+      result === "amount_mismatch" ? `Booking payment amount mismatch: expected ${data?.expected} paise, received ${data?.received}. NOT credited.`
+      : result === "booking_already_paid" || result === "order_already_paid" ? "This booking was already paid: NOT credited. Refund this payment in the Razorpay dashboard."
+      : null;
+    await log({ result, booking_id: data?.booking_id ?? null, provider_id: data?.provider_id ?? null,
+                razorpay_payment_id: payment.id, amount: payment.amount / 100, note });
+    return result;
+  };
+
   try {
     const type: string = event?.event ?? "";
     const payment = event?.payload?.payment?.entity;
 
-    // ── Customer paid a booking QR ───────────────────────────────────────────
+    // ── Customer paid a booking QR (old flow, unchanged) ─────────────────────
     if (type === "qr_code.credited" && payment) {
       const qr = event?.payload?.qr_code?.entity;
       const { data, error } = await admin.rpc("record_qr_payment", {
@@ -109,46 +162,66 @@ serve(async (req: Request) => {
       return Response.json({ ok: true, result });
     }
 
-    // ── Pro recharged the wallet (Razorpay Checkout order) ───────────────────
+    // ── A Checkout payment succeeded (order.paid may arrive before or after payment.captured) ──
     if ((type === "payment.captured" || type === "order.paid") && payment?.order_id) {
-      // Orders made by create-wallet-topup-order carry notes.type = "wallet_topup". Payments without notes still go
-      // through record_wallet_topup, which ignores any order that is not in wallet_topup_orders ("unknown_order").
-      const noteType = event?.payload?.order?.entity?.notes?.type ?? payment?.notes?.type;
-      if (noteType && noteType !== "wallet_topup") return Response.json({ ok: true, result: "ignored" });
-      const { data, error } = await admin.rpc("record_wallet_topup", {
-        p_order_id: payment.order_id,
-        p_payment_id: payment.id,
-        p_amount_paise: payment.amount,
-      });
-      if (error) throw error;
-      const result: string = data?.result ?? "unknown";
-      // unknown_order = a payment that is not one of our top-ups (ignore quietly)
-      if (result !== "unknown_order") {
-        await log({ result, provider_id: data?.provider_id ?? null, razorpay_payment_id: payment.id, amount: payment.amount / 100,
-                    note: result === "amount_mismatch" ? `Top-up amount mismatch: expected ${data?.expected}, received ${data?.received}` : null });
+      const noteType: string | null = event?.payload?.order?.entity?.notes?.type ?? payment?.notes?.type ?? null;
+      let result: string;
+      if (noteType === "booking_payment") result = await bookingPayment(payment, false);
+      else if (noteType === "wallet_topup") result = await walletTopup(payment, false);
+      else if (!noteType) {
+        result = await walletTopup(payment, true);
+        if (result === "unknown_order") result = await bookingPayment(payment, true);
+        if (result === "unknown_order") await log({ result: "ignored", razorpay_payment_id: payment.id, amount: payment.amount / 100, note: "Not a wallet top-up or booking order" });
+      } else {
+        result = "ignored";
+        await log({ result, razorpay_payment_id: payment.id, amount: payment.amount / 100, note: `notes.type ${noteType} is not handled` });
       }
       return Response.json({ ok: true, result });
     }
 
-    // ── A refund was processed: reverse the provider credit ──────────────────
+    // ── A payment attempt failed: no money moves; the order can still be paid by a later attempt ──
+    if (type === "payment.failed") {
+      let result = "logged";
+      if (payment?.order_id) {
+        const { data, error } = await admin.rpc("mark_booking_payment_failed", { p_order_id: payment.order_id });
+        if (!error) result = data?.result ?? result;
+      }
+      await log({ result, booking_id: null, razorpay_payment_id: payment?.id ?? null, amount: payment ? payment.amount / 100 : null,
+                  note: `payment.failed${payment?.error_description ? `: ${payment.error_description}` : ""}` });
+      return Response.json({ ok: true, result });
+    }
+
+    // ── A refund was processed ──────────────────────────────────────────────
     if (type === "refund.processed") {
       const refund = event?.payload?.refund?.entity;
       if (refund?.payment_id && refund?.id) {
-        const { data, error } = await admin.rpc("record_refund", {
-          p_payment_id: refund.payment_id,
-          p_refund_id: refund.id,
-          p_amount_paise: refund.amount,
-        });
-        if (error) throw error;
-        await log({ result: data?.result ?? "unknown", provider_id: data?.provider_id ?? null,
+        const args = { p_payment_id: refund.payment_id, p_refund_id: refund.id, p_amount_paise: refund.amount };
+        const booking = await admin.rpc("record_booking_refund", args);
+        if (booking.error && !missingFunction(booking.error)) throw booking.error;
+        let data = booking.error ? null : booking.data;
+        let result: string = data?.result ?? "unknown_payment";
+        if (result === "unknown_payment") {
+          // Not a recorded booking payment: wallet top-up or QR refund, as before.
+          const wallet = await admin.rpc("record_refund", args);
+          if (wallet.error) throw wallet.error;
+          data = wallet.data;
+          result = data?.result ?? "unknown";
+          if (result === "no_credit") {
+            // Out of order: a booking payment whose capture is not recorded yet. 500 = Razorpay retries later.
+            try {
+              const p = await razorpay(`/payments/${refund.payment_id}`, "GET");
+              const o = p?.order_id ? await razorpay(`/orders/${p.order_id}`, "GET") : null;
+              if (o?.notes?.type === "booking_payment") return new Response("capture not recorded yet", { status: 500 });
+            } catch (e) { console.warn("refund lookup failed", e); }
+          }
+        }
+        await log({ result, booking_id: data?.booking_id ?? null, provider_id: data?.provider_id ?? null,
                     razorpay_payment_id: refund.payment_id, amount: refund.amount / 100 });
-        return Response.json({ ok: true, result: data?.result });
+        return Response.json({ ok: true, result });
       }
     }
 
-    if (type === "payment.failed") {
-      await log({ result: "ignored", razorpay_payment_id: payment?.id ?? null, amount: payment ? payment.amount / 100 : null, note: "payment.failed" });
-    }
+    await log({ result: "ignored", razorpay_payment_id: payment?.id ?? null, amount: payment ? payment.amount / 100 : null, note: `event ${type}` });
     return Response.json({ ok: true, result: "ignored" });
   } catch (e) {
     // 500 makes Razorpay retry later. Every money write is idempotent, so retries are safe.

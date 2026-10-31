@@ -1,7 +1,7 @@
 import {
   canDecline, COMPLETION_CODE_LENGTH, declinePatch, formatBookingWhen,
   formatInr, interpretCompletion, isCompletionCode, isPatchAction, isRequestOpen, jobProgress, phoneVisibleToProvider, PROVIDER_ACTION_LABEL,
-  providerActionPatch, providerStatusLabel, providerStep, requestAccess, requestEconomics, settleJob, whereForProvider, type BookingStatus, type PatchAction, type Settlement,
+  proPaymentLine, providerActionPatch, providerStatusLabel, providerStep, requestAccess, requestEconomics, settleJob, whereForProvider, type BookingStatus, type PatchAction, type Settlement,
 } from "@handyfix/shared";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -232,7 +232,13 @@ export default function JobScreen() {
       {settlement || status === "completed" ? (
         <Card>
           <Text className="text-lg font-semibold text-ok">Job completed</Text>
-          <Line label="Final bill (customer pays you)" value={formatInr(Number(booking.total_amount ?? price))} />
+          <Line label="Final bill" value={formatInr(Number(booking.total_amount ?? price))} />
+          {proPaymentLine(booking) ? (
+            <View accessibilityLabel="Online payment" className="gap-1 rounded-tile bg-ok-bg px-3 py-2">
+              <Text className="text-base font-semibold text-ok">{proPaymentLine(booking)}</Text>
+              <Text className="text-xs text-fg">Added to your wallet. On hold for 48 hours after the job (the problem-report window), then you can withdraw it. Do not take cash for this job.</Text>
+            </View>
+          ) : null}
           {Number(booking.parts_amount ?? 0) > 0 ? <Line label="Parts (no fee)" value={formatInr(Number(booking.parts_amount))} /> : null}
           {feeRecord.data ? (
             <>

@@ -1,3 +1,5 @@
+import { formatInr } from "../money/money";
+
 /**
  * Paying for a booking in the app through Razorpay (owner decision 2026-10-30). The customer may pay online OR pay the
  * pro directly by cash/UPI; the customer platform fee stays ₹0. Only the server ever marks a booking paid (Section 2
@@ -60,4 +62,19 @@ export function paymentStateLabel(state: PaymentState): string {
     refunded: "Refunded",
     partially_refunded: "Partly refunded",
   }[state];
+}
+
+/**
+ * The pro's view of how a job was paid. "Paid online" only when the Section 2 webhook recorded a Razorpay payment
+ * (payment_method = online); the legacy cash "record payment" also sets payment_status = paid, so status alone is not enough.
+ */
+export function proPaymentLine(booking: { payment_status?: string | null; payment_method?: string | null; total_amount: number | string | null }): string | null {
+  const state = paymentState(booking.payment_status);
+  if (booking.payment_method !== "online") return null;
+  const paise = payableAmountPaise(booking);
+  const amount = paise === null ? "" : ` ${formatInr(paise / 100)}`;
+  if (state === "paid") return `Paid online${amount}`;
+  if (state === "refunded") return "Online payment refunded";
+  if (state === "partially_refunded") return `Paid online${amount}, partly refunded`;
+  return null;
 }

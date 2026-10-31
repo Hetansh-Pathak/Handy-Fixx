@@ -81,6 +81,29 @@ const check = (name, ok, extra = "") => {
   check("nothing is shown as reserved when no job holds a fee", !w.includes("reserved for jobs"));
   await shot("50-wallet");
 
+  // ── 1b. a customer paid a job online (Payments Section 2) ───────────────────
+  const inTwoDays = new Date(Date.now() + 47 * 3600000).toISOString();
+  Object.assign(db.storedBookings.find((b) => b.id === "w1"), { payment_status: "paid", payment_method: "online", completed_at: new Date().toISOString() });
+  db.ledger = [
+    { id: "l3", type: "online_credit", amount: 300, note: "Customer paid online (Razorpay)", booking_id: "w1", created_at: new Date().toISOString(), available_at: inTwoDays, razorpay_payment_id: "pay_1" },
+    ...db.ledger,
+  ];
+  await openWallet();
+  await waitBody("Paid online");
+  check("the online payment is in the history as 'Paid online' +₹300, on hold until a date", (await has("+₹300")) && (await has("On hold until")));
+  check("the headline shows the money on hold, separate from the available balance",
+    (await L("On hold").innerText()).startsWith("₹300 from online payments on hold") && (await L("Wallet balance").innerText()) === "₹250 available");
+  await shot("53-wallet-on-hold");
+  await page.goto(`${BASE}/provider/job/w1`, { waitUntil: "networkidle" });
+  await waitBody("Job completed");
+  check("the job screen says 'Paid online ₹300' and not to take cash", (await L("Online payment").innerText()).includes("Paid online ₹300") && (await has("Do not take cash for this job")));
+  Object.assign(db.storedBookings.find((b) => b.id === "w2"), { payment_status: "paid", payment_method: "cash" });
+  await page.goto(`${BASE}/provider/job/w2`, { waitUntil: "networkidle" });
+  await waitBody("Job completed");
+  check("a job paid in cash does not say 'Paid online'", !(await has("Paid online")));
+  db.ledger = db.ledger.filter((l) => l.id !== "l3");
+  await openWallet();
+
   // ── 2. recharge packs ────────────────────────────────────────────────────────
   const packs = await body();
   check("three packs are offered, ₹99 marked most popular, with no free amount field",

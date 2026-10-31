@@ -248,6 +248,7 @@ DECLARE
   s      record;
   v_amt  numeric;
   v_id   uuid;
+  v_on_hold numeric := 0;
 BEGIN
   IF p_amount IS NULL OR p_amount <= 0 THEN
     RETURN jsonb_build_object('ok', false, 'reason', 'invalid_amount');
@@ -271,8 +272,11 @@ BEGIN
   IF v_amt < s.min_payout THEN
     RETURN jsonb_build_object('ok', false, 'reason', 'below_minimum', 'min_payout', s.min_payout);
   END IF;
-  -- Money held for accepted jobs cannot be withdrawn.
-  IF v_amt > public.wallet_balance(sp.id) - public.wallet_held(sp.id) THEN
+  -- Money held for accepted jobs cannot be withdrawn, nor online earnings still on hold (20261123, if applied).
+  IF to_regprocedure('public.wallet_on_hold(uuid)') IS NOT NULL THEN
+    EXECUTE 'SELECT public.wallet_on_hold($1)' INTO v_on_hold USING sp.id;
+  END IF;
+  IF v_amt > public.wallet_balance(sp.id) - public.wallet_held(sp.id) - COALESCE(v_on_hold, 0) THEN
     RETURN jsonb_build_object('ok', false, 'reason', 'insufficient_balance');
   END IF;
 

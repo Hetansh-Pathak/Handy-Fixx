@@ -23,7 +23,7 @@ describe("SQL matches the shared fee rules", () => {
     const fn = read("functions/create-wallet-topup-order/index.ts");
     expect(fn).toContain(`const PACKS = [${RECHARGE_PACK_AMOUNTS.join(", ")}];`);
   });
-  it.each(["create-wallet-topup-order", "razorpay-webhook", "verify-wallet-payment"])(
+  it.each(["create-wallet-topup-order", "razorpay-webhook", "verify-wallet-payment", "create-booking-payment-order", "verify-booking-payment"])(
     "the deployable copy of %s is the proposal (only the header differs)",
     (name) => {
       // Code from the first import on; line endings ignored (Windows checkouts have CRLF).

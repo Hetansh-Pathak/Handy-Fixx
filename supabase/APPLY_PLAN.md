@@ -27,7 +27,8 @@ Superseded, do NOT apply: `20261002000003_server_side_fee_trigger`.
 | 6 | `20261109` pro area for Nearest (`6_`), `20261112` late-cancel limit (`9_`), `20261111` delete account (`8_`, + function) | Low | Any time |
 | – | Edge Function proposals in `proposals/functions/` (`create-wallet-topup-order`, `razorpay-webhook`, `verify-wallet-payment`) | Payments | Deploy with or right after 5; see `docs/PAYMENTS_SETUP.md` |
 
-| 7 | `20261122000000` booking payment orders (`21_`) | Low: new table, new column, new CHECK, new function; changes no existing function | Then deploy `create-booking-payment-order` (from `supabase/proposals/functions/`). Only useful together with Payments Section 2 (webhook marks paid) |
+| 7 | `20261122000000` booking payment orders (`21_`) | Low: new table, new column, new CHECK, new function; changes no existing function | Then deploy `create-booking-payment-order` (from `supabase/proposals/functions/`). Only useful together with 8 (webhook marks paid) |
+| 8 | `20261123000000` booking payment settlement (`22_`) | Medium: new money functions (service role only), new columns, replaces `request_payout` (also subtracts money on hold) | Needs 7. Works with or without 5 (fee = slabs before 5, 3% after). Then run `verify/11_booking_payment_selftest_NOTHING_SAVED.sql` (all PASS, nothing saved), then deploy `razorpay-webhook` (Section 2 copy in `supabase/functions/`), `verify-booking-payment`, `create-booking-payment-order` |
 
 Not yet reviewed whether still needed: `20261103` contact, `20261104` avatars, `20261105` attachment read fix, `20261106` catalogue.
 
@@ -37,6 +38,8 @@ Not yet reviewed whether still needed: `20261103` contact, `20261104` avatars, `
 - 4: a pro unticks a job on My services; booking that job with that pro is refused ("This pro does not do this job").
 - 5: `verify/09` all ok; a test pro with ₹0 (launch over) cannot accept ("Recharge ₹49 to accept…"); after a ₹49 test top-up
   accept works, Wallet shows "₹12 reserved"; completing with the code charges ₹12 (`booking_fees`, one `fee:<booking>` entry).
+
+- 8: `verify/10` row 22 = applied; `verify/11` prints only PASS/SKIP lines; a test payment (`success@razorpay`) gives one `online_credit` row with `available_at` 48 h after completion and the booking shows `payment_status = paid`, `payment_method = online`.
 
 ## After applying
 `EXPO_PUBLIC_PDF_PRICING_LIVE=1` and `EXPO_PUBLIC_ARRIVED_STATUS=1` in the build env (both migrations are live), rebuild.

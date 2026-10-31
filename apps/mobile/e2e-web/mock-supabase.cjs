@@ -263,6 +263,14 @@ async function installMock(page) {
       if (!order) { order = { id: "order_bk" + (db.bookingOrders.length + 1), booking_id: row.id, amount_paise: amount, status: "created" }; db.bookingOrders.push(order); }
       return json(route, 200, { order_id: order.id, amount_paise: amount, key_id: "rzp_test_x", prefill: {} });
     }
+    if (p === "/functions/v1/verify-booking-payment") {
+      // mirrors the proposed function: signature check only, never credits or marks paid
+      const b = body();
+      db.calls.push({ fn: "verify-booking-payment", body: b });
+      const order = (db.bookingOrders || []).find((o) => o.id === b.razorpay_order_id);
+      if (!order) return json(route, 404, { verified: false, error: "Payment not found" });
+      return json(route, 200, { verified: b.razorpay_signature === "good", paid: order.status === "paid", amount_paise: order.amount_paise, booking_id: order.booking_id });
+    }
     if (p === "/functions/v1/create-wallet-topup-order") {
       const b = body();
       db.calls.push({ fn: "create-wallet-topup-order", body: b });

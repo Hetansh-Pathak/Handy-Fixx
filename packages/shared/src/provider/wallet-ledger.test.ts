@@ -41,6 +41,19 @@ describe("payout replies", () => {
   });
 });
 
+describe("describeLedgerEntry: online booking earnings", () => {
+  const now = new Date("2026-10-30T12:00:00Z");
+  it("labels them 'Paid online' and shows the hold until the dispute window ends", () => {
+    const l = describeLedgerEntry({ id: "o", type: "online_credit", amount: "949.00", created_at: "x", available_at: "2026-11-01T12:00:00Z" }, now);
+    expect(l).toMatchObject({ label: "Paid online", credit: true, amountText: "+₹949", onHoldUntil: "2026-11-01T12:00:00Z" });
+  });
+  it("is not on hold once the time has passed, nor for rows without a hold", () => {
+    expect(describeLedgerEntry({ id: "o", type: "online_credit", amount: 949, created_at: "x", available_at: "2026-10-29T12:00:00Z" }, now).onHoldUntil).toBeNull();
+    expect(describeLedgerEntry({ id: "t", type: "topup", amount: 99, created_at: "x" }, now).onHoldUntil).toBeNull();
+    expect(describeLedgerEntry({ id: "r", type: "refund_reversal", amount: -921, created_at: "x", available_at: "2026-11-01T12:00:00Z" }, now).onHoldUntil).toBeNull();
+  });
+});
+
 describe("earningsSummary", () => {
   const now = new Date("2026-10-27T10:00:00Z");
   it("counts completed jobs only, split by today and month", () => {

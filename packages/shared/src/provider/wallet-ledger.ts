@@ -10,10 +10,13 @@ export type LedgerEntry = {
   note?: string | null;
   booking_id?: string | null;
   created_at: string;
+  /** Online booking earnings (Payments Section 2): withdrawable from this time; null/absent = available now. */
+  available_at?: string | null;
+  razorpay_payment_id?: string | null;
 };
 
 const LEDGER_LABEL: Record<string, string> = {
-  online_credit: "Online payment received",
+  online_credit: "Paid online",
   cash_fee: "HandyFix fee",
   topup: "Wallet top-up",
   payout: "Withdrawal",
@@ -22,13 +25,19 @@ const LEDGER_LABEL: Record<string, string> = {
   adjustment: "Adjustment",
 };
 
-export type LedgerLine = { id: string; label: string; amount: number; credit: boolean; amountText: string; note: string | null; createdAt: string };
+export type LedgerLine = {
+  id: string; label: string; amount: number; credit: boolean; amountText: string; note: string | null; createdAt: string;
+  /** Set while an online earning is still in the dispute window: shown as "On hold until …". */
+  onHoldUntil: string | null;
+};
 
 /** One row of the wallet history, signed: money in is green (+), money out is red (-). */
-export function describeLedgerEntry(entry: LedgerEntry): LedgerLine {
+export function describeLedgerEntry(entry: LedgerEntry, now: Date = new Date()): LedgerLine {
   const amount = Number(entry.amount) || 0;
   const credit = amount > 0;
+  const until = entry.available_at ? new Date(entry.available_at) : null;
   return {
+    onHoldUntil: credit && until && Number.isFinite(until.getTime()) && until.getTime() > now.getTime() ? entry.available_at ?? null : null,
     id: entry.id,
     label: LEDGER_LABEL[entry.type] ?? "Wallet entry",
     amount,

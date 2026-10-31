@@ -1,5 +1,5 @@
 import {
-  describeLedgerEntry, earningsSummary, FEE_RULE_LABEL, findNewTopup, rechargeStartError, formatInr, jobsCovered, jobsCoveredLine, launchLine, payoutSummary, RECHARGE_PACKS, TYPICAL_BILL,
+  describeLedgerEntry, earningsSummary, FEE_RULE_LABEL, findNewTopup, rechargeStartError, formatInr, jobsCovered, jobsCoveredLine, launchLine, onHoldTotal, payoutSummary, RECHARGE_PACKS, TYPICAL_BILL,
   type LedgerEntry, type RechargePack,
 } from "@handyfix/shared";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -94,7 +94,10 @@ export default function WalletScreen() {
     }
   };
 
-  const earnings = earningsSummary(bookings.data ?? [], new Date());
+  const now = new Date();
+  const earnings = earningsSummary(bookings.data ?? [], now);
+  // Online booking payments stay on hold for the dispute window (48 h after completion), then can be withdrawn.
+  const onHold = onHoldTotal(ledger.data ?? [], now);
   const payoutReady = profile.data ? payoutSummary(profile.data).ready : false;
   const approved = provider?.kyc_status === "approved";
   const canWithdraw = rt.wallet.balance > 0 && rt.wallet.due === 0 && payoutReady && approved;
@@ -117,13 +120,16 @@ export default function WalletScreen() {
           {rt.launch.active ? "Fee-free launch" : jobsCoveredLine(jobsCovered(rt.wallet.balance))}
         </Text>
         <Text accessibilityLabel="Wallet balance" className="text-base text-muted">{formatInr(rt.wallet.balance)} available</Text>
+        {onHold > 0 ? (
+          <Text accessibilityLabel="On hold" className="text-sm text-fg">{formatInr(onHold)} from online payments on hold (withdrawable 48 h after the job)</Text>
+        ) : null}
         {rt.held > 0 ? <Text className="text-sm text-fg">{formatInr(rt.held)} reserved for jobs you accepted (taken when they complete)</Text> : null}
         {rt.wallet.due > 0 ? (
           <Text accessibilityLabel="Wallet dues" className="text-sm font-semibold text-danger">You owe {formatInr(rt.wallet.due)}. A recharge clears it first.</Text>
         ) : null}
         {rt.launch.active
           ? <Text className="text-sm text-ok">{launchLine(rt.launch)}. No fee is taken.</Text>
-          : <Text className="text-sm text-muted">HandyFix fee: {FEE_RULE_LABEL}. Reserved when you accept, taken when the job completes. Customers pay you directly.</Text>}
+          : <Text className="text-sm text-muted">HandyFix fee: {FEE_RULE_LABEL}. Reserved when you accept, taken when the job completes. Customers pay you directly or online in the app.</Text>}
       </HeroCard>
 
       <Card>
@@ -169,7 +175,7 @@ export default function WalletScreen() {
         <Line label="Today" value={formatInr(earnings.todayTotal)} />
         <Line label="This month" value={`${formatInr(earnings.monthTotal)} · ${earnings.monthJobs} job${earnings.monthJobs === 1 ? "" : "s"}`} />
         <Line label="All time" value={`${formatInr(earnings.total)} · ${earnings.jobs} job${earnings.jobs === 1 ? "" : "s"}`} />
-        <Text className="text-xs text-muted">What customers paid you for completed jobs (paid to you directly, before the HandyFix fee).</Text>
+        <Text className="text-xs text-muted">What customers paid for completed jobs (directly or online), before the HandyFix fee.</Text>
       </Card>
 
       <Card>
@@ -178,12 +184,13 @@ export default function WalletScreen() {
         {ledger.isError ? <ErrorBanner message="Could not load your wallet history." /> : null}
         {ledger.data && ledger.data.length === 0 ? <Body muted>No wallet activity yet.</Body> : null}
         {(ledger.data ?? []).map((entry) => {
-          const l = describeLedgerEntry(entry);
+          const l = describeLedgerEntry(entry, now);
           return (
             <View key={l.id} className="flex-row items-center justify-between gap-3 border-t border-line pt-2">
               <View className="flex-1">
                 <Text className="text-base text-fg">{l.label}</Text>
                 <Text className="text-xs text-muted">{l.createdAt.slice(0, 10)}{l.note ? ` · ${l.note}` : ""}</Text>
+                {l.onHoldUntil ? <Text className="text-xs font-semibold text-warn">On hold until {holdDate(l.onHoldUntil)}</Text> : null}
               </View>
               <Text className={`text-base font-semibold ${l.credit ? "text-ok" : "text-danger"}`}>{l.amountText}</Text>
             </View>
@@ -193,6 +200,9 @@ export default function WalletScreen() {
     </Screen>
   );
 }
+
+const holdDate = (iso: string) =>
+  new Date(iso).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" });
 
 function Line({ label, value }: { label: string; value: string }) {
   return (

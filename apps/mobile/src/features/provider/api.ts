@@ -24,11 +24,29 @@ export type ProviderBooking = {
   started_at: string | null;
   sub_item_name: string | null;
   special_instructions: string | null;
+  payment_status?: string | null;
+  /** 'online' once the webhook recorded a Razorpay payment (proposal 20261122; absent before it is applied). */
+  payment_method?: string | null;
   services: { name: string } | { name: string }[] | null;
 };
 
-const BOOKING_COLUMNS =
-  "id, status, created_at, booking_date, booking_time, address, city, pincode, customer_name, customer_phone, latitude, longitude, provider_amount, total_amount, parts_amount, completed_at, started_at, sub_item_name, special_instructions, services(name)";
+const BASE_BOOKING_COLUMNS =
+  "id, status, created_at, booking_date, booking_time, address, city, pincode, customer_name, customer_phone, latitude, longitude, provider_amount, total_amount, parts_amount, completed_at, started_at, sub_item_name, special_instructions, payment_status, services(name)";
+const BOOKING_COLUMNS = `${BASE_BOOKING_COLUMNS}, payment_method`;
+
+/** A column a proposal adds is not in the live database yet (PostgREST 42703 / PGRST204). */
+const missingColumn = (error: { message: string; code?: string }) =>
+  error.code === "42703" || error.code === "PGRST204" || /column .* does not exist/i.test(error.message);
+
+/** Runs a bookings query with payment_method, and again without it until proposal 20261122 is applied. */
+async function selectBookings<T>(
+  run: (columns: string) => PromiseLike<{ data: T | null; error: { message: string; code?: string } | null }>,
+): Promise<T | null> {
+  let { data, error } = await run(BOOKING_COLUMNS);
+  if (error && missingColumn(error)) ({ data, error } = await run(BASE_BOOKING_COLUMNS));
+  if (error) throw readable(error);
+  return data;
+}
 
 export const serviceNameOf = (b: ProviderBooking): string => {
   const s = Array.isArray(b.services) ? b.services[0] : b.services;
@@ -79,23 +97,20 @@ export async function publishApproxLocation(providerId: string, point: { latitud
 }
 
 export async function fetchPendingRequests(providerId: string): Promise<ProviderBooking[]> {
-  const { data, error } = await getSupabase()
-    .from("bookings").select(BOOKING_COLUMNS).eq("provider_id", providerId).eq("status", "pending").order("created_at", { ascending: true });
-  if (error) throw readable(error);
-  return (data ?? []) as ProviderBooking[];
+  const data = await selectBookings((columns) => getSupabase()
+    .from("bookings").select(columns).eq("provider_id", providerId).eq("status", "pending").order("created_at", { ascending: true }));
+  return (data ?? []) as unknown as ProviderBooking[];
 }
 
 export async function fetchProviderBookings(providerId: string): Promise<ProviderBooking[]> {
-  const { data, error } = await getSupabase()
-    .from("bookings").select(BOOKING_COLUMNS).eq("provider_id", providerId).order("created_at", { ascending: false }).limit(100);
-  if (error) throw readable(error);
-  return (data ?? []) as ProviderBooking[];
+  const data = await selectBookings((columns) => getSupabase()
+    .from("bookings").select(columns).eq("provider_id", providerId).order("created_at", { ascending: false }).limit(100));
+  return (data ?? []) as unknown as ProviderBooking[];
 }
 
 export async function fetchProviderBooking(id: string): Promise<ProviderBooking | null> {
-  const { data, error } = await getSupabase().from("bookings").select(BOOKING_COLUMNS).eq("id", id).maybeSingle();
-  if (error) throw readable(error);
-  return (data as ProviderBooking | null) ?? null;
+  const data = await selectBookings((columns) => getSupabase().from("bookings").select(columns).eq("id", id).maybeSingle());
+  return (data as unknown as ProviderBooking | null) ?? null;
 }
 
 export async function applyBookingPatch(bookingId: string, providerId: string, patch: BookingPatch): Promise<void> {
@@ -168,13 +183,19 @@ export async function updateEta(bookingId: string, providerId: string, minutes: 
 
 export type PayoutRow = { id: string; amount: number | string; status: string; requested_at: string };
 
-/** Ledger rows are readable by their own provider (RLS `wallet_tx_provider_read`). */
+/**
+ * Ledger rows are readable by their own provider (RLS `wallet_tx_provider_read`). `available_at` (when an online
+ * earning stops being on hold) comes with proposal 20261123; before that the list loads without it.
+ */
 export async function fetchLedger(providerId: string, limit = 40): Promise<LedgerEntry[]> {
-  const { data, error } = await getSupabase()
-    .from("wallet_transactions").select("id, type, amount, note, booking_id, created_at")
+  const run = (columns: string) => getSupabase()
+    .from("wallet_transactions").select(columns)
     .eq("provider_id", providerId).order("created_at", { ascending: false }).limit(limit);
+  const base = "id, type, amount, note, booking_id, created_at";
+  let { data, error } = await run(`${base}, available_at, razorpay_payment_id`);
+  if (error && missingColumn(error)) ({ data, error } = await run(base));
   if (error) throw readable(error);
-  return (data ?? []) as LedgerEntry[];
+  return (data ?? []) as unknown as LedgerEntry[];
 }
 
 export async function fetchPayouts(providerId: string): Promise<PayoutRow[]> {

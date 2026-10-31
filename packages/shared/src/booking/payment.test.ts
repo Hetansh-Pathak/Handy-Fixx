@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
-import { canPayOnline, onlinePaymentBlock, payableAmountPaise, paymentState, paymentStateLabel, PAYMENT_STATES } from "./payment";
+import { canPayOnline, onlinePaymentBlock, payableAmountPaise, paymentState, paymentStateLabel, PAYMENT_STATES, proPaymentLine } from "./payment";
 
 describe("SQL booking_payable_paise follows the same rule (proposal 20261122000000)", () => {
   const sql = readFileSync(resolve(__dirname, "../../../../supabase/proposals/20261122000000_booking_payment_orders_PROPOSAL_NOT_APPLIED.sql"), "utf8");
@@ -64,5 +64,18 @@ describe("onlinePaymentBlock / canPayOnline (owner: pay once the job is complete
     expect(onlinePaymentBlock(done, 1)).toBe("extra_waiting");
     expect(onlinePaymentBlock({ ...done, total_amount: 0 })).toBe("no_amount");
     expect(canPayOnline(done, 1)).toBe(false);
+  });
+});
+
+describe("proPaymentLine", () => {
+  it("says 'Paid online ₹X' only for a payment the webhook recorded", () => {
+    expect(proPaymentLine({ payment_status: "paid", payment_method: "online", total_amount: 949 })).toBe("Paid online ₹949");
+    expect(proPaymentLine({ payment_status: "partially_refunded", payment_method: "online", total_amount: "949" })).toBe("Paid online ₹949, partly refunded");
+    expect(proPaymentLine({ payment_status: "refunded", payment_method: "online", total_amount: 949 })).toBe("Online payment refunded");
+  });
+  it("stays quiet for cash (legacy record-payment also sets paid), unpaid, or before the column exists", () => {
+    expect(proPaymentLine({ payment_status: "paid", payment_method: "cash", total_amount: 949 })).toBeNull();
+    expect(proPaymentLine({ payment_status: "paid", total_amount: 949 })).toBeNull();
+    expect(proPaymentLine({ payment_status: "unpaid", payment_method: "online", total_amount: 949 })).toBeNull();
   });
 });
