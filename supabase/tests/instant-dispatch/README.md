@@ -7,7 +7,7 @@ Supabase. Not part of the npm workspaces.
 ```bash
 cd supabase/tests/instant-dispatch
 npm install        # once
-npm test           # 55 checks + the dry-run file (runs fully, saves nothing)
+npm test           # 59 checks (both proposals) + the dry-run file (runs fully, saves nothing)
 ```
 
 - `stub.sql`: the parts of the live database dispatch touches (tables, LIVE trigger functions copied 2026-10-31,

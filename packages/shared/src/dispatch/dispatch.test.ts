@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { distanceKm, type LatLng } from "../geo/distance";
-import { dispatchEligibility, offerAccess, orderForOffers, type DispatchCandidate } from "./eligibility";
+import { dispatchEligibility, offerAccess, orderForOffers, servesCity, type DispatchCandidate } from "./eligibility";
 import { isOfferOpen, offerTransition, offerView, readOfferStatus, type OfferStatus } from "./offer";
 import { extendSearchClock, isInCity, newSearchClock, ringForDistance, tickSearch, type SearchClock } from "./ring-plan";
 import {
@@ -19,14 +19,16 @@ describe("settings", () => {
   it("defaults: 2/5/10 km rings of 10 s, then all of Jamnagar until 120 s", () => {
     expect(S.rings.map((r) => r.radiusKm)).toEqual([2, 5, 10]);
     expect(S.rings.every((r) => r.waitSeconds === 10)).toBe(true);
-    expect(S.city).toMatchObject({ name: "Jamnagar", radiusKm: 20 });
+    expect(S.city).toMatchObject({ name: "Jamnagar", radiusKm: 20, pincodePrefix: "361" });
     expect(S.maxSearchSeconds).toBe(120);
     expect(ringCount(S)).toBe(4);
   });
   it("reads the database row, numerics as strings included", () => {
     const s = parseDispatchSettings({ ring_radii_km: ["1", 3, 8], ring_wait_seconds: [5, 5, 5], max_search_seconds: "90", city_name: "Rajkot", city_lat: "22.3", city_lng: 70.8, city_radius_km: 15 });
     expect(s.rings).toEqual([{ radiusKm: 1, waitSeconds: 5 }, { radiusKm: 3, waitSeconds: 5 }, { radiusKm: 8, waitSeconds: 5 }]);
-    expect(s.city).toEqual({ name: "Rajkot", centre: { latitude: 22.3, longitude: 70.8 }, radiusKm: 15 });
+    expect(s.city).toEqual({ name: "Rajkot", centre: { latitude: 22.3, longitude: 70.8 }, radiusKm: 15, pincodePrefix: "361" });
+    expect(parseDispatchSettings({ city_pincode_prefix: "360" }).city.pincodePrefix).toBe("360");
+    expect(parseDispatchSettings({ city_pincode_prefix: "36x" }).city.pincodePrefix).toBe("361");
     expect(s.maxSearchSeconds).toBe(90);
   });
   it("a bad row never stops dispatch: shrinking radii, zero or missing values fall back to the defaults", () => {
@@ -118,6 +120,25 @@ describe("eligibility", () => {
     ["too_far", { location: { latitude: 23.0225, longitude: 72.5714 } }],
   ] as const)("not eligible: %s", (reason, over) => {
     expect(elig(pro(over))).toEqual({ ok: false, reason });
+  });
+  it("GPS missing or far away (a PC browser said 'Ahmedabad') but the profile serves Jamnagar: city ring, distance to the centre", () => {
+    const ahmedabad = { latitude: 23.03, longitude: 72.577 };
+    expect(elig(pro({ location: ahmedabad, serviceArea: ["Ahmedabad", "Jamnagar"] }))).toMatchObject({ ok: true, ring: 4, byServiceArea: true, distanceKm: 0 });
+    expect(elig(pro({ location: null, serviceArea: ["361008"] }))).toMatchObject({ ok: true, ring: 4, byServiceArea: true });
+    expect(elig(pro({ location: ahmedabad, serviceArea: ["380009", "Ahmedabad"] }))).toEqual({ ok: false, reason: "too_far" });
+    expect(elig(pro({ location: null, serviceArea: null }))).toEqual({ ok: false, reason: "no_location" });
+  });
+  it("a pro near the customer by GPS keeps their close ring even if the profile also says Jamnagar", () => {
+    expect(elig(pro({ serviceArea: ["Jamnagar"] }))).toMatchObject({ ok: true, ring: 1 });
+    expect(elig(pro({ serviceArea: ["Jamnagar"] }))).not.toHaveProperty("byServiceArea");
+  });
+  it("service area: the city's name or a 361xxx pincode, nothing looser", () => {
+    expect(servesCity(["jamnagar "], S.city)).toBe(true);
+    expect(servesCity(["361001"], S.city)).toBe(true);
+    expect(servesCity(["36100"], S.city)).toBe(false);
+    expect(servesCity(["Jamnagar Road, Rajkot"], S.city)).toBe(false);
+    expect(servesCity(["380009"], S.city)).toBe(false);
+    expect(servesCity(null, S.city)).toBe(false);
   });
   it("a pro 15 km away inside Jamnagar is in the city ring", () => {
     expect(elig(pro({ location: north(CUSTOMER, 15) }))).toMatchObject({ ok: true, ring: 4 });

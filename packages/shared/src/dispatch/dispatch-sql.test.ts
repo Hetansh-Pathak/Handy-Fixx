@@ -6,8 +6,9 @@ import { DISPATCH_STATES } from "./search";
 import { DEFAULT_DISPATCH_SETTINGS as S } from "./settings";
 
 // The database twin of these rules (proposal 20261124000000) must say the same thing. The behaviour itself is tested
-// on a real throwaway Postgres: supabase/tests/instant-dispatch (55 checks, including truly concurrent accepts).
+// on a real throwaway Postgres: supabase/tests/instant-dispatch (59 checks, including truly concurrent accepts).
 const sql = readFileSync(resolve(__dirname, "../../../../supabase/proposals/20261124000000_instant_dispatch_PROPOSAL_NOT_APPLIED.sql"), "utf8");
+const area = readFileSync(resolve(__dirname, "../../../../supabase/proposals/20261124000001_dispatch_service_area_PROPOSAL_NOT_APPLIED.sql"), "utf8");
 
 describe("dispatch SQL matches the shared rules", () => {
   it("same default settings", () => {
@@ -46,6 +47,13 @@ describe("dispatch SQL matches the shared rules", () => {
     expect(sql).toContain("UPDATE public.booking_offers SET status = 'taken', responded_at = now() WHERE booking_id = b.id AND id <> o.id AND status = 'offered';");
     expect(sql).toContain("UPDATE public.booking_offers SET status = 'offered', responded_at = NULL, offered_at = now() WHERE booking_id = b.id AND status = 'expired';");
     expect(sql).toContain("IF b.dispatch_state IS DISTINCT FROM 'no_pro' OR b.provider_id IS NOT NULL OR b.status::text <> 'pending' THEN");
+  });
+  it("service area (20261124000001): same prefix and the same test as servesCity, city ring only, fresh heartbeat needed", () => {
+    expect(area).toContain(`city_pincode_prefix text NOT NULL DEFAULT '${S.city.pincodePrefix}'`);
+    expect(area).toContain("WHERE lower(btrim(a)) = lower(btrim(s.city_name))");
+    expect(area).toContain("OR (btrim(a) ~ '^[0-9]{6}$' AND btrim(a) LIKE s.city_pincode_prefix || '%')");
+    expect(area).toContain("WHEN c.serves_city AND c.heartbeat_fresh THEN c.km_to_centre");
+    expect(area).toContain("CASE WHEN c.gps_in_city OR (c.serves_city AND c.heartbeat_fresh) THEN (SELECT (cardinality(ring_radii_km) + 1)::smallint FROM s) END) AS ring");
   });
   it("first accept wins under a row lock", () => {
     expect(sql).toContain("SELECT * INTO b FROM public.bookings WHERE id = p_booking_id FOR UPDATE;");

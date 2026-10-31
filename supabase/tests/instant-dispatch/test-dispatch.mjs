@@ -28,9 +28,12 @@ const one = async (sql, params) => (await q(sql, params))[0];
 try {
   await admin.query(readFileSync(join(here, "stub.sql"), "utf8"));
   const proposal = readFileSync(`${repo}/supabase/proposals/20261124000000_instant_dispatch_PROPOSAL_NOT_APPLIED.sql`, "utf8");
+  const area = readFileSync(`${repo}/supabase/proposals/20261124000001_dispatch_service_area_PROPOSAL_NOT_APPLIED.sql`, "utf8");
   await admin.query(proposal);
-  await admin.query(proposal);
-  check("the proposal applies on a live-like database, and a second run changes nothing (re-run safe)", true);
+  await admin.query(area);
+  await admin.query(proposal.replace(/CREATE OR REPLACE FUNCTION public\.dispatch_candidates[\s\S]*?\n\$\$;\n/, ""));
+  await admin.query(area);
+  check("both proposals apply on a live-like database (20261124000000 then 000001), and re-running changes nothing", true);
 
   // ── seed ──────────────────────────────────────────────────────────────────────────────────────────────────────────
   const C = { lat: 22.4707, lng: 70.0577 };                 // Jamnagar centre = the customer
@@ -64,6 +67,15 @@ try {
   const pFar = await pro("pFar Ahmedabad", null);
   await q(`insert into provider_presence values ($1, 23.0225, 72.5714, 10, now())`, [pFar.id]);
   const pLaunch = await pro("pLaunch empty wallet", 1.8, { launch: true, wallet: 0 });
+  // 20261124000001: GPS says Ahmedabad (a PC browser) but the profile serves Jamnagar; and an open app with no position yet
+  const pArea = await pro("pArea GPS Ahmedabad, serves Jamnagar", 0, { lat: 23.03, lng: 72.577 });
+  await q(`update service_providers set pincodes = '{Ahmedabad,Jamnagar}' where id = $1`, [pArea.id]);
+  const pAreaFar = await pro("pAreaFar GPS Ahmedabad, serves Ahmedabad", 0, { lat: 23.03, lng: 72.577 });
+  await q(`update service_providers set pincodes = '{380009,Ahmedabad}' where id = $1`, [pAreaFar.id]);
+  const pNoGps = await pro("pNoGps app open, no position, 361008", null);
+  await q(`update service_providers set pincodes = '{361008}', updated_at = now() where id = $1`, [pNoGps.id]);
+  const pNoGpsStale = await pro("pNoGpsStale app closed, 361008", null);
+  await q(`update service_providers set pincodes = '{361008}', updated_at = now() - interval '2 hours' where id = $1`, [pNoGpsStale.id]);
 
   const cust = "30000000-0000-0000-0000-000000000001", cust2 = "30000000-0000-0000-0000-000000000002", cust3 = "30000000-0000-0000-0000-000000000003";
 
@@ -135,8 +147,17 @@ try {
   const b1row = await one(`select current_ring, ring_deadline from bookings where id=$1`, [b1.id]);
   check("then 10 km, then all of Jamnagar (15 km pro), which stays open with no deadline", b1row.current_ring === 4 && b1row.ring_deadline === null
     && !!(await one(`select 1 x from booking_offers where booking_id=$1 and provider_id=$2`, [b1.id, p5.id])));
-  check("every pro is offered the job once, however many rings open", (await one(`select count(*)::int n, count(distinct provider_id)::int d from booking_offers where booking_id=$1`, [b1.id])).n === 7);
-  check("earlier offers stay open while later rings run (cumulative)", (await one(`select count(*)::int n from booking_offers where booking_id=$1 and status='offered'`, [b1.id])).n === 7);
+  check("every pro is offered the job once, however many rings open", (await one(`select count(*)::int n, count(distinct provider_id)::int d from booking_offers where booking_id=$1`, [b1.id])).n === 9);
+  const areaOffer = await one(`select ring, distance_km from booking_offers where booking_id=$1 and provider_id=$2`, [b1.id, pArea.id]);
+  check("GPS says Ahmedabad but the profile serves Jamnagar: offered on the city ring, distance = customer to city centre (not 264 km)",
+    !!areaOffer && areaOffer.ring === 4 && Number(areaOffer.distance_km) < 1, JSON.stringify(areaOffer));
+  check("an open app with no position yet but a fresh heartbeat and a 361xxx area is offered on the city ring",
+    (await one(`select ring from booking_offers where booking_id=$1 and provider_id=$2`, [b1.id, pNoGps.id]))?.ring === 4);
+  check("a pro who serves Ahmedabad only, or whose app is closed (stale heartbeat), is never offered",
+    !(await one(`select 1 x from booking_offers where booking_id=$1 and provider_id in ($2,$3)`, [b1.id, pAreaFar.id, pNoGpsStale.id])));
+  check("service-area pros are not asked in the close rings (GPS decides those)",
+    !(await one(`select 1 x from dispatch_events where booking_id=$1 and event='offered' and ring < 4 and provider_id in ($2,$3)`, [b1.id, pArea.id, pNoGps.id])));
+  check("earlier offers stay open while later rings run (cumulative)", (await one(`select count(*)::int n from booking_offers where booking_id=$1 and status='offered'`, [b1.id])).n === 9);
 
   // ── 5. low wallet ─────────────────────────────────────────────────────────────────────────────────────────────────
   const PL = await as(pLow.uid);

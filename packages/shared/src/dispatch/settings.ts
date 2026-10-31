@@ -12,8 +12,10 @@ export type DispatchSettings = {
   /**
    * The last ring: every eligible pro inside the city zone. A centre and radius, not `service_providers.city`
    * (that column says "Ahmedabad" for every approved pro on the live project, checked 2026-10-31).
+   * `pincodePrefix`: a pro whose service area lists the city's name or a pincode with this prefix also counts as in
+   * the city (owner, 2026-10-31: "pros in Jamnagar get the request", even when their phone's GPS is off or wrong).
    */
-  city: { name: string; centre: LatLng; radiusKm: number };
+  city: { name: string; centre: LatLng; radiusKm: number; pincodePrefix: string };
   /** The whole search ends after this many seconds from the start (the last ring stays open until then). */
   maxSearchSeconds: number;
   /** "Keep looking for 10 more minutes". */
@@ -28,7 +30,7 @@ export const DEFAULT_DISPATCH_SETTINGS: DispatchSettings = {
     { radiusKm: 5, waitSeconds: 10 },
     { radiusKm: 10, waitSeconds: 10 },
   ],
-  city: { name: "Jamnagar", centre: { latitude: 22.4707, longitude: 70.0577 }, radiusKm: 20 },
+  city: { name: "Jamnagar", centre: { latitude: 22.4707, longitude: 70.0577 }, radiusKm: 20, pincodePrefix: "361" },
   maxSearchSeconds: 120,
   extendSeconds: 600,
   presenceFreshSeconds: 90,
@@ -65,6 +67,7 @@ export function parseDispatchSettings(row: Record<string, unknown> | null | unde
       name: typeof row.city_name === "string" && row.city_name.trim() ? row.city_name.trim() : d.city.name,
       centre: { latitude: finite(row.city_lat, d.city.centre.latitude), longitude: finite(row.city_lng, d.city.centre.longitude) },
       radiusKm: positive(row.city_radius_km, d.city.radiusKm),
+      pincodePrefix: typeof row.city_pincode_prefix === "string" && /^\d{1,6}$/.test(row.city_pincode_prefix) ? row.city_pincode_prefix : d.city.pincodePrefix,
     },
     maxSearchSeconds: positive(row.max_search_seconds, d.maxSearchSeconds),
     extendSeconds: positive(row.extend_seconds, d.extendSeconds),
