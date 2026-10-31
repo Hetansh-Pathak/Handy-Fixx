@@ -4,6 +4,7 @@ Everything here was first run, in this order, on the staging project: 19 steps a
 Nothing here deletes data. The two steps that cannot be undone (the PAN script and proposal C) are deliberately NOT in this folder.
 
 ## 0. Before you start
+- The live project's connection server is `aws-1-ap-south-1` (staging's is `aws-0`). If you ever see "tenant/user ... not found", you used the wrong one: copy the address from Connect > Session pooler in the dashboard.
 - Docker Desktop must be running (the backup uses it). Your live database password: Supabase > Handy-fix > Project Settings > Database
   (resetting it does not affect the apps). Keep it in your shell only; do not paste it into a chat.
 
@@ -12,7 +13,7 @@ Nothing here deletes data. The two steps that cannot be undone (the PAN script a
 cd D:\Handy-Fixx-Ritesh\supabase\live
 npm install
 New-Item -ItemType Directory -Force out | Out-Null
-$env:LIVE_DB_URL = "postgresql://postgres.jviwwhjwtyneqrguumro:<live password>@aws-0-ap-south-1.pooler.supabase.com:5432/postgres"
+$env:LIVE_DB_URL = "postgresql://postgres.jviwwhjwtyneqrguumro:<live password>@aws-1-ap-south-1.pooler.supabase.com:5432/postgres"
 supabase db dump --db-url $env:LIVE_DB_URL -f out/live-before-structure.sql
 supabase db dump --db-url $env:LIVE_DB_URL --data-only -f out/live-before-data.sql
 ```
