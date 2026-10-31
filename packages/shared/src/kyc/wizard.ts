@@ -237,5 +237,9 @@ export function kycSaveErrorMessage(error: { code?: string | null; message?: str
   if (/network request failed|failed to fetch|timeout|offline/i.test(message)) {
     return "No internet connection. Check your internet and try again.";
   }
+  // The app is newer than the database: a column it needs is not there yet (the identity-check upgrade is not applied).
+  if (error.code === "42703" || /column .* does not exist/i.test(message)) {
+    return "The identity check is being upgraded and is not ready yet. Please try again in a little while.";
+  }
   return "We could not save this step. Please try again.";
 }

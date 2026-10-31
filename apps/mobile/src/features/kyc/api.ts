@@ -142,6 +142,8 @@ async function callKycPan(body: PanFunctionBody): Promise<{ pan_last4?: string }
     let message = "We could not save your PAN. Please try again.";
     const ctx = (error as { context?: unknown }).context;
     if (ctx instanceof Response) {
+      // 404 = the `kyc-pan` function is not deployed yet (the identity-check upgrade has not been switched on).
+      if (ctx.status === 404) throw new Error("PAN saving is not switched on yet. Please try again in a little while.");
       const detail = (await ctx.json().catch(() => null)) as { error?: unknown } | null;
       if (typeof detail?.error === "string" && detail.error.length < 300) message = detail.error;
     } else if (/failed to send|network|fetch/i.test(error.message)) {

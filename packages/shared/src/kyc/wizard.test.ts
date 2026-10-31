@@ -195,6 +195,11 @@ describe("kycSaveErrorMessage", () => {
   it("passes the readable P0001 rules through", () => {
     expect(kycSaveErrorMessage({ code: "P0001", message: "Cannot change kyc_status directly." })).toBe("Cannot change kyc_status directly.");
   });
+  it("explains an upgrade that has not reached the database yet, instead of a vague save error", () => {
+    const m = kycSaveErrorMessage({ code: "42703", message: "column provider_kyc.pan_last4 does not exist" });
+    expect(m).toMatch(/being upgraded/i);
+    expect(m).not.toMatch(/pan_last4|column/);
+  });
   it("describes a lost connection", () => {
     expect(kycSaveErrorMessage({ message: "Network request failed" })).toMatch(/internet/i);
   });
