@@ -77,6 +77,8 @@ and proposes a short plan. No need to explain the project again.
 
 - **Expo moved to the owner's account (2026-10-31):** `app.config.ts` owner `hetanshpathak`, projects `handyfix` (customer, `7c7a4f6c-…`) and `handyfix-pro` (Pro, `2adb52d3-…`; also the id `docs/PUSH_SETUP.md` asks for). First development builds (`customer-dev`, `provider-dev`, Android APK) started on EAS; Android keystores are kept by Expo. Daily use: `npm run start:customer` / `start:provider` in `apps/mobile`, open the installed app and scan the QR (same Wi-Fi). Also fixed: admin sidebar links were dark on dark (Tooltip `asChild` turned NavLink's className function into text).
 
+- **Instant dispatch, slice 1 of 6 (2026-10-31, branch `feature/instant-dispatch`): shared logic.** Owner decision: Rapido-style matching replaces "customer picks a pro" (plan and owner answers in `docs/INSTANT_DISPATCH.md`: Jamnagar = centre + 20 km zone, distance only (no pincodes), low-wallet pros still get the offer as "Top up ₹X"). `packages/shared/src/dispatch/` (ring plan, eligibility, offer and search state machines, one catalogue price, privacy jitter; 39 tests). Pro-picking helpers marked deprecated, not deleted. **Next: slice 2, database proposal `20261124000000` tested on a local stub (not applied).**
+
 ## NEXT (in this order)
 
 Commission plan v2 (owner, 2026-10-29): **Phase 4** in-app customer payment + same-day payout (deferred: needs Razorpay Payouts + refund rule from the owner). Then the A2-A7 list below.

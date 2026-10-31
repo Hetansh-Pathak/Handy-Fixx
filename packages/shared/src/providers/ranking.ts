@@ -43,6 +43,7 @@ const responseBand = (s: number | null) => band(s, RESPONSE_BAND_SECONDS, "floor
 /**
  * Default ordering: rating, then distance, then response speed. NEVER by money,
  * and featured slots are handled separately (PDF p.12).
+ * @deprecated Instant dispatch (owner decision 2026-10-31): customers no longer pick a pro. Kept until the owner confirms it is unused; do not use in new code.
  */
 export function rankProviders<T extends ProviderCard>(list: readonly T[]): T[] {
   return [...list].sort(rankCompare);
@@ -58,7 +59,10 @@ const rankCompare = (a: ProviderCard, b: ProviderCard) =>
   cmp(a.avgResponseSeconds, b.avgResponseSeconds, 1) ||
   byId(a, b);
 
-/** The customer's explicit sort choice on the "Choose a pro" screen. */
+/**
+ * The customer's explicit sort choice on the "Choose a pro" screen.
+ * @deprecated Instant dispatch (owner decision 2026-10-31): customers no longer pick a pro. Kept until the owner confirms it is unused; do not use in new code.
+ */
 export function sortProviders<T extends ProviderCard>(list: readonly T[], sort: ProviderSort): T[] {
   const primary: Record<ProviderSort, (a: T, b: T) => number> = {
     cheapest: (a, b) => a.price - b.price,
@@ -77,6 +81,7 @@ export const isFeaturedEligible = (p: ProviderCard) =>
 /**
  * 1-2 clearly-marked featured slots first (only KYC-approved pros rated 4.3+), then everyone
  * else ranked normally. Money never moves a pro up the normal list.
+ * @deprecated Instant dispatch (owner decision 2026-10-31): customers no longer pick a pro. Kept until the owner confirms it is unused; do not use in new code.
  */
 export function orderWithFeatured<T extends ProviderCard>(
   list: readonly T[],
@@ -95,6 +100,7 @@ export const SIMILAR_PRICE_TOLERANCE = 0.25;
 /**
  * When a pro declines or the 30 s timer runs out: same area, similar price, online and
  * approved, never the pro(s) already tried, best-ranked first.
+ * @deprecated Instant dispatch (owner decision 2026-10-31): customers no longer pick a pro. Kept until the owner confirms it is unused; do not use in new code.
  */
 export function nextBestPros<T extends ProviderCard>(input: {
   candidates: readonly T[];

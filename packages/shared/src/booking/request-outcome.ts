@@ -39,5 +39,8 @@ export function requestOutcome(
   }
 }
 
-/** Show "next best pros" when the pro said no or the time passed (PDF p.4: "No starting over"). */
+/**
+ * Show "next best pros" when the pro said no or the time passed (PDF p.4: "No starting over").
+ * @deprecated Instant dispatch (owner decision 2026-10-31): customers no longer pick a pro. Kept until the owner confirms it is unused; do not use in new code.
+ */
 export const needsAlternatives = (o: RequestOutcome) => o === "expired" || o === "declined";
