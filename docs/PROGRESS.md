@@ -107,6 +107,12 @@ Owner plan of 2026-10-29 ("first release, do all the things"), one slice at a ti
 7. **Release prep:** Google Maps key + `EXPO_PUBLIC_MAPS_ENABLED=1`, EAS builds, Play Store closed test, hosted privacy policy URL; delete `legacy/` at mobile parity.
 8. **Later (PDF order):** ranking by rating, distance and response speed; Featured boost and Pro subscription (~40 pros); urgent add-on, real refunds, maintenance plans (after in-app payments); society tie-ups and ads (500+ bookings).
 
+## One job at a time + apnabanda rename (2026-11-01, branch hetansh2, NOT pushed)
+
+- **Slice 1, one job at a time:** shared rule `providerBusy` (`requestAccess` state `busy`), Pro popup / request page / Jobs show "Finish your current job first", customer list and booking screen mark a busy pro. Server twin = proposal `20261126000000` (NOT applied; APPLY_PLAN row 16; dry run `30_`; 38-check throwaway-Postgres test incl. two sessions at once). **Owner:** review, dry run, apply after `20261114`, `20261124000000/1`.
+- **Slice 2, name apnabanda:** brand constants `packages/shared/src/brand.ts`, every visible HandyFix string reworded, `TERMS_VERSION` v1.4, `LEGAL_VERSION` 1.2, `site/` and push file regenerated, guard test `brand.test.ts`. **Owner:** decide the Android package ids (`in.handyfix.*`, permanent after the first Play Store upload), redeploy the edge functions that send wording, publish `site/`, build new apps.
+- Details, file lists, test results, what is not done: `docs/CHANGES_ONE_JOB_AND_RENAME.md`.
+
 ## Live rollout status (2026-11-01)
 
 - **Applied on live by the owner with `supabase/live/rollout-live.mjs`:** slice 1 (17 steps: the older proposals plus security A, D, E) and slice 2 (security B, KYC PAN encryption). Hardened functions (kyc-pan, kyc-admin-reveal-pan, kyc-retention, send-provider-otp, verify-provider-otp, send-welcome-email) deployed by the owner from `supabase/staging/out/deploy`; KYC loads again.
