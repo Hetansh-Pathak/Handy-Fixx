@@ -63,3 +63,5 @@ supabase/.temp/
 # Firebase / Google service-account private keys (never commit; upload them to Expo instead)
 *firebase-adminsdk*.json
 *service-account*.json
+.env.*.local
+.env*.held-by-*
