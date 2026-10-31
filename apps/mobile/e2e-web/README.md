@@ -25,13 +25,10 @@ It is a regression net for navigation and form logic. It does **not** replace te
 
 ```bash
 cd apps/mobile
-npm i -D playwright && npx playwright install chromium     # once
+npm i --no-save playwright && npx playwright install chromium     # once
 
-# terminal 1: the app on the web, pointed at the mock host the script intercepts
-EXPO_PUBLIC_SUPABASE_URL=https://mock.supabase.co \
-EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY=anon-key \
-EXPO_PUBLIC_ENABLE_SPIKE=0 \
-npx expo start --web --port 8099 --clear
+# terminal 1: the app on the web with the fake backend (sets the mock values itself and sets .env.local aside until Ctrl+C)
+npm run web:e2e
 
 # terminal 2
 npm run test:e2e-web            # runs all suites; screenshots go to e2e-web/shots/
