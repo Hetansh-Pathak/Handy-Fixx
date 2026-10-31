@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { LayoutDashboard, Shield, Users, BookOpen, FileText, LogOut, Menu, ChevronLeft, Wallet, Tag, Gavel, Percent, Eye } from 'lucide-react';
 import { useAdminAuth } from '@/contexts/AdminAuthContext';
@@ -19,6 +19,7 @@ interface SidebarItem {
 const AdminLayout: React.FC = () => {
   const { user, signOut } = useAdminAuth();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [pendingKyc, setPendingKyc] = useState(0);
@@ -71,14 +72,14 @@ const AdminLayout: React.FC = () => {
                 <NavLink
                   to={item.to}
                   onClick={() => setMobileOpen(false)}
-                  className={({ isActive }) =>
-                    cn(
-                      'w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 cursor-pointer relative',
-                      isActive
-                        ? 'bg-primary text-primary-foreground font-bold shadow-sm'
-                        : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
-                    )
-                  }
+                  // A plain string, not NavLink's className function: TooltipTrigger (asChild) merges class names as
+                  // text, which turned the function into literal text and left the links unstyled (dark on dark).
+                  className={cn(
+                    'w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 cursor-pointer relative',
+                    pathname === item.to || pathname.startsWith(`${item.to}/`)
+                      ? 'bg-primary text-primary-foreground font-bold shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
+                  )}
                 >
                   <span className="shrink-0">{item.icon}</span>
                   {!collapsed && <span className="flex-1 text-left truncate">{item.label}</span>}
