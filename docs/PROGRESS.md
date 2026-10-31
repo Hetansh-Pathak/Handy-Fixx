@@ -110,7 +110,8 @@ Owner plan of 2026-10-29 ("first release, do all the things"), one slice at a ti
 ## Live rollout status (2026-11-01)
 
 - **Applied on live by the owner with `supabase/live/rollout-live.mjs`:** slice 1 (17 steps: the older proposals plus security A, D, E) and slice 2 (security B, KYC PAN encryption). Hardened functions (kyc-pan, kyc-admin-reveal-pan, kyc-retention, send-provider-otp, verify-provider-otp, send-welcome-email) deployed by the owner from `supabase/staging/out/deploy`; KYC loads again.
-- **Still to do, in order:** (1) owner tests the Pro identity check and admin KYC Review; (2) PAN migration script dry run, then `--apply` with a fresh backup; (3) proposal C (drops plain PAN and Aadhaar columns, irreversible); (4) delete stray live functions `quick-function` and `bright-handler`; (5) reset the DB passwords pasted in chat (staging, live); (6) leaked-password protection toggle; (7) bank/UPI plain text (M2); (8) Pro app rebuild for real pros; (9) push the unpushed local commits (ask first).
+- **Done by the owner 2026-11-01:** stray live functions `quick-function` and `bright-handler` deleted (verified: 14 functions, slug = name); DB passwords reset; leaked-password protection set.
+- **Still to do, in order:** (1) PAN migration script dry run, then `--apply` with a fresh backup and the same `KYC_PAN_*` values as the Edge Function secrets; (2) proposal C (drops plain PAN and Aadhaar columns, irreversible); (3) bank/UPI plain text (M2); (4) Pro app rebuild for real pros; (5) delete the staging project once (1) and (2) are rehearsed; (6) push the unpushed local commits (ask first).
 
 ## BLOCKED on the owner
 
