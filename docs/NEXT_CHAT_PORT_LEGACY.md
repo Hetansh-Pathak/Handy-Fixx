@@ -25,7 +25,7 @@ copy that says customers pay inside the app. These were replaced by the PDF mode
   work (bill photo for parts), completion code, fee record, dispute reply/appeal, wallet (Razorpay top-up, ledger, withdraw).
 - Shared logic: `packages/shared` (451 tests). Admin: `apps/admin` (price bands, fees and disputes, KYC review).
 - **Never run on a real phone yet.** Treat everything as untested on device.
-- Expo: customer project `@riteshkanara/handyfix` (ID in `apps/mobile/app.config.ts`). The Pro project does not exist yet (the owner runs
+- Expo (moved 2026-10-31 to the owner's account): customer `@hetanshpathak/handyfix`, Pro `@hetanshpathak/handyfix-pro`. Was: customer project `@riteshkanara/handyfix` (ID in `apps/mobile/app.config.ts`). The Pro project does not exist yet (the owner runs
   `eas init` with `$env:EXPO_PUBLIC_APP_VARIANT="provider"` and sends the ID; then put it in `app.config.ts`).
 
 ## 3. What is missing in `apps/mobile`, and where the legacy reference is
