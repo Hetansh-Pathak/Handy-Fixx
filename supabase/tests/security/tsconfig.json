@@ -1,0 +1,27 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": ["ES2022", "DOM"],
+    "types": ["node"],
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitAny": true,
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": true,
+    "noEmit": true,
+    "skipLibCheck": true
+  },
+  "include": [
+    "edge/**/*.ts",
+    "../../proposals/functions/_shared/*.ts",
+    "../../proposals/functions/send-provider-otp/handler.ts",
+    "../../proposals/functions/verify-provider-otp/handler.ts",
+    "../../proposals/functions/send-welcome-email/handler.ts",
+    "../../proposals/functions/kyc-*/handler.ts",
+    "../../proposals/functions/kyc-*/*.ts",
+    "../../proposals/scripts/*.ts"
+  ],
+  "exclude": ["../../proposals/functions/kyc-*/index.ts"]
+}
