@@ -37,6 +37,8 @@ Superseded, do NOT apply: `20261002000003_server_side_fee_trigger`.
 | 13 | `20261125000002` drop plain PAN + Aadhaar columns (`27_`) | **Irreversible** | Only after `supabase/proposals/scripts/kyc-migrate-pan.ts --apply`; it refuses to run while plain values remain |
 | 14 | `20261125000003` permissions (`28_`) | Medium: locks `anon` out of every table except the public catalogue, closes 45 trigger functions and all anon-callable functions, adds booking / attachment ownership rules, bucket limits | Independent; apply after 11. Then test: sign in to the customer app, the Pro app and the admin site. Dry run first |
 
+| 15 | `20261125000004` booking integrity (`29_`) | Low-medium: one BEFORE INSERT trigger on `bookings` (bookings must start pending; server-owned columns reset), replaces two functions (`generate_booking_completion_code`, `add_booking_extra`) | Independent. Closes the "booking born completed / paid" hole. After applying, make a normal test booking in the customer app. Details: `docs/SECURITY_ATTACK_WALKTHROUGH.md` |
+
 Not yet reviewed whether still needed: `20261103` contact, `20261104` avatars, `20261105` attachment read fix, `20261106` catalogue.
 
 ## Checks after each

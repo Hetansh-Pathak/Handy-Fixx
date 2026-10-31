@@ -24,6 +24,10 @@ Status values: **fixed in proposal** (written and tested on a throwaway Postgres
 | M1 | Medium | A pro can replace or delete KYC photos after submitting or after approval | fixed in proposal A |
 | M2 | Medium | Bank account numbers / UPI stored in plain text | open |
 | M3 | Medium | Booking UPDATE policies allow any column; safety rests on triggers | open: the live guard trigger `guard_booking_update` limits each side to the right columns (read 2026-11-01); to be attacked by hand in the pre-test |
+| W1 | High | The booking guards fire on UPDATE only: a customer could create a booking already `completed`, `confirmed` or `paid`, and set dispatch state, `created_at`, arrival evidence, coupon fields on insert (fake reviews / disputes for any pro, no 3% fee, forced jobs). Found by the attack walkthrough | fixed in proposal E |
+| W2 | Low | Completion codes generated with `random()` | fixed in proposal E (secure source) |
+| W3 | Low | `add_booking_extra` accepted any text as the bill-photo path | fixed in proposal E |
+| W4 | Info | A pro and a friend acting as customer can run fake jobs (the friend reads the code) | accepted: business-rule monitoring (`docs/MONITORING_PLAN.md`) |
 | M8 | Medium | A user could create a booking whose `customer_id` was someone else (open rule `users_own_bookings_insert`): it appeared in that person's list and notified the pro | fixed in proposal D |
 | M9 | Medium | Any signed-in user could attach a file to any booking id; the booking's pro could then open it | fixed in proposal D |
 | M4 | Medium | Admin/KYC functions executable by `anon`; anon has ALL on every table; 45 trigger functions callable by anyone; new objects granted to anon by default | fixed in proposals A + D |

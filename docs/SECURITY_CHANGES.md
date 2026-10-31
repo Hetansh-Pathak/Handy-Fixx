@@ -70,6 +70,13 @@ screen, so the `anon` role (what the public key alone gives) needs almost nothin
 Not in D (apply the existing, already-reviewed proposals separately): chat `20261110` and reviews `20261108`; both drop loose live
 policies whose names match the live database.
 
+### E. `20261125000004_booking_integrity` (findings W1, W2, W3; found by the attack walkthrough)
+| Change | Why |
+|---|---|
+| `BEFORE INSERT` trigger `zz_guard_booking_insert`: a booking from the app must start `pending`; payment status, completion / start / cancel / arrival times and positions, coupon and final amount, tracking, unread counters, dispatch state and `created_at` are reset | The money and status guards only fire on UPDATE. A customer could create a booking already `completed`, `confirmed` or `paid`: fake reviews and disputes against any pro, no 3% fee, a job forced on a pro. The app sends none of these columns. The server (definer functions, SQL editor) is not affected; admins signed in to the app are not exempt. |
+| `generate_booking_completion_code` uses `gen_random_uuid()` instead of `random()` | Secure source for the 4-digit code (still 5 guesses then a 15-minute lock). |
+| `add_booking_extra`: the bill photo must be `<your auth id>/<this booking id>/...` and may not contain `..` | A pro could name any file path; the storage rule lets a booking's parties read a file that one of its extras names. |
+
 ### One-time script (not run): `supabase/proposals/scripts/kyc-migrate-pan.ts`
 Dry run by default; `--apply` encrypts every plain PAN and clears the plain value in the same update, clears Aadhaar
 numbers / hashes / paths and deletes every `aadhaar_*` file in the bucket (also older retakes). Idempotent. Invalid,
@@ -94,6 +101,7 @@ duplicate and mismatching PANs are reported and left for a person. Logic in `kyc
 | 2 | `20261125000001_kyc_pan_encryption_PROPOSAL_NOT_APPLIED.sql` | `dryrun/26_kyc_pan_encryption_DRYRUN.sql` | `dryrun/apply_26_kyc_pan_encryption_COMMIT.sql` |
 | 3 | `20261125000002_kyc_drop_plain_columns_PROPOSAL_NOT_APPLIED.sql` | `dryrun/27_kyc_drop_plain_columns_DRYRUN.sql` | `dryrun/apply_27_kyc_drop_plain_columns_COMMIT.sql` |
 | any time after 1 | `20261125000003_permissions_hardening_PROPOSAL_NOT_APPLIED.sql` | `dryrun/28_permissions_hardening_DRYRUN.sql` | `dryrun/apply_28_permissions_hardening_COMMIT.sql` |
+| any time | `20261125000004_booking_integrity_PROPOSAL_NOT_APPLIED.sql` | `dryrun/29_booking_integrity_DRYRUN.sql` | `dryrun/apply_29_booking_integrity_COMMIT.sql` |
 
 Also listed in `supabase/APPLY_PLAN.md` (rows 11-13). A is independent of the others; B and the `kyc-pan` function need A's
 `otp_rate_take`; C needs B and the script.
@@ -135,8 +143,8 @@ Rollback: each SQL file ends with a ROLLBACK section (policies / grants to resto
 
 | Check | Result |
 |---|---|
-| SQL on a throwaway Postgres 17 (`supabase/tests/security`, `npm run test:sql`) | **124 / 124 passed** (proposals A, B, C, D applied twice and in order, dry-run and apply files, attacks, retention, blocklist, unique blind index, columns gone, anon locked out, booking / attachment ownership). The tests reproduce each hole first, then show it closed; they caught two mistakes in D (new functions still granted to everyone) before it was ever applied |
-| Function code against fakes (`npm run test:edge`): OTP, welcome mail, AES-GCM round trip, tampering, wrong key, 20,000 nonces, rotation, kyc-pan / reveal / retention handlers, migration script | **31 / 31 passed**; `npm run typecheck` (strict tsc) clean |
+| SQL on a throwaway Postgres 17 (`supabase/tests/security`, `npm run test:sql`) | **124 / 124 passed** + **112 / 112 attack walkthrough** (`test-attacks.mjs`: the live bookings / payment rules, each hole reproduced then closed by A + D + E) (proposals A, B, C, D applied twice and in order, dry-run and apply files, attacks, retention, blocklist, unique blind index, columns gone, anon locked out, booking / attachment ownership). The tests reproduce each hole first, then show it closed; they caught two mistakes in D (new functions still granted to everyone) before it was ever applied |
+| Function code against fakes (`npm run test:edge`): OTP, welcome mail, AES-GCM round trip, tampering, wrong key, 20,000 nonces, rotation, kyc-pan / reveal / retention handlers, migration script | **43 / 43 passed** (31 + 12 on the real Razorpay webhook file: forged, tampered, unsigned, replayed, wrong amount, database error, missing secret); `npm run typecheck` (strict tsc) clean |
 | `npm run test` (packages/shared Vitest) | **925 / 925 passed** (71 files) |
 | `npm run typecheck`, `npm run mobile:typecheck` | clean |
 | `npm run lint` | 0 errors, 7 warnings (same 7 as before this work, all in the admin app) |

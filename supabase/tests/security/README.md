@@ -9,6 +9,7 @@ npm test            # SQL on a throwaway Postgres 17 + Edge Function code agains
 npm run typecheck   # strict tsc over the function handlers and tests
 ```
 
+- `test-attacks.mjs` + `stub-attacks.sql` + `harness.mjs`: the attack walkthrough (docs/SECURITY_ATTACK_WALKTHROUGH.md): the live bookings, payment and completion rules, each hole reproduced then closed.
 - `test-security.mjs`: starts a real Postgres 17 in a temp folder (embedded-postgres), loads `stub.sql` (a live-like
   copy of the tables, policies and functions the proposals touch, checked read-only on 2026-10-31), applies each
   proposal twice, tries the attacks each one must stop, and runs the dry-run files (must end in ROLLBACK, save nothing).

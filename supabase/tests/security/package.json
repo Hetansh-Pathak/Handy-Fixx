@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "test": "npm run test:sql && npm run test:edge",
-    "test:sql": "node test-security.mjs ../../..",
+    "test:sql": "node test-security.mjs ../../.. && node test-attacks.mjs ../../..",
     "test:edge": "node --experimental-strip-types --no-warnings --test edge/*.test.ts",
     "typecheck": "tsc -p tsconfig.json"
   },
