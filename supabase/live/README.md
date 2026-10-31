@@ -17,6 +17,13 @@ $env:LIVE_DB_URL = "postgresql://postgres.jviwwhjwtyneqrguumro:<live password>@a
 supabase db dump --db-url $env:LIVE_DB_URL -f out/live-before-structure.sql
 supabase db dump --db-url $env:LIVE_DB_URL --data-only -f out/live-before-data.sql
 ```
+No Docker? Use the script instead (read-only, one JSON file with every table's rows; the structure is the copy taken from the live catalog on 2026-11-01):
+```powershell
+node backup-data.mjs
+Copy-Item ..stagingoutschema.sql outlive-before-structure.sql
+```
+Then pass `--backup out/live-before-data.json` in step 3.
+
 Both files must exist and be more than a few KB. They stay on your PC (`out/` is not committed). Uploaded photos are not in a database dump.
 
 ## 2. See what is pending (changes nothing)
