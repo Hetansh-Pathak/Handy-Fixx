@@ -15,6 +15,19 @@ const userFromAuth = (req) => {
   try { const sub = JSON.parse(Buffer.from(tok.split(".")[1], "base64url").toString()).sub; return Object.values(db.users).find((u) => u.id === sub) || null; } catch { return null; }
 };
 
+// One job at a time (twin of provider_busy_conflict): an active job, or a confirmed one whose window (+30 min buffer each side) overlaps.
+const busyStart = (b) => (b.booking_date && b.booking_time ? new Date(`${b.booking_date}T${String(b.booking_time).slice(0, 5)}:00`).getTime() : null);
+function busyConflict(request) {
+  const rs = busyStart(request);
+  const minutes = (b) => Number((db.services.find((s) => s.id === b.service_id) || {}).duration_minutes) || 60;
+  return db.storedBookings.some((j) => {
+    if (j.id === request.id || j.provider_id !== request.provider_id) return false;
+    if (["on_the_way", "arrived", "in_progress"].includes(j.status)) return true;
+    const js = busyStart(j);
+    if (j.status !== "confirmed" || rs === null || js === null) return false;
+    return rs < js + (minutes(j) + 30) * 60000 && js < rs + (minutes(request) + 30) * 60000;
+  });
+}
 const CORS = { "access-control-allow-origin": "*", "access-control-allow-headers": "authorization, apikey, content-type, x-client-info, x-supabase-api-version, prefer, accept-profile, content-profile, range, accept, x-client-version", "access-control-allow-methods": "GET,POST,PUT,PATCH,DELETE,HEAD,OPTIONS", "access-control-expose-headers": "content-range" };
 const json = (route, status, body, extra = {}) => route.fulfill({ status, headers: { ...CORS, "content-type": "application/json", ...extra }, body: JSON.stringify(body) });
 
@@ -131,6 +144,10 @@ async function installMock(page) {
         const pid = (q.get("provider_id") || "").replace("eq.", "");
         const row = db.storedBookings.find((r) => r.id === id && (!pid || r.provider_id === pid));
         const patch = body();
+        if (row && patch.status === "confirmed" && row.status === "pending" && db.serverBusyRule !== false && busyConflict(row)) {
+          // mirrors enforce_one_job_at_a_time in proposal 20261126000000 (it runs before the wallet check)
+          return json(route, 400, { code: "P0001", message: "You already have a job at this time. Finish it first." });
+        }
         if (row && patch.status === "confirmed" && row.status === "pending" && db.serverWalletRule && !db.launchActive) {
           // mirrors enforce_wallet_before_accept in proposal 20261114: no dues, the fee must be held from the spendable balance
           const fee = fee3(Number(row.provider_amount) - Number(row.parts_amount || 0));
@@ -379,6 +396,10 @@ async function installMock(page) {
       db.payouts.unshift(row);
       db.ledger.unshift({ id: "l-po" + db.payouts.length, type: "payout", amount: -amt, note: "Withdrawal request", created_at: row.requested_at });
       return json(route, 200, { ok: true, payout_id: row.id, amount: amt });
+    }
+    if (p === "/rest/v1/rpc/providers_busy_at") {
+      const ids = body().p_provider_ids || [];
+      return json(route, 200, (db.busyProviderIds || []).filter((id) => ids.includes(id)));
     }
     if (p === "/rest/v1/rpc/provider_response_times") {
       const ids = body().p_ids || [];

@@ -43,7 +43,7 @@ export default function ProviderJobs() {
   // New requests the wallet cannot cover are still shown (so the pro sees what they would earn) but locked:
   // open ones first, at most 3 locked cards, then a counter.
   const accessOf = (b: ProviderBooking) =>
-    requestAccess({ price: Number(b.provider_amount ?? 0), wallet: rt.wallet, launchActive: rt.launch.active, walletReady: rt.walletReady });
+    requestAccess({ price: Number(b.provider_amount ?? 0), wallet: rt.wallet, launchActive: rt.launch.active, walletReady: rt.walletReady, busy: rt.busyOf(b) });
   const split = current === "new" ? partitionByAccess(rows, (b) => accessOf(b).state === "locked") : null;
   const shown = split ? [...split.open, ...split.locked] : rows;
 
@@ -91,11 +91,12 @@ export default function ProviderJobs() {
       {shown.map((b) => {
         const lock = split ? accessOf(b) : null;
         const isLocked = lock?.state === "locked";
+        const busy = lock?.state === "busy" ? lock : null;
         const missed = b.status === "pending" && current === "cancelled";
         return (
           <Pressable key={b.id} accessibilityRole="button" accessibilityLabel={`Job ${serviceNameOf(b)}`}
             onPress={() => router.push({ pathname: "/provider/job/[id]", params: { id: b.id } })}
-            className={`gap-1 rounded-tile border bg-card p-4 active:opacity-80 ${current === "new" && !isLocked ? "border-brand" : "border-line"}`}>
+            className={`gap-1 rounded-tile border bg-card p-4 active:opacity-80 ${current === "new" && !isLocked && !busy ? "border-brand" : "border-line"}`}>
             {lock && lock.state === "locked" ? (
               <View className="flex-row items-center gap-1.5">
                 <Lock size={14} color={colors.muted} />
@@ -109,8 +110,16 @@ export default function ProviderJobs() {
             <Text className="text-sm text-muted">{formatBookingWhen(b.booking_date, b.booking_time)} · {b.city ?? ""}</Text>
             {lock && lock.state === "locked" ? <Text className="text-sm text-fg">{lockedEarningLine(Number(b.provider_amount ?? 0))}</Text> : null}
             {b.special_instructions ? <Text className="text-sm text-fg" numberOfLines={2}>“{b.special_instructions}”</Text> : null}
+            {busy ? (
+              <Pressable accessibilityRole="button" accessibilityLabel={busy.cta}
+                onPress={() => router.push({ pathname: "/provider/job/[id]", params: { id: busy.currentJobId } })}
+                className="min-h-[44px] justify-center rounded-tile bg-field px-3 active:opacity-80">
+                <Text className="text-sm font-semibold text-fg">{busy.cta}</Text>
+                <Text className="text-xs text-muted">Tap to open your current job. You can accept this one when it ends.</Text>
+              </Pressable>
+            ) : null}
             <Text className="text-sm font-semibold text-brand">
-              {lock && lock.state === "locked" ? lock.cta : current === "new" ? "Tap to review and accept" : missed ? "Missed: the booked time passed" : providerStatusLabel(b.status as BookingStatus)}
+              {lock && lock.state === "locked" ? lock.cta : busy ? "Waiting: you are on another job" : current === "new" ? "Tap to review and accept" : missed ? "Missed: the booked time passed" : providerStatusLabel(b.status as BookingStatus)}
             </Text>
           </Pressable>
         );

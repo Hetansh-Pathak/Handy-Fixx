@@ -4,7 +4,7 @@
   "description": "Tests proposal 20261124000000 on a throwaway real Postgres (not part of the npm workspaces).",
   "type": "module",
   "scripts": {
-    "test": "node test-dispatch.mjs ../../.. && node test-dryrun.mjs ../../.."
+    "test": "node test-dispatch.mjs ../../.. && node test-dryrun.mjs ../../.. && node test-one-job.mjs ../../.. && node test-one-job-dryrun.mjs ../../.."
   },
   "dependencies": {
     "embedded-postgres": "17.10.0-beta.17",

@@ -37,4 +37,6 @@ export type ProviderListing = ProviderCard & {
   isVerified: boolean;
   /** The pro's area rounded to about 1 km. Null until the pro shares it (needs the location proposal). */
   point: LatLng | null;
+  /** One job at a time: the pro is on a job right now (proposal 20261126000000; absent until it is applied). */
+  busyNow?: boolean;
 };

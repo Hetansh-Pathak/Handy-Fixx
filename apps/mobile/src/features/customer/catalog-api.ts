@@ -2,6 +2,7 @@ import {
   groupProOffers, isProviderAvailable, offersService, offersSubItem, ownSubItemRate, readPoint, resolveListedPrice, responseTimeMap, servesArea, friendlyDbError,
   type ProSubItemRow,
 } from "@handyfix/shared";
+import { toDateString } from "@handyfix/shared";
 import { getSupabase } from "@/lib/supabase";
 import type { ProviderListing, ServiceRow, SubItemRow } from "./types";
 
@@ -131,7 +132,25 @@ export async function searchProviders(args: ProviderSearchArgs): Promise<{ listi
     });
   }
   await attachResponseTimes(listings);
+  const clock = `${String(args.now.getHours()).padStart(2, "0")}:${String(args.now.getMinutes()).padStart(2, "0")}`;
+  const busyNow = await fetchBusyProviderIds(listings.map((l) => l.id), toDateString(args.now), clock, args.service.id);
+  for (const l of listings) l.busyNow = busyNow.has(l.id);
   return { listings, offlineCount };
+}
+
+/**
+ * One job at a time: which of these pros are busy at that day and time (ids only; the server hides job details).
+ * Comes from proposal 20261126000000; until it is applied, or if the call fails, nobody is marked busy.
+ */
+export async function fetchBusyProviderIds(providerIds: readonly string[], date: string, time: string, serviceId: string): Promise<ReadonlySet<string>> {
+  if (providerIds.length === 0) return new Set();
+  try {
+    const { data, error } = await getSupabase().rpc("providers_busy_at", { p_provider_ids: providerIds.slice(0, 200), p_date: date, p_time: time, p_service_id: serviceId });
+    if (error || !Array.isArray(data)) return new Set();
+    return new Set(data.filter((x): x is string => typeof x === "string"));
+  } catch {
+    return new Set();
+  }
 }
 
 /**

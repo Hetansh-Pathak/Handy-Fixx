@@ -21,7 +21,7 @@ import { ClockPicker } from "@/features/customer/ClockPicker";
 import { availabilityKey, fetchAvailability } from "@/features/schedule/api";
 import { registerPush } from "@/lib/push";
 import { bookingPauseKey, createBooking, EmailNotVerifiedError, fetchBookingPause } from "@/features/customer/booking-api";
-import { fetchBookingContext } from "@/features/customer/catalog-api";
+import { fetchBookingContext, fetchBusyProviderIds } from "@/features/customer/catalog-api";
 import { env } from "@/lib/env";
 
 type Step = 1 | 2 | 3;
@@ -95,10 +95,15 @@ export default function BookScreen() {
 
   const back = () => (step > 1 ? setStep((step - 1) as Step) : router.back());
 
-  const next1 = () => {
+  const next1 = async () => {
     const r = bookingScheduleSchema.safeParse({ date: date ? toDateString(date) : "", time: slot ?? "" });
     if (!r.success) return setErrors(fieldErrors(r.error));
     if (!slot || !times.includes(slot)) return setErrors({ time: "That time is no longer available. Pick another." });
+    // One job at a time: a pro who has another job at this time could not accept it. Tell the customer now.
+    if (ctx) {
+      const busyAt = await fetchBusyProviderIds([ctx.provider.id], toDateString(date!), slot, ctx.service.id);
+      if (busyAt.has(ctx.provider.id)) return setErrors({ time: `${ctx.provider.fullName.split(" ")[0]} already has a job at this time. Pick another time, or another pro.` });
+    }
     setErrors({});
     setStep(2);
   };
@@ -232,7 +237,7 @@ export default function BookScreen() {
           <Text className="text-base font-semibold text-fg">Time</Text>
           <ClockPicker options={times} value={slot} onChange={(t) => { setSlot(t); setErrors({}); }} />
           {errors.time || errors.date ? <Text className="text-sm text-danger">{errors.time ?? errors.date}</Text> : null}
-          <Button label="Continue" disabled={!hoursReady} onPress={next1} />
+          <Button label="Continue" disabled={!hoursReady} onPress={() => void next1()} />
         </>
       ) : null}
 

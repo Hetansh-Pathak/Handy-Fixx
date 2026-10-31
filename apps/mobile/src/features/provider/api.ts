@@ -1,6 +1,7 @@
 import {
   callEdge, friendlyDbError, interpretPayout, isGuardedFieldError, patchFallbacks, type BookingPatch, type CompletionResult, type LedgerEntry, type PayoutRequestResult, type RechargePack, type WalletSummary,
 } from "@handyfix/shared";
+import type { JobSlot } from "@handyfix/shared";
 import type { CheckoutOrder } from "@/lib/razorpay";
 import { getSupabase } from "@/lib/supabase";
 
@@ -27,11 +28,11 @@ export type ProviderBooking = {
   payment_status?: string | null;
   /** 'online' once the webhook recorded a Razorpay payment (proposal 20261122; absent before it is applied). */
   payment_method?: string | null;
-  services: { name: string } | { name: string }[] | null;
+  services: { name: string; duration_minutes?: number | null } | { name: string; duration_minutes?: number | null }[] | null;
 };
 
 const BASE_BOOKING_COLUMNS =
-  "id, status, created_at, booking_date, booking_time, address, city, pincode, customer_name, customer_phone, latitude, longitude, provider_amount, total_amount, parts_amount, completed_at, started_at, sub_item_name, special_instructions, payment_status, services(name)";
+  "id, status, created_at, booking_date, booking_time, address, city, pincode, customer_name, customer_phone, latitude, longitude, provider_amount, total_amount, parts_amount, completed_at, started_at, sub_item_name, special_instructions, payment_status, services(name, duration_minutes)";
 const BOOKING_COLUMNS = `${BASE_BOOKING_COLUMNS}, payment_method`;
 
 /** A column a proposal adds is not in the live database yet (PostgREST 42703 / PGRST204). */
@@ -51,6 +52,12 @@ async function selectBookings<T>(
 export const serviceNameOf = (b: ProviderBooking): string => {
   const s = Array.isArray(b.services) ? b.services[0] : b.services;
   return b.sub_item_name ?? s?.name ?? "Service";
+};
+
+/** A booking as the one-job-at-a-time rule sees it (shared `providerBusy`): booked day and time, plus the service duration. */
+export const jobSlotOf = (b: ProviderBooking): JobSlot => {
+  const s = Array.isArray(b.services) ? b.services[0] : b.services;
+  return { id: b.id, status: b.status, date: b.booking_date, time: b.booking_time, durationMinutes: s?.duration_minutes ?? null };
 };
 
 /** The database may raise a readable rule (e.g. "Wallet below the fee…"): show it as written. */

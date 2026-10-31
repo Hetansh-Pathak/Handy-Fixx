@@ -262,6 +262,48 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   check("each stage has its own tab", (await stageCount("New, 0")) >= 1 && (await stageCount("Started, 0")) >= 1);
   await shot("36-jobs");
 
+  // ── 9. one job at a time: a pro on a job cannot accept another ───────────────
+  await goHome();
+  await see("You're online");
+  await sleep(1200);
+  db.wallet = { available: 500, dues: 0 };
+  const today = new Date().toISOString().slice(0, 10);
+  const current = newRequest({ status: "in_progress", booking_date: today, booking_time: "09:00:00", started_at: new Date().toISOString(), special_instructions: "Current job" });
+  pushBookingChange(current, "INSERT");
+  await sleep(1500);
+  const r6 = newRequest({ booking_time: "20:00:00", special_instructions: "Second job" });
+  pushBookingChange(r6, "INSERT");
+  await alertUp(8000);
+  await waitBody("Finish your current job first", 15000)
+    .then(async () => check("the popup of a busy pro says 'Finish your current job first' (not a wallet message)", (await has("You can accept it when your current job ends")) && !(await has("Locked job request"))))
+    .catch(async () => check("the popup of a busy pro says 'Finish your current job first'", false, (await body()).slice(0, 300)));
+  await shot("37-busy-popup");
+  await openRequest();
+  const busyScreen = await body();
+  const acceptWhileBusy = page.locator('[role="button"]:has-text("Accept"):visible').last();
+  check("the request screen explains it, offers 'Open my current job' and Accept is disabled",
+    busyScreen.includes("You already have a job at this time. Finish it first.") && (await count("Open my current job")) >= 1 && (await isDisabled(acceptWhileBusy)), busyScreen.slice(0, 260));
+  await shot("38-busy-request");
+  await T("Open my current job").click();
+  await see("Enter customer's code");
+  check("the link opens the job that is in the way (in progress, step 3 of 3)", await has("Step 3 of 3"));
+  // that job ends: the same request can now be accepted
+  current.status = "completed";
+  pushBookingChange(current, "UPDATE");
+  await sleep(1500);
+  await page.goto(BASE + "/provider/job/" + r6.id, { waitUntil: "networkidle" });
+  await see("Review the problem");
+  await T("Accept").click();
+  for (let i = 0; i < 24 && db.storedBookings.find((b) => b.id === r6.id).status !== "confirmed"; i += 1) await sleep(250);
+  check("after the first job is completed the same request can be accepted", db.storedBookings.find((b) => b.id === r6.id).status === "confirmed");
+  // a stale screen that still sends the accept meets the server rule (the mock mirrors the database trigger)
+  const r7 = newRequest({ booking_time: "20:15:00" });
+  const res = await page.evaluate(async (id) => {
+    const r = await fetch("https://mock.supabase.co/rest/v1/bookings?id=eq." + id, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ status: "confirmed" }) });
+    return { status: r.status, body: await r.text() };
+  }, r7.id).catch((e) => ({ status: 0, body: String(e) }));
+  check("an overlapping accept that bypasses the screen is refused with the plain message", res.status === 400 && res.body.includes("You already have a job at this time. Finish it first."), JSON.stringify(res).slice(0, 200));
+
   check("no uncaught page errors", errors.length === 0, errors.slice(0, 3).join(" | "));
   const failed = results.filter((r) => !r.ok).length;
   console.log(`\n${results.length - failed}/${results.length} checks passed`);

@@ -2,6 +2,7 @@ import { checkCanAccept, type RechargePack, type WalletState } from "../money/wa
 import { feeForServiceBill } from "../money/fee";
 import { formatInr, roundMoney, type Rupees } from "../money/money";
 import type { BookingStatus } from "../booking/status";
+import { BUSY_CTA, type BusyResult } from "../booking/provider-busy";
 import { acceptBlockMessage } from "./wallet-view";
 
 /** The most locked requests shown as cards; the rest become a "+N more" counter (owner plan, 2026-10-29). */
@@ -9,6 +10,8 @@ export const LOCKED_CARD_CAP = 3;
 
 export type RequestAccess =
   | { state: "open"; fee: Rupees; feeWaived: boolean }
+  /** The pro has another job at this time (one job at a time). Accept is replaced by a link to that job. */
+  | { state: "busy"; fee: Rupees; currentJobId: string; message: string; cta: string }
   | {
       state: "locked";
       reason: "insufficient_wallet" | "due_outstanding";
@@ -28,6 +31,7 @@ export type RequestAccess =
  * would earn), but it is locked when the spendable wallet cannot cover the fee that accepting holds.
  * `walletReady = false` (balance not loaded yet) never locks: the database is the real authority and a
  * wrong "locked" flash would only confuse. The launch period skips the check.
+ * A busy pro (`busy.busy`, from `providerBusy`) is blocked before the wallet is looked at: finishing the current job comes first.
  */
 export function requestAccess(input: {
   /** The pro's locked rate for the job (service bill at request time; parts are added later). */
@@ -35,8 +39,12 @@ export function requestAccess(input: {
   wallet: WalletState;
   launchActive: boolean;
   walletReady?: boolean;
+  busy?: BusyResult;
 }): RequestAccess {
   const check = checkCanAccept({ wallet: input.wallet, estimatedServiceBill: input.price, launchActive: input.launchActive });
+  if (input.busy?.busy) {
+    return { state: "busy", fee: check.fee, currentJobId: input.busy.jobId, message: input.busy.message, cta: BUSY_CTA };
+  }
   if (input.walletReady === false || check.ok) {
     return { state: "open", fee: check.fee, feeWaived: check.ok ? check.feeWaived : false };
   }

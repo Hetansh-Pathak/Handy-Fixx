@@ -222,6 +222,7 @@ export default function ServiceScreen() {
             </View>
             {p.distanceKm !== null ? <Text className="text-sm text-muted">About {formatDistance(p.distanceKm)} away</Text> : null}
             {p.avgResponseSeconds !== null ? <Text className="text-sm text-muted">{formatResponseTime(p.avgResponseSeconds)}</Text> : null}
+            {p.busyNow ? <Text className="text-sm font-semibold text-warn">On a job right now. Pick a later time when you book.</Text> : null}
             {p.bio ? <Text className="text-sm text-muted" numberOfLines={2}>{p.bio}</Text> : null}
             <Button label={`Book ${p.fullName.split(" ")[0]}`} onPress={() => book(p)} />
           </View>

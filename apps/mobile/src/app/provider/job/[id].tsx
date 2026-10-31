@@ -75,8 +75,9 @@ export default function JobScreen() {
   const price = Number(booking.provider_amount ?? 0);
   const serviceBill = Math.max(0, price - Number(booking.parts_amount ?? 0));
   const economics = requestEconomics({ price: serviceBill, launchActive: rt.launch.active });
-  const access = requestAccess({ price, wallet: rt.wallet, launchActive: rt.launch.active, walletReady: rt.walletReady });
+  const access = requestAccess({ price, wallet: rt.wallet, launchActive: rt.launch.active, walletReady: rt.walletReady, busy: rt.busyOf(booking) });
   const locked = access.state === "locked" ? access : null;
+  const proBusy = access.state === "busy" ? access : null;
   const destination = booking.latitude != null && booking.longitude != null ? { latitude: Number(booking.latitude), longitude: Number(booking.longitude) } : null;
 
   const reload = async () => {
@@ -198,7 +199,14 @@ export default function JobScreen() {
               <Button label={locked.cta} onPress={() => router.push("/provider/wallet")} />
             </Card>
           ) : null}
-          <Button label="Accept" loading={busy} disabled={!!locked} onPress={() => void run("accept")} />
+          {proBusy ? (
+            <Card>
+              <Text className="text-lg font-semibold text-fg">{proBusy.cta}</Text>
+              <Body muted>{proBusy.message} The customer keeps waiting for your answer, so decline if you cannot take it later.</Body>
+              <Button label="Open my current job" onPress={() => router.push({ pathname: "/provider/job/[id]", params: { id: proBusy.currentJobId } })} />
+            </Card>
+          ) : null}
+          <Button label="Accept" loading={busy} disabled={!!locked || !!proBusy} onPress={() => void run("accept")} />
           {canDecline(status) ? <Button label="Decline" variant="secondary" disabled={busy} onPress={() => void decline()} /> : null}
         </>
       ) : status === "pending" ? (

@@ -1,5 +1,5 @@
 import {
-  formatBookingWhen, heldFromSummary, openRequests, providerLaunchStatus, requestAccess, requestEconomics, walletStateFromSummary, type LaunchStatus, type WalletState,
+  formatBookingWhen, heldFromSummary, openRequests, providerBusy, providerLaunchStatus, requestAccess, requestEconomics, walletStateFromSummary, type BusyResult, type LaunchStatus, type WalletState,
 } from "@handyfix/shared";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import * as Location from "expo-location";
@@ -12,7 +12,7 @@ import { fetchOpenOffers, offersKey, reportPresence, type OpenOffer } from "@/fe
 import { env } from "@/lib/env";
 import { configureNotificationHandler, notifyLockedRequest, notifyNewRequest, onRequestTapped } from "@/lib/notifications";
 import { getSupabase } from "@/lib/supabase";
-import { fetchPendingRequests, fetchWalletSummary, serviceNameOf, setOnline, touchPresence, type ProviderBooking } from "./api";
+import { fetchPendingRequests, fetchProviderBookings, fetchWalletSummary, jobSlotOf, serviceNameOf, setOnline, touchPresence, type ProviderBooking } from "./api";
 import { RequestPopup } from "./RequestPopup";
 import { clearApproxArea, ensureBackgroundLocation, shareApproxArea, startPresence, stopPresence } from "./tracking";
 
@@ -37,6 +37,8 @@ type Runtime = {
   walletReady: boolean;
   launch: LaunchStatus;
   refreshWallet: () => Promise<void>;
+  /** One job at a time: is this pro busy for that request (a job in progress, or an overlapping confirmed one)? */
+  busyOf: (b: ProviderBooking) => BusyResult;
   /** Requests waiting for this pro's answer (no countdown), oldest first. */
   openRequests: ProviderBooking[];
   /** Hide the banner for a request once the pro has opened it. */
@@ -127,6 +129,18 @@ export function ProviderRuntime({ children }: { children: ReactNode }) {
     queryFn: () => fetchPendingRequests(providerId!),
   });
 
+  // The pro's own jobs (the Jobs tab reads the same cache): the one-job-at-a-time rule compares requests with them.
+  const myJobs = useQuery({
+    queryKey: ["provider-bookings", providerId],
+    enabled: !!providerId,
+    refetchInterval: 30_000,
+    queryFn: () => fetchProviderBookings(providerId!),
+  });
+  const busyOf = useCallback(
+    (b: ProviderBooking): BusyResult => providerBusy({ jobs: (myJobs.data ?? []).map(jobSlotOf), request: jobSlotOf(b) }),
+    [myJobs.data],
+  );
+
   useEffect(() => {
     if (!online || !providerId) return;
     const supabase = getSupabase();
@@ -193,8 +207,8 @@ export function ProviderRuntime({ children }: { children: ReactNode }) {
   }, [markRequestSeen, router, openOffers]);
 
   const accessOf = useCallback(
-    (r: ProviderBooking) => requestAccess({ price: Number(r.provider_amount ?? 0), wallet, launchActive: launch.active, walletReady: walletQuery.isSuccess }),
-    [wallet, launch.active, walletQuery.isSuccess],
+    (r: ProviderBooking) => requestAccess({ price: Number(r.provider_amount ?? 0), wallet, launchActive: launch.active, walletReady: walletQuery.isSuccess, busy: busyOf(r) }),
+    [wallet, launch.active, walletQuery.isSuccess, busyOf],
   );
 
   // A phone notification once per new request. No countdown: the pro reviews it and answers when ready.
@@ -205,8 +219,9 @@ export function ProviderRuntime({ children }: { children: ReactNode }) {
       notified.current.add(r.id);
       const access = accessOf(r);
       const when = `${formatBookingWhen(r.booking_date, r.booking_time)} · ${r.city ?? "Nearby"}`;
-      if (access.state === "locked") {
-        void notifyLockedRequest({ bookingId: r.id, title: `Locked request: ${serviceNameOf(r)}`, body: `${when}. ${access.cta}.` });
+      if (access.state === "locked" || access.state === "busy") {
+        const title = access.state === "busy" ? `Request while you are on a job: ${serviceNameOf(r)}` : `Locked request: ${serviceNameOf(r)}`;
+        void notifyLockedRequest({ bookingId: r.id, title, body: `${when}. ${access.cta}.` });
       } else {
         void notifyNewRequest({ bookingId: r.id, title: `New request: ${serviceNameOf(r)}`, body: `${when}. Tap to see the details and decide.` });
       }
@@ -257,9 +272,9 @@ export function ProviderRuntime({ children }: { children: ReactNode }) {
   const value = useMemo<Runtime>(
     () => ({
       online, canGoOnline, switchBlockedReason, toggling, notice, error, toggleOnline, wallet, held, walletReady: walletQuery.isSuccess, launch, refreshWallet,
-      openRequests: open, markRequestSeen, openOffers, showOffer,
+      busyOf, openRequests: open, markRequestSeen, openOffers, showOffer,
     }),
-    [online, canGoOnline, switchBlockedReason, toggling, notice, error, toggleOnline, wallet, held, walletQuery.isSuccess, launch, refreshWallet, open, markRequestSeen, openOffers, showOffer],
+    [online, canGoOnline, switchBlockedReason, toggling, notice, error, toggleOnline, wallet, held, walletQuery.isSuccess, launch, refreshWallet, busyOf, open, markRequestSeen, openOffers, showOffer],
   );
 
   void userId;
@@ -288,6 +303,7 @@ export function ProviderRuntime({ children }: { children: ReactNode }) {
           more={unseen.length - 1}
           onView={() => openRequest(unseen[0]!.id)}
           onRecharge={() => { markRequestSeen(unseen[0]!.id); router.push("/provider/wallet"); }}
+          onCurrentJob={(jobId) => { markRequestSeen(unseen[0]!.id); router.push({ pathname: "/provider/job/[id]", params: { id: jobId } }); }}
           onLater={() => markRequestSeen(unseen[0]!.id)}
         />
       ) : null}
