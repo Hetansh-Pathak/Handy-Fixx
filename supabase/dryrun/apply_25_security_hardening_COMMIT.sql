@@ -1,4 +1,4 @@
--- APPLY (saves). Run 25_security_hardening_DRYRUN.sql first. Take a backup first. Then deploy send-provider-otp, verify-provider-otp, send-welcome-email.
+-- APPLY (saves). Run 25_security_hardening_DRYRUN.sql first and take a backup. Then deploy send-provider-otp, verify-provider-otp, send-welcome-email.
 BEGIN;
 -- =====================================================================================================================
 -- PROPOSAL 20261125000000: security hardening before the VAPT                               NOT APPLIED. ASK FIRST.
@@ -47,10 +47,17 @@ ALTER TABLE public.provider_otp_codes
   ADD COLUMN IF NOT EXISTS locked_at   timestamptz,
   ADD COLUMN IF NOT EXISTS consumed_at timestamptz,
   ADD COLUMN IF NOT EXISTS ip_hash     text;
-ALTER TABLE public.provider_otp_codes ALTER COLUMN otp_code DROP NOT NULL;
 -- Plain codes: unused codes are thrown away (they live 10 minutes), used ones keep their row without the code.
+-- (20261125000002 drops the otp_code column later, so every statement that names it is guarded: re-run safe.)
 DELETE FROM public.provider_otp_codes WHERE verified IS NOT TRUE AND code_hash IS NULL;
-UPDATE public.provider_otp_codes SET otp_code = NULL WHERE otp_code IS NOT NULL;
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns
+             WHERE table_schema = 'public' AND table_name = 'provider_otp_codes' AND column_name = 'otp_code') THEN
+    ALTER TABLE public.provider_otp_codes ALTER COLUMN otp_code DROP NOT NULL;
+    UPDATE public.provider_otp_codes SET otp_code = NULL WHERE otp_code IS NOT NULL;
+  END IF;
+END $$;
 
 -- One row per send, keyed by an HMAC of the account, the email or the IP (never the raw value). Service role only.
 CREATE TABLE IF NOT EXISTS public.otp_rate_events (

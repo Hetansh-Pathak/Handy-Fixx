@@ -154,3 +154,9 @@ create policy "Providers can update own KYC docs" on storage.objects for update 
   bucket_id = 'provider-kyc' and (storage.foldername(name))[1] = auth.uid()::text);
 create policy "Admins can read all KYC docs" on storage.objects for select to authenticated using (
   bucket_id = 'provider-kyc' and public.has_role(auth.uid(), 'admin'));
+
+-- pg_cron stand-in (the live project has pg_cron 1.6.4) ------------------------------------------------------------------
+create schema cron;
+create table cron.job (jobid serial primary key, jobname text, schedule text, command text);
+create function cron.schedule(n text, s text, cmd text) returns bigint language sql as $$ insert into cron.job (jobname, schedule, command) values (n, s, cmd) returning jobid $$;
+create function cron.unschedule(id bigint) returns boolean language sql as $$ delete from cron.job where jobid = id returning true $$;

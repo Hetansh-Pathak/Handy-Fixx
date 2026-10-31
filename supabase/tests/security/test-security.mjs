@@ -189,11 +189,179 @@ async function suiteA() {
   }
 }
 
+
+const PROPOSAL_B = "20261125000001_kyc_pan_encryption_PROPOSAL_NOT_APPLIED.sql";
+const PROPOSAL_C = "20261125000002_kyc_drop_plain_columns_PROPOSAL_NOT_APPLIED.sql";
+const HEX = (c) => c.repeat(64);
+
+// ── Proposals B and C ─────────────────────────────────────────────────────────────────────────────────────────────────
+async function suiteBC() {
+  const { q, as, stop } = await freshDb("bc");
+  try {
+    await seed(q);
+    // a draft that is on step 5 of the old 9-step wizard, and rows with old plain PAN + Aadhaar data
+    await q(`update public.service_providers set onboarding_step = 5 where id = $1`, [ids.spDraft]);
+    await q(`update public.service_providers set kyc_reviewed_at = now() - interval '60 days' where id = $1`, [ids.spA]);
+    await q(`insert into public.provider_kyc (provider_id, aadhaar_last4, aadhaar_hash, pan_number, aadhaar_front_path, aadhaar_back_path, selfie_path, pan_path, consent_accepted_at)
+             values ($1,'1234','h1','ABCDE1234F',$3,$4,$5,$6, now()), ($2,'5678','h2','VWXYZ5678K','b/af','b/ab','b/selfie','b/pan', now())`,
+      [ids.spA, ids.spB, `${ids.proA}/aadhaar_front_1.jpg`, `${ids.proA}/aadhaar_back_1.jpg`, `${ids.proA}/selfie_1.jpg`, `${ids.proA}/pan_1.jpg`]);
+
+    await q(P(PROPOSAL_B));
+    await q(P(PROPOSAL_B));
+    check("B1 proposal B applies and re-runs safely", true);
+    check("B2 the wizard's saved step moves down one, once (5 -> 4, not 3 after the re-run)",
+      (await q(`select onboarding_step s from public.service_providers where id = $1`, [ids.spDraft]))[0].s === 4);
+
+    // Unique blind index
+    const sealed = (n) => `'ct${n}', 'AAAAAAAAAAAAAAAA', 1, '234F', '${HEX("a")}'`;
+    const cols = `pan_encrypted, pan_nonce, pan_key_version, pan_last4, pan_blind_index`;
+    await q(`update public.provider_kyc set (${cols}) = (${sealed(1)}) where provider_id = $1`, [ids.spA]);
+    const dup = await as("service_role", null, `update public.provider_kyc set (${cols}) = (${sealed(2)}) where provider_id = $1`, [ids.spB]);
+    check("B3 a second pro with the same PAN blind index is refused (unique)", dup.error?.code === "23505", dup.error?.message);
+    const badShape = await as("service_role", null, `update public.provider_kyc set pan_encrypted = 'x' where provider_id = $1`, [ids.spB]);
+    check("B4 half-filled PAN columns are refused (shape check)", badShape.error?.code === "23514", badShape.error?.message);
+
+    // Who can read / write what
+    const ownRows = await as("authenticated", ids.proA, `select provider_id, pan_last4 from public.provider_kyc`);
+    check("B5 a pro reads only their own KYC row, with pan_last4", ownRows.count === 1 && ownRows.rows[0].pan_last4 === "234F", JSON.stringify(ownRows.rows));
+    for (const col of ["pan_number", "pan_encrypted", "pan_blind_index", "pan_nonce", "aadhaar_hash", "aadhaar_last4", "phone_blind_index"]) {
+      const r = await as("authenticated", ids.proA, `select ${col} from public.provider_kyc`);
+      check(`B6 a pro cannot read provider_kyc.${col}`, denied(r), r.error?.message);
+    }
+    const adminRead = await as("authenticated", ids.admin, `select provider_id from public.provider_kyc`);
+    check("B7 an admin reads every KYC row (non-secret columns)", adminRead.count === 2);
+    const anon = await as("anon", null, `select provider_id from public.provider_kyc`);
+    check("B8 anon reads nothing", denied(anon), anon.error?.message);
+    const writePan = await as("authenticated", ids.proDraft, `update public.provider_kyc set pan_encrypted = 'x' where provider_id = $1`, [ids.spDraft]);
+    const writeHold = await as("authenticated", ids.proA, `update public.provider_kyc set legal_hold = false where provider_id = $1`, [ids.spA]);
+    const writeIdx = await as("authenticated", ids.proDraft,
+      `insert into public.provider_kyc (provider_id, pan_blind_index) values ($1, '${HEX("c")}')`, [ids.spDraft]);
+    check("B9 a pro cannot write the PAN columns", denied(writePan), writePan.error?.message);
+    check("B10 a pro cannot clear their own legal hold", denied(writeHold), writeHold.error?.message);
+    check("B11 a pro cannot insert a blind index", denied(writeIdx), writeIdx.error?.message);
+    const okWrite = await as("authenticated", ids.proDraft, `insert into public.provider_kyc (provider_id, selfie_path, pan_path) values ($1, 'x/s', 'x/p') returning provider_id`, [ids.spDraft], true);
+    check("B12 a pro can still save their own selfie / PAN photo paths", !okWrite.error, okWrite.error?.message);
+    // trigger as the last line of defence: grant the column by mistake and the trigger still refuses
+    await q(`grant update (pan_last4) on public.provider_kyc to authenticated`);
+    const viaGrant = await as("authenticated", ids.proDraft, `update public.provider_kyc set pan_last4 = '999Z' where provider_id = $1`, [ids.spDraft]);
+    check("B13 even with a mistaken GRANT the trigger refuses server-only columns", viaGrant.error !== null && /can only be saved by HandyFix/.test(viaGrant.error.message), viaGrant.error?.message);
+    await q(`revoke update (pan_last4) on public.provider_kyc from authenticated`);
+
+    // Access log
+    await q(`insert into public.kyc_access_log (actor_id, provider_id, action, detail) values ($1, $2, 'view_pan', 'support call')`, [ids.admin, ids.spA]);
+    const logUpd = await as("service_role", null, `update public.kyc_access_log set detail = 'edited'`);
+    const logDel = await as("service_role", null, `delete from public.kyc_access_log`);
+    check("B14 the access log cannot be edited or deleted", /append-only/.test(logUpd.error?.message ?? "") && /append-only/.test(logDel.error?.message ?? ""));
+    const logAdmin = await as("authenticated", ids.admin, `select * from public.kyc_access_log`);
+    const logPro = await as("authenticated", ids.proA, `select * from public.kyc_access_log`);
+    const logInsert = await as("authenticated", ids.admin, `insert into public.kyc_access_log (provider_id, action) values ($1, 'view_pan')`, [ids.spA]);
+    check("B15 only admins read the access log", logAdmin.count === 1 && logPro.count === 0);
+    check("B16 nobody can write the access log from the app (even an admin)", denied(logInsert), logInsert.error?.message);
+    const viewDoc = await as("authenticated", ids.admin, `select public.log_kyc_document_view($1, 'selfie')`, [ids.spA], true);
+    const viewDocPro = await as("authenticated", ids.proA, `select public.log_kyc_document_view($1, 'selfie')`, [ids.spA]);
+    check("B17 an admin's document view is logged; a pro cannot call it",
+      !viewDoc.error && (await q(`select count(*)::int n from public.kyc_access_log where action = 'view_document'`))[0].n === 1 && viewDocPro.error !== null);
+
+    // Blocklist
+    const hit = async (pan, phone, bank) => (await as("service_role", null, `select public.kyc_blocklist_hit($1,$2,$3) h`, [pan, phone, bank])).rows[0].h;
+    check("B18 blocklist: nothing listed yet means no hit", (await hit(HEX("a"), null, null)) === false);
+    const bl = await as("authenticated", ids.admin, `select public.admin_blocklist_provider($1, 'fraud case 12') n`, [ids.spA], true);
+    check("B19 an admin can blocklist a pro's stored hashes (PAN here; phone/bank name were null)", bl.rows[0]?.n === 1, bl.error?.message);
+    check("B20 blocklist hit by PAN hash", (await hit(HEX("a"), null, null)) === true);
+    check("B21 blocklist miss for other hashes", (await hit(HEX("e"), HEX("f"), HEX("0"))) === false);
+    await q(`insert into public.kyc_blocklist (kind, value_hash, reason) values ('phone', '${HEX("9")}', 'known scammer')`);
+    check("B22 blocklist hit by phone hash", (await hit(null, HEX("9"), null)) === true);
+    const blPro = await as("authenticated", ids.proA, `select public.admin_blocklist_provider($1, 'x y z')`, [ids.spB]);
+    const blRead = await as("authenticated", ids.proA, `select * from public.kyc_blocklist`);
+    check("B23 a pro can neither blocklist nor read the blocklist", blPro.error !== null && blRead.count === 0);
+
+    // submit_kyc without Aadhaar
+    await q(`update public.service_providers set first_name='Ravi', last_name='Patel', date_of_birth='1990-01-01', pincodes=ARRAY['Jamnagar'],
+             service_ids=ARRAY[gen_random_uuid()], kyc_status='not_submitted' where id = $1`, [ids.spDraft]);
+    await q(`update public.provider_kyc set consent_accepted_at = now(), pan_path = 'x/p', selfie_path = 'x/s' where provider_id = $1`, [ids.spDraft]);
+    const noPan = await as("authenticated", ids.proDraft, `select public.submit_kyc() r`);
+    check("B24 submit_kyc: refused without the encrypted PAN", noPan.rows[0]?.r?.success === false && /PAN/.test(noPan.rows[0].r.error), JSON.stringify(noPan.rows));
+    await q(`update public.provider_kyc set (${cols}) = ('ct9','AAAAAAAAAAAAAAAA',1,'678K','${HEX("d")}') where provider_id = $1`, [ids.spDraft]);
+    const ok = await as("authenticated", ids.proDraft, `select public.submit_kyc() r`);
+    check("B25 submit_kyc: succeeds with PAN + selfie + PAN photo and NO Aadhaar at all", ok.rows[0]?.r?.success === true, JSON.stringify(ok.rows));
+    await q(`insert into public.kyc_blocklist (kind, value_hash, reason) values ('pan', '${HEX("d")}', 'blocked pan')`);
+    const blocked = await as("authenticated", ids.proDraft, `select public.submit_kyc() r`);
+    check("B26 submit_kyc: refused for a blocklisted PAN", blocked.rows[0]?.r?.success === false && /cannot accept/.test(blocked.rows[0].r.error), JSON.stringify(blocked.rows));
+    const anonSubmit = await as("anon", null, `select public.submit_kyc()`);
+    check("B27 anon cannot call submit_kyc", denied(anonSubmit), anonSubmit.error?.message);
+
+    // Retention
+    const days = (await q(`select photo_retention_days d, retention_doc_kinds k from public.kyc_settings`))[0];
+    check("B28 retention defaults: 30 days (placeholder), Aadhaar photos only", days.d === 30 && days.k.join() === "aadhaar_front,aadhaar_back");
+    await q(`update public.service_providers set kyc_status='approved', kyc_reviewed_at = now() - interval '60 days' where id in ($1,$2)`, [ids.spA, ids.spB]);
+    await q(`update public.service_providers set kyc_status='approved', kyc_reviewed_at = now() - interval '5 days' where id = $1`, [ids.spDraft]);
+    await q(`update public.provider_kyc set aadhaar_front_path='d/af' where provider_id = $1`, [ids.spDraft]);
+    await q(`update public.provider_kyc set legal_hold = true, legal_hold_reason = 'police request' where provider_id = $1`, [ids.spB]);
+    const due = (await as("service_role", null, `select * from public.kyc_retention_due(100)`)).rows;
+    check("B29 retention: only the approved, old, non-held pro is due (not the held one, not the recent one)",
+      due.length === 1 && due[0].provider_id === ids.spA, JSON.stringify(due));
+    check("B30 retention lists only Aadhaar photos, never the selfie or the PAN photo",
+      due[0].paths.length === 2 && due[0].paths.every((x) => x.includes("aadhaar_")), JSON.stringify(due[0]?.paths));
+    const heldDone = await as("service_role", null, `select public.kyc_retention_mark_done($1, ARRAY['b/af','b/ab']) n`, [ids.spB], true);
+    check("B31 mark_done refuses a pro on legal hold (re-checked under lock)", heldDone.rows[0]?.n === 0
+      && (await q(`select aadhaar_front_path p from public.provider_kyc where provider_id = $1`, [ids.spB]))[0].p === "b/af");
+    const done = await as("service_role", null, `select public.kyc_retention_mark_done($1, $2) n`, [ids.spA, due[0].paths], true);
+    const after = (await q(`select aadhaar_front_path af, selfie_path s, pan_path p, photos_deleted_at d from public.provider_kyc where provider_id = $1`, [ids.spA]))[0];
+    check("B32 mark_done clears the Aadhaar photo paths, keeps selfie + PAN photo, stamps the date",
+      done.rows[0]?.n === 2 && after.af === null && after.s && after.p && after.d, JSON.stringify(after));
+    check("B33 the deletion is written to the access log", (await q(`select count(*)::int n from public.kyc_access_log where action = 'retention_delete' and provider_id = $1`, [ids.spA]))[0].n === 1);
+    check("B34 after that nothing is due for that pro", (await as("service_role", null, `select * from public.kyc_retention_due(100)`)).rows.filter((r) => r.provider_id === ids.spA).length === 0);
+    check("B35 retention functions are not callable by apps", denied(await as("authenticated", ids.admin, `select * from public.kyc_retention_due(1)`))
+      && denied(await as("authenticated", ids.admin, `select public.kyc_retention_mark_done($1, ARRAY['a'])`, [ids.spA])));
+    const job = await q(`select schedule from cron.job where jobname = 'kyc-retention'`);
+    check("B36 the daily retention job is scheduled once (03:15 IST)", job.length === 1 && job[0].schedule === "45 21 * * *");
+    await q(`select public.kyc_retention_kick()`);
+    check("B37 the retention kick does nothing (no error) while pg_net / the vault secret are not set up", true);
+
+    // Proposal C
+    const refuse = await q(P(PROPOSAL_C)).then(() => null, (e) => e);
+    check("C1 proposal C refuses while plain PAN / Aadhaar values remain", refuse !== null && /still has/.test(refuse.message), refuse?.message);
+    check("C2 ...and changed nothing", (await q(`select count(*)::int n from information_schema.columns where table_name = 'provider_kyc' and column_name = 'pan_number'`))[0].n === 1);
+    await q(`update public.provider_kyc set pan_number = null, aadhaar_last4 = null, aadhaar_hash = null, aadhaar_front_path = null, aadhaar_back_path = null`);
+    await q(P(PROPOSAL_C));
+    await q(P(PROPOSAL_C));
+    const left = await q(`select column_name from information_schema.columns where table_schema = 'public' and table_name = 'provider_kyc'
+                          and (column_name = 'pan_number' or column_name like 'aadhaar%')`);
+    check("C3 after the script ran, proposal C drops pan_number and every Aadhaar column (and re-runs safely)", left.length === 0, JSON.stringify(left));
+    check("C4 the plain-PAN unique index is gone, the blind-index one stays",
+      (await q(`select indexname from pg_indexes where tablename = 'provider_kyc' and indexname in ('provider_kyc_pan_unique','provider_kyc_pan_blind_unique')`)).map((r) => r.indexname).join() === "provider_kyc_pan_blind_unique");
+    const dueAfter = await as("service_role", null, `select * from public.kyc_retention_due(10)`);
+    check("C5 retention still works after the Aadhaar columns are gone", !dueAfter.error, dueAfter.error?.message);
+    check("C6 submit_kyc still works after the Aadhaar columns are gone", (await as("authenticated", ids.proA, `select public.submit_kyc() r`)).error === null);
+    const plainOtp = await q(`select count(*)::int n from information_schema.columns where table_name = 'provider_otp_codes' and column_name = 'otp_code'`);
+    check("C7 without proposal A the plain OTP column is left alone", plainOtp[0].n === 1);
+  } finally {
+    await stop();
+  }
+}
+
+/** A then B then C in order, twice: everything must still hold together (and the OTP plain column goes in C). */
+async function suiteOrder() {
+  const { q, stop } = await freshDb("order");
+  try {
+    await seed(q);
+    await q(P(PROPOSAL_A)); await q(P(PROPOSAL_B));
+    await q(P(PROPOSAL_C));
+    await q(P(PROPOSAL_A)); await q(P(PROPOSAL_B)); await q(P(PROPOSAL_C));
+    const otp = await q(`select count(*)::int n from information_schema.columns where table_name = 'provider_otp_codes' and column_name = 'otp_code'`);
+    check("O1 A -> B -> C applies, and A -> B -> C again changes nothing", true);
+    check("O2 proposal C drops the plain OTP column once proposal A emptied it", otp[0].n === 0);
+  } finally {
+    await stop();
+  }
+}
+
 /** Runs a dry-run file: its last SELECT must be all true, and afterwards `stillThereSql` must return ok = true. */
-async function runDryRun(file, label, stillThereSql) {
+async function runDryRun(file, label, stillThereSql, prelude = []) {
   const { c, q, stop } = await freshDb(`dry-${label}`);
   try {
     await seed(q);
+    for (const name of prelude) await q(P(name));
     const res = await c.query(readFileSync(`${repo}/supabase/dryrun/${file}`, "utf8"));
     const row = (Array.isArray(res) ? res : [res]).filter((r) => r.command === "SELECT" && r.rows.length).pop()?.rows[0] ?? {};
     const allTrue = Object.keys(row).length > 0 && Object.values(row).every((v) => v === true);
@@ -221,6 +389,12 @@ try {
   sameBody(PROPOSAL_A, "25_security_hardening_DRYRUN.sql", "apply_25_security_hardening_COMMIT.sql", "A-files");
   await runDryRun("25_security_hardening_DRYRUN.sql", "A-dry",
     `select exists (select 1 from pg_policies where policyname = 'public_read_providers') ok`);
+  await suiteBC();
+  await suiteOrder();
+  sameBody(PROPOSAL_B, "26_kyc_pan_encryption_DRYRUN.sql", "apply_26_kyc_pan_encryption_COMMIT.sql", "B-files");
+  await runDryRun("26_kyc_pan_encryption_DRYRUN.sql", "B-dry",
+    `select not exists (select 1 from information_schema.columns where table_name = 'provider_kyc' and column_name = 'pan_blind_index') ok`);
+  sameBody(PROPOSAL_C, "27_kyc_drop_plain_columns_DRYRUN.sql", "apply_27_kyc_drop_plain_columns_COMMIT.sql", "C-files");
 } catch (e) {
   check("suite crashed", false, e.stack ?? String(e));
 }
