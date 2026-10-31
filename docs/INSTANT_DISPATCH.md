@@ -100,6 +100,24 @@ The switch stays OFF until the proposal is applied (slice 5): the live database 
 - Left for slice 6 (polish): the route drawing itself in, success haptic (`expo-haptics` is a native package: new
   development build), a real dark map when `EXPO_PUBLIC_MAPS_ENABLED=1`, "Ask my previous pro first".
 
+## Pro app (slice 4, done; same switch)
+
+- Heartbeat: while online the existing heartbeat (every 30 s in the app, and the `PRESENCE_TASK` foreground service in
+  the background) also calls `report_presence(lat, lng)`. Location permission is asked only when a pro goes online
+  (existing rule); the heartbeat never asks.
+- Offers: `booking_offers` (own rows) by Realtime (unique channel name) plus the 8 s poll; one phone notification per
+  offer ("New job near you"); tapping it opens the offer.
+- `OfferAlert` (full screen, the request sound on a loop + vibration until the pro decides, no countdown): service,
+  "about N km away · area", Now or the slot, the customer's note, "You earn ₹X", the fee (or "waived"); one primary
+  button **Accept**, or **"Top up ₹X to accept"** (opens Wallet) from the database's own fee and balance. While open it
+  re-reads the card every 3 s, so "Taken by another pro", "Expired" and "The customer cancelled this request" appear
+  without a tap. Accept: `accept_dispatch_offer`; won = straight to the job (existing steps: Start trip, I've
+  arrived, Start job, Enter code); otherwise the database's answer in plain words. "Later" keeps it in
+  **Jobs → New → Requests**.
+- Shared: `readOfferCard`, `offerCardAccess`, `offerWhenLine`, `offerWhereLine`, `acceptOutcome` (11 tests; anything
+  unexpected is never treated as a win).
+- Browser test `dispatch-pro-flow.cjs` (15 checks).
+
 ## Not working until push exists (slice 4b, needs the owner's Firebase project)
 
 A pro whose app is **closed** gets no offer. While the Pro app is open (or in the background with the location

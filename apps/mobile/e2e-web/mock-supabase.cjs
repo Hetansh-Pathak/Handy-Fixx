@@ -178,6 +178,43 @@ async function installMock(page) {
       const row = db.storedBookings.find((r) => r.id === bid);
       return json(route, 200, row && ["arrived", "in_progress", "confirmed", "on_the_way"].includes(row.status) ? [{ code: db.completionCode }] : []);
     }
+    // ── instant dispatch, Pro side: db.offers = [{ booking_id, provider_id, status, ring, distance_km, card }] ──
+    if (p === "/rest/v1/booking_offers") {
+      const u = userFromAuth(req);
+      const me = db.providerRows.find((r) => u && r.user_id === u.id);
+      const st = (url.searchParams.get("status") || "").replace("eq.", "");
+      return json(route, 200, (db.offers || []).filter((o) => me && o.provider_id === me.id && (!st || o.status === st))
+        .map((o) => ({ booking_id: o.booking_id, status: o.status, offered_at: o.offered_at, ring: o.ring, distance_km: o.distance_km })));
+    }
+    if (p === "/rest/v1/rpc/report_presence") {
+      db.presence = (db.presence || []).concat([body()]);
+      return route.fulfill({ status: 204, headers: CORS });
+    }
+    if (p === "/rest/v1/rpc/get_offer_card" || p === "/rest/v1/rpc/accept_dispatch_offer") {
+      const u = userFromAuth(req);
+      const me = db.providerRows.find((r) => u && r.user_id === u.id);
+      const bid = body().p_booking_id;
+      const offer = (db.offers || []).find((o) => me && o.provider_id === me.id && o.booking_id === bid);
+      if (!offer) return p.endsWith("accept_dispatch_offer") ? json(route, 200, { result: "not_offered" }) : json(route, 400, { code: "P0001", message: "Offer not found" });
+      if (p.endsWith("get_offer_card")) {
+        return json(route, 200, { booking_id: bid, offer_status: offer.status, offered_at: offer.offered_at, ring: offer.ring, approx_km: Math.max(0.5, Math.round(offer.distance_km * 2) / 2), ...offer.card });
+      }
+      db.calls.push({ fn: "accept_dispatch_offer", body: { p_booking_id: bid } });
+      // mirrors the proposal: someone else first = taken; the live wallet check refuses with its own words
+      const others = (db.offers || []).filter((o) => o.booking_id === bid && o !== offer);
+      if (offer.status === "accepted") return json(route, 200, { result: "accepted", booking_id: bid });
+      if (others.some((o) => o.status === "accepted")) return json(route, 200, { result: "taken" });
+      if (offer.status !== "offered") return json(route, 200, { result: offer.status === "withdrawn" ? "withdrawn" : "expired" });
+      if (!offer.card.launch_active && Number(offer.card.wallet_balance) < Number(offer.card.fee)) {
+        return json(route, 200, { result: "top_up", message: "Wallet below the fee. Top up Rs 100 to accept." });
+      }
+      offer.status = "accepted";
+      others.forEach((o) => { if (o.status === "offered") o.status = "taken"; });
+      const row = db.storedBookings.find((r) => r.id === bid);
+      if (row) Object.assign(row, { provider_id: me.id, status: "confirmed", dispatch_state: "assigned" });
+      return json(route, 200, { result: "accepted", booking_id: bid });
+    }
+
     // ── instant dispatch (proposal 20261124000000). Suites drive the search by changing db.dispatch[bookingId]. ──
     if (["/rest/v1/rpc/start_dispatch", "/rest/v1/rpc/get_search_state", "/rest/v1/rpc/cancel_search", "/rest/v1/rpc/extend_search"].includes(p)) {
       const u = userFromAuth(req);

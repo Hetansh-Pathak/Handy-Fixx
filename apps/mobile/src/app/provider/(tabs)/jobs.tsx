@@ -1,11 +1,11 @@
 import {
-  countByStage, defaultJobStage, formatBookingWhen, formatInr, JOB_STAGES, jobStage, lockedEarningLine, partitionByAccess, providerStatusLabel, requestAccess,
+  countByStage, defaultJobStage, formatBookingWhen, formatDistance, formatInr, JOB_STAGES, jobStage, lockedEarningLine, partitionByAccess, providerStatusLabel, requestAccess,
   type BookingStatus, type JobStage,
 } from "@handyfix/shared";
 import { useQuery } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
-import { Lock } from "lucide-react-native";
+import { BellRing, Lock } from "lucide-react-native";
 import { Pressable, ScrollView, View } from "react-native";
 import { Text } from "@/components/text";
 import { Body, ErrorBanner, Screen, Title, ListSkeleton } from "@/components/ui";
@@ -69,7 +69,24 @@ export default function ProviderJobs() {
 
       <ErrorBanner message={jobs.isError ? "Could not load your jobs." : null} />
       {jobs.isPending ? <ListSkeleton /> : null}
-      {jobs.isSuccess && rows.length === 0 ? <Body muted>{stage.empty}</Body> : null}
+      {current === "new" && rt.openOffers.length > 0 ? (
+        // Instant dispatch: offers are not bookings of this pro yet; they open the full-screen offer again.
+        <View className="gap-2">
+          <Text className="text-lg font-semibold text-fg">Requests</Text>
+          {rt.openOffers.map((o) => (
+            <Pressable key={o.bookingId} accessibilityRole="button" accessibilityLabel={`Job offer about ${formatDistance(Math.max(0.5, Math.round(o.distanceKm * 2) / 2))} away`}
+              onPress={() => rt.showOffer(o.bookingId)}
+              className="min-h-[44px] flex-row items-center gap-3 rounded-panel border-2 border-brand bg-brand-soft p-4 active:opacity-80">
+              <BellRing size={22} color={colors.brand} />
+              <View className="flex-1">
+                <Text className="text-base font-semibold text-fg">New job near you</Text>
+                <Text className="text-sm text-muted">about {formatDistance(Math.max(0.5, Math.round(o.distanceKm * 2) / 2))} away · tap to see it and accept</Text>
+              </View>
+            </Pressable>
+          ))}
+        </View>
+      ) : null}
+      {jobs.isSuccess && rows.length === 0 && !(current === "new" && rt.openOffers.length > 0) ? <Body muted>{stage.empty}</Body> : null}
 
       {shown.map((b) => {
         const lock = split ? accessOf(b) : null;

@@ -2,7 +2,9 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { distanceKm, estimateEtaMinutes } from "@handyfix/shared";
 import type { LocationObject } from "expo-location";
 import * as TaskManager from "expo-task-manager";
+import { reportPresence } from "@/features/dispatch/pro-api";
 import { touchPresence, updateEta, upsertProviderLocation } from "@/features/provider/api";
+import { env } from "@/lib/env";
 
 /** Keeps a pro "online" for customers while the app is in the background (a foreground service). */
 export const PRESENCE_TASK = "handyfix-provider-presence";
@@ -30,12 +32,15 @@ async function read<T>(key: string): Promise<T | null> {
 }
 
 /** Background tasks must be defined at app start (imported by the root layout), outside any component. */
-TaskManager.defineTask<{ locations: LocationObject[] }>(PRESENCE_TASK, async ({ error }) => {
+TaskManager.defineTask<{ locations: LocationObject[] }>(PRESENCE_TASK, async ({ data, error }) => {
   if (error) return;
   const state = await read<PresenceState>(PRESENCE_KEY);
   if (!state || Date.now() - state.lastTouch < PRESENCE_MIN_GAP_MS) return;
   try {
     await touchPresence(state.providerId);
+    // Instant dispatch: the same heartbeat carries the position, so offers reach pros with the app in the background.
+    const last = data?.locations?.[data.locations.length - 1];
+    if (env.instantDispatch && last) await reportPresence({ latitude: last.coords.latitude, longitude: last.coords.longitude, accuracy: last.coords.accuracy });
     await AsyncStorage.setItem(PRESENCE_KEY, JSON.stringify({ ...state, lastTouch: Date.now() }));
   } catch {
     /* offline: the next tick tries again */

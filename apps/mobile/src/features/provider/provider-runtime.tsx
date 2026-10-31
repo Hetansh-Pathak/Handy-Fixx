@@ -2,10 +2,14 @@ import {
   formatBookingWhen, heldFromSummary, openRequests, providerLaunchStatus, requestAccess, requestEconomics, walletStateFromSummary, type LaunchStatus, type WalletState,
 } from "@handyfix/shared";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import * as Location from "expo-location";
 import { useRouter } from "expo-router";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { AppState } from "react-native";
 import { useSession } from "@/features/auth/session-provider";
+import { OfferAlert } from "@/features/dispatch/OfferAlert";
+import { fetchOpenOffers, offersKey, reportPresence, type OpenOffer } from "@/features/dispatch/pro-api";
+import { env } from "@/lib/env";
 import { configureNotificationHandler, notifyLockedRequest, notifyNewRequest, onRequestTapped } from "@/lib/notifications";
 import { getSupabase } from "@/lib/supabase";
 import { fetchPendingRequests, fetchWalletSummary, serviceNameOf, setOnline, touchPresence, type ProviderBooking } from "./api";
@@ -37,7 +41,23 @@ type Runtime = {
   openRequests: ProviderBooking[];
   /** Hide the banner for a request once the pro has opened it. */
   markRequestSeen: (id: string) => void;
+  /** Instant dispatch: offers waiting for this pro (empty while the switch is off). */
+  openOffers: OpenOffer[];
+  /** Show the full-screen alert for an offer again (from Jobs -> New). */
+  showOffer: (bookingId: string) => void;
 };
+
+/** The heartbeat's position for instant dispatch (permission was asked when going online; never asks here). */
+async function sendPosition(): Promise<void> {
+  try {
+    const perm = await Location.getForegroundPermissionsAsync();
+    if (!perm.granted) return;
+    const pos = (await Location.getLastKnownPositionAsync({ maxAge: 60_000 })) ?? (await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }));
+    if (pos) await reportPresence({ latitude: pos.coords.latitude, longitude: pos.coords.longitude, accuracy: pos.coords.accuracy });
+  } catch {
+    /* no position this time: the next heartbeat tries again */
+  }
+}
 
 const RuntimeContext = createContext<Runtime | null>(null);
 
@@ -85,11 +105,16 @@ export function ProviderRuntime({ children }: { children: ReactNode }) {
     if (!online || !providerId) return;
     const sub = AppState.addEventListener("change", (s) => {
       appActive.current = s === "active";
-      if (s === "active") void touchPresence(providerId).catch(() => undefined);
+      if (s === "active") { void touchPresence(providerId).catch(() => undefined); if (env.instantDispatch) void sendPosition(); }
     });
     void touchPresence(providerId).catch(() => undefined);
+    if (env.instantDispatch) void sendPosition();
     void shareApproxArea(providerId); // for the customer's "Nearest" sort; also covers a restart while online
-    const id = setInterval(() => { if (appActive.current) void touchPresence(providerId).catch(() => undefined); }, HEARTBEAT_MS);
+    const id = setInterval(() => {
+      if (!appActive.current) return;
+      void touchPresence(providerId).catch(() => undefined);
+      if (env.instantDispatch) void sendPosition();
+    }, HEARTBEAT_MS);
     const area = setInterval(() => { if (appActive.current) void shareApproxArea(providerId); }, AREA_REFRESH_MS);
     return () => { clearInterval(id); clearInterval(area); sub.remove(); };
   }, [online, providerId]);
@@ -115,6 +140,42 @@ export function ProviderRuntime({ children }: { children: ReactNode }) {
     return () => { void supabase.removeChannel(channel); };
   }, [online, providerId, queryClient]);
 
+  // -- instant dispatch offers: realtime for speed, polling as the safety net --
+  const offers = useQuery({
+    queryKey: offersKey(providerId),
+    enabled: env.instantDispatch && online && !!providerId,
+    refetchInterval: POLL_MS,
+    queryFn: fetchOpenOffers,
+  });
+  useEffect(() => {
+    if (!env.instantDispatch || !online || !providerId) return;
+    const supabase = getSupabase();
+    const channel = supabase
+      // Unique name: joining the same channel twice crashes the app.
+      .channel(`provider-offers-${providerId}-${Math.random().toString(36).slice(2)}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "booking_offers", filter: `provider_id=eq.${providerId}` }, () => {
+        void queryClient.invalidateQueries({ queryKey: offersKey(providerId) });
+      })
+      .subscribe();
+    return () => { void supabase.removeChannel(channel); };
+  }, [online, providerId, queryClient]);
+  const openOffers = useMemo(() => (env.instantDispatch && online ? offers.data ?? [] : []), [online, offers.data]);
+  const [offerShown, setOfferShown] = useState<string | null>(null);
+  const unseenOffer = offerShown ?? openOffers.find((o) => !seen.has(o.bookingId))?.bookingId ?? null;
+  const showOffer = useCallback((id: string) => setOfferShown(id), []);
+  const closeOffer = useCallback((id: string) => {
+    setOfferShown(null);
+    setSeen((prev) => (prev.has(id) ? prev : new Set(prev).add(id)));
+    void queryClient.invalidateQueries({ queryKey: offersKey(providerId) });
+  }, [queryClient, providerId]);
+  useEffect(() => {
+    for (const o of openOffers) {
+      if (notified.current.has(o.bookingId)) continue;
+      notified.current.add(o.bookingId);
+      void notifyNewRequest({ bookingId: o.bookingId, title: "New job near you", body: "Tap to see the job and accept it. The first pro to accept gets it." });
+    }
+  }, [openOffers]);
+
   useEffect(() => {
     if (!online) return;
     const id = setInterval(() => setNow(new Date()), 60_000);
@@ -125,9 +186,11 @@ export function ProviderRuntime({ children }: { children: ReactNode }) {
   const unseen = open.filter((r) => !seen.has(r.id));
   const markRequestSeen = useCallback((id: string) => setSeen((prev) => (prev.has(id) ? prev : new Set(prev).add(id))), []);
   const openRequest = useCallback((id: string) => {
+    // A tapped notification for an instant-dispatch offer opens the offer (the job itself is not theirs yet).
+    if (openOffers.some((o) => o.bookingId === id)) { setOfferShown(id); return; }
     markRequestSeen(id);
     router.push({ pathname: "/provider/job/[id]", params: { id } });
-  }, [markRequestSeen, router]);
+  }, [markRequestSeen, router, openOffers]);
 
   const accessOf = useCallback(
     (r: ProviderBooking) => requestAccess({ price: Number(r.provider_amount ?? 0), wallet, launchActive: launch.active, walletReady: walletQuery.isSuccess }),
@@ -194,16 +257,29 @@ export function ProviderRuntime({ children }: { children: ReactNode }) {
   const value = useMemo<Runtime>(
     () => ({
       online, canGoOnline, switchBlockedReason, toggling, notice, error, toggleOnline, wallet, held, walletReady: walletQuery.isSuccess, launch, refreshWallet,
-      openRequests: open, markRequestSeen,
+      openRequests: open, markRequestSeen, openOffers, showOffer,
     }),
-    [online, canGoOnline, switchBlockedReason, toggling, notice, error, toggleOnline, wallet, held, walletQuery.isSuccess, launch, refreshWallet, open, markRequestSeen],
+    [online, canGoOnline, switchBlockedReason, toggling, notice, error, toggleOnline, wallet, held, walletQuery.isSuccess, launch, refreshWallet, open, markRequestSeen, openOffers, showOffer],
   );
 
   void userId;
   return (
     <RuntimeContext.Provider value={value}>
       {children}
-      {unseen[0] ? (
+      {unseenOffer ? (
+        <OfferAlert
+          key={unseenOffer}
+          bookingId={unseenOffer}
+          more={Math.max(0, openOffers.filter((o) => !seen.has(o.bookingId)).length - 1)}
+          onAccepted={(id) => {
+            closeOffer(id);
+            void queryClient.invalidateQueries({ queryKey: ["provider-bookings", providerId] });
+            router.push({ pathname: "/provider/job/[id]", params: { id } });
+          }}
+          onRecharge={() => { closeOffer(unseenOffer); router.push("/provider/wallet"); }}
+          onClose={() => closeOffer(unseenOffer)}
+        />
+      ) : unseen[0] ? (
         <RequestPopup
           key={unseen[0].id}
           request={unseen[0]}
