@@ -19,8 +19,6 @@
     "legal:build": "node scripts/build-legal-site.mjs",
     "push:build": "node scripts/build-push-function.mjs",
     "admin": "npm run dev -w @handyfix/admin",
-    "legacy:customer": "npm --prefix legacy/customer-app run dev",
-    "legacy:provider": "npm --prefix legacy/provider-app run dev",
     "mobile:install": "npm --prefix apps/mobile install",
     "mobile:typecheck": "npm --prefix apps/mobile run typecheck",
     "mobile:start": "npm --prefix apps/mobile run start",

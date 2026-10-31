@@ -2,7 +2,7 @@
 
 HandyFix is a home-services marketplace that connects customers with verified local professionals. The repository is a monorepo being migrated from three Vite web apps to a single **React Native + Expo** mobile app (customer and provider roles) with a web admin panel, shared TypeScript logic and a Supabase backend.
 
-> **Migration status:** Phases 0 to 2 (clean baseline, monorepo, shared logic) are done and `apps/mobile` exists as an app shell with native-risk check screens (Phase 3: run `apps/mobile/SPIKE.md` on a real Android phone). Until it reaches feature parity, `legacy/customer-app` and `legacy/provider-app` are the working web apps and act as the UI spec.
+> **Migration status:** Phases 0 to 2 (clean baseline, monorepo, shared logic) are done and `apps/mobile` exists as an app shell with native-risk check screens (Phase 3: run `apps/mobile/SPIKE.md` on a real Android phone). The old web apps were removed on 2026-11-01; `apps/mobile` is the customer and Pro app.
 
 ![Customer application preview](docs/customer-app-preview.png)
 
@@ -42,7 +42,6 @@ handyfix/
 │   ├── functions/             # All Edge Functions (OTP, email, Razorpay, wallet)
 │   ├── proposals/             # SQL that is NOT applied (review only)
 │   └── verify/                # Read-only verification scripts
-├── legacy/                    # Old web apps, kept as UI spec until mobile parity, then deleted
 │   ├── customer-app/          # (Vite + React, port 3000)
 │   └── provider-app/          # (Vite + React, port 3001)
 ├── docs/
@@ -61,7 +60,7 @@ handyfix/
 
 ### 1. Configure environment variables
 
-Create a `.env.local` file inside `apps/admin` (and in `legacy/customer-app` and `legacy/provider-app` if you run them):
+Create a `.env.local` file inside `apps/admin`:
 
 ```env
 VITE_SUPABASE_URL=https://<your-project-ref>.supabase.co
@@ -128,8 +127,6 @@ npm run mobile:start
 **Legacy web apps** (own `package-lock.json`, not part of the workspace, so install inside each):
 
 ```bash
-cd legacy/customer-app && npm install && npm run dev   # http://localhost:3000
-cd legacy/provider-app && npm install && npm run dev   # http://localhost:3001
 ```
 
 ## Authentication

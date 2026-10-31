@@ -24,14 +24,13 @@ apps/mobile      Expo SDK 58 app (TypeScript, Expo Router, NativeWind). Routes: 
 apps/admin       Web admin (Vite + React). Stays web.
 packages/shared  @handyfix/shared: types, Zod schemas, API functions, hooks, fee/price/booking logic, tests
 supabase/        migrations/{customer,provider}, functions/, proposals/ (NOT applied), verify/
-legacy/          Old web customer/provider apps. READ-ONLY UI spec. Deleted at mobile parity.
 ```
 
 ## Rules
 
 - **Shared logic goes in `packages/shared`** (see its README for the module map and the list of assumptions to confirm). Reuse `feeForServiceBill`, `settleJob`, `checkCanAccept`, `providerStep`, `customerActions`, `createHandyFixClient` etc. instead of re-deriving rules in a screen. Never duplicate Supabase client setup, types, Zod schemas, or fee/date/booking rules inside an app. Logic there needs Vitest tests; `npm run test` must pass before touching screens.
 - **Never change RLS, migrations, or Edge Functions without asking first.** Never edit an applied migration; add a new one. Anything not yet applied goes in `supabase/proposals/`.
-- **Do not edit `legacy/`** except to read it. Treat old screens as a spec and fix their bugs in the new version instead of porting them.
+- The old web customer/provider apps (`legacy/`) were deleted on 2026-11-01 (mobile parity reached); `git show v1.0-vapt:legacy/<path>` still reads any old screen.
 - Strict TypeScript everywhere new (`tsconfig.base.json`). No `any` in new code.
 - Work **one vertical slice at a time**, plan first, commit after each working slice. Never "convert everything".
 - Never commit secrets, `.env*`, keystores, or `.expo/`. Supabase anon key only in the client; service keys only in Edge Function secrets.
@@ -119,4 +118,3 @@ npm run mobile:typecheck   # tsc for the Expo app
 npm run mobile:start       # Expo dev server (needs a development build on a phone)
 ```
 
-`legacy/*` apps are not in the workspace; install inside each folder.

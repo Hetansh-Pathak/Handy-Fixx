@@ -21,7 +21,6 @@ Only public values are used. Never put a service-role key in any of these files.
 |---|---|---|
 | `apps/admin` | `apps/admin/.env.local` | `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY` |
 | `apps/mobile` | `apps/mobile/.env.local` | `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` |
-| `legacy/customer-app`, `legacy/provider-app` | `.env.local` in each folder | `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY` |
 
 **After changing settings, restart.** Vite reads them at start. The mobile app bakes `EXPO_PUBLIC_*` into the bundle:
 `npm run mobile:start -- --clear`.

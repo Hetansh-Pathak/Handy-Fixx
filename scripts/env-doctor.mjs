@@ -35,8 +35,6 @@ const CANON_KEY = canonical.VITE_SUPABASE_PUBLISHABLE_KEY;
 const apps = [
   { name: "apps/admin (web admin)", dir: "apps/admin", url: "VITE_SUPABASE_URL", key: "VITE_SUPABASE_PUBLISHABLE_KEY", old: "admin-app" },
   { name: "apps/mobile (customer + pro)", dir: "apps/mobile", url: "EXPO_PUBLIC_SUPABASE_URL", key: "EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY", old: null },
-  { name: "legacy/customer-app", dir: "legacy/customer-app", url: "VITE_SUPABASE_URL", key: "VITE_SUPABASE_PUBLISHABLE_KEY", old: "customer-app" },
-  { name: "legacy/provider-app", dir: "legacy/provider-app", url: "VITE_SUPABASE_URL", key: "VITE_SUPABASE_PUBLISHABLE_KEY", old: "provider-app" },
 ];
 
 async function countServices(url, key) {
