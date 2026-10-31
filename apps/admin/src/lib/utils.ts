@@ -34,15 +34,6 @@ export function timeAgo(date: string | null | undefined): string {
   return `${Math.floor(hrs / 24)}d ago`;
 }
 
-export function maskAadhaar(last4: string): string {
-  return `XXXX XXXX ${last4}`;
-}
-
-export function maskPAN(pan: string): string {
-  if (!pan || pan.length !== 10) return pan;
-  return `XXXXX${pan.slice(5, 9)}${pan[9]}`;
-}
-
 export function shortId(id: string): string {
   return `#${id.slice(0, 8).toUpperCase()}`;
 }
@@ -52,7 +43,7 @@ export const KYC_REJECTION_REASONS: string[] = [
   'Name mismatch',
   'Selfie unclear',
   'PAN not matching',
-  'Aadhaar not matching',
+  'Bank or UPI name does not match',
   'Documents not readable',
   'Under 18',
   'Duplicate account',

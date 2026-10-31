@@ -311,6 +311,22 @@ async function installMock(page) {
       return json(route, 200, { success: true });
     }
     if (p === "/functions/v1/send-welcome-email") return json(route, 200, { ok: true });
+    // kyc-pan (proposal 20261125000001): accepts the PAN once and answers with the last 4 characters only. The mock keeps
+    // only the last 4 too, so a test can prove the full number is never stored where the app reads it back.
+    if (p === "/functions/v1/kyc-pan") {
+      const u = userFromAuth(req);
+      const b = body();
+      (db.kycPanCalls ??= []).push({ action: b.action, had_pan: typeof b.pan === "string" });
+      if (b.action === "prepare_submit") return json(route, 200, { ok: true });
+      const pan = String(b.pan || "").toUpperCase().replace(/[\s-]/g, "");
+      if (!/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(pan)) return json(route, 400, { error: "PAN format is ABCDE1234F: 5 letters, 4 digits, 1 letter." });
+      const sp = db.providerRows.find((r) => u && r.user_id === u.id);
+      const rows = (db.tables.provider_kyc ??= []);
+      let row = rows.find((r) => sp && r.provider_id === sp.id);
+      if (!row) { row = { provider_id: sp ? sp.id : "p-?" }; rows.push(row); }
+      row.pan_last4 = pan.slice(-4);
+      return json(route, 200, { pan_last4: pan.slice(-4) });
+    }
     if (p === "/rest/v1/rpc/get_wallet_summary") {
       const { available, dues, held } = db.wallet;
       return json(route, 200, { ok: true, provider_id: "x", balance: available + held - dues, available, held, dues, blocked: false });

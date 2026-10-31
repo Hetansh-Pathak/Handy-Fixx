@@ -24,7 +24,7 @@ export function accountDeletion(ctx: LegalContext): LegalDoc {
         heading: "3. What is erased",
         body: [
           "Your profile: name, phone number, photo and saved address.",
-          "For pros: name, phone, email, photo, bio, bank and UPI details, date of birth, the identity record (so your Aadhaar and PAN are freed) and the uploaded documents, including the selfie. Your pro profile is set inactive and offline.",
+          "For pros: name, phone, email, photo, bio, bank and UPI details, date of birth, the identity record (so your PAN is freed) and the uploaded documents, including the selfie. Your pro profile is set inactive and offline.",
           "Your notifications and your sign-in.",
         ],
       },

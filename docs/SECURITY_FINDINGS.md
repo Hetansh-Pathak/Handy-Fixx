@@ -9,7 +9,7 @@ deployed Edge Function list. No row data was read and nothing was changed.
 exist in no repo file (`public_read_providers`, `admin_users`, `messages`, `coupons`, `customer_otp_codes`, ...).
 Where the repo and live disagree, this list follows live.
 
-Status values: **fixed in proposal** (written, NOT applied), **open** (not fixed in this task), **accepted** (by design).
+Status values: **fixed in proposal** (written and tested on a throwaway Postgres, **NOT applied to the live project**), **open** (not fixed in this task), **accepted** (by design). What each fix does, the order to apply, and what you must do by hand: [SECURITY_CHANGES.md](SECURITY_CHANGES.md).
 
 | # | Sev | Finding | Status |
 |---|---|---|---|
@@ -18,7 +18,7 @@ Status values: **fixed in proposal** (written, NOT applied), **open** (not fixed
 | C3 | Critical | Provider email OTP can be bypassed | fixed in proposal A + functions |
 | H1 | High | Anyone can create notifications (and phone pushes) for any user | fixed in proposal A |
 | H2 | High | `send-welcome-email` is an open mail relay with HTML injection | fixed in proposal (function) |
-| H3 | High | PAN stored in plain text; Aadhaar hash salt is public; Aadhaar photos kept | fixed in proposal B/C + app |
+| H3 | High | PAN stored in plain text; Aadhaar hash salt is public; Aadhaar photos kept | fixed in proposals B + C, 3 functions, one-time script, app (nothing applied) |
 | H4 | High | Anyone signed in can post into any booking chat | open: proposal `20261110` exists, not applied |
 | H5 | High | Anyone signed in can post a review for any pro | open: proposal `20261108` exists, not applied |
 | M1 | Medium | A pro can replace or delete KYC photos after submitting or after approval | fixed in proposal A |
@@ -34,6 +34,7 @@ Status values: **fixed in proposal** (written, NOT applied), **open** (not fixed
 | L4 | Low | Customer email OTP hash is an unsalted SHA-256 | open |
 | L5 | Low | GraphQL schema lists every table to `anon` | open |
 | L6 | Low | `has_role(uuid, text)` callable by anyone (tells whether a given user id is an admin) | open |
+| D1 | Medium | Dependencies: runtime `zod` (high, memory exhaustion on huge collections) and `react-router-dom` (moderate) in the admin app; dev tools `vitest`, `vite`, `@expo/cli` | open (fixes are major bumps; see SECURITY_CHANGES.md) |
 | A1 | Info | SECURITY DEFINER views `public_providers`, `booking_provider_info` (advisor ERROR) | accepted |
 | A2 | Info | `auto_confirm_user` confirms every signup | accepted |
 | A3 | Info | `Access-Control-Allow-Origin: *` on Edge Functions | accepted |

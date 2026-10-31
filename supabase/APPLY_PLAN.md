@@ -32,6 +32,10 @@ Superseded, do NOT apply: `20261002000003_server_side_fee_trigger`.
 | 9 | `20261124000000` instant dispatch (`23_`) **APPLIED 2026-10-31 by the owner** | Medium: new tables, booking columns, 9 functions, a pg_cron job every 3 s, replaces `notify_provider_on_new_booking` (skips dispatch bookings only) | Independent of the others. Apply together with the app version that uses it (instant-dispatch slice 5). Tested: `supabase/tests/instant-dispatch` (55 checks on a real throwaway Postgres) |
 | 10 | `20261124000001` dispatch: service-area pros (`24_`) | Low: one column, replaces `dispatch_candidates` only | Needs 9. Pros whose GPS is missing or wrong but whose profile serves Jamnagar get offers on the city ring |
 
+| 11 | `20261125000000` security hardening (`25_`) | Medium: drops two open read policies on `service_providers` and four open notification insert policies, locks `confirm_user_email`, changes the provider OTP table | Independent. Needs the `OTP_HMAC_KEY` secret; deploy `send-provider-otp`, `verify-provider-otp`, `send-welcome-email` right after; delete the stray functions `quick-function`, `bright-handler`. Details: `docs/SECURITY_CHANGES.md` |
+| 12 | `20261125000001` KYC: PAN encrypted, no Aadhaar (`26_`) | High: apps lose direct access to PAN columns, `submit_kyc` replaced, new tables and a daily retention job | Needs 11. Deploy `kyc-pan`, `kyc-admin-reveal-pan`, `kyc-retention` and ship the new Pro build and admin site WITH it. Retention days = 30 placeholder (lawyer) |
+| 13 | `20261125000002` drop plain PAN + Aadhaar columns (`27_`) | **Irreversible** | Only after `supabase/proposals/scripts/kyc-migrate-pan.ts --apply`; it refuses to run while plain values remain |
+
 Not yet reviewed whether still needed: `20261103` contact, `20261104` avatars, `20261105` attachment read fix, `20261106` catalogue.
 
 ## Checks after each

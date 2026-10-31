@@ -34,7 +34,8 @@ Time-dependent functions take `now: Date` as an argument. Never call `new Date()
 | `booking/request-timer` | 30 s accept countdown | PDF p.6 |
 | `providers/ranking` | Rank by rating → distance → response speed, compared in bands the customer can tell apart (never money), featured slots, next-best offers | PDF p.4, p.12 |
 | `geo/distance` | Haversine km, distance formatting | new |
-| `kyc/kyc` | 9 steps, Aadhaar (Verhoeff) and PAN checks, masks, file validation, 18+ check | legacy `constants.ts` |
+| `kyc/kyc` | 8 steps (no Aadhaar since 2026-10-31), PAN format check, file validation, 18+ check, terms version | legacy `constants.ts` |
+| `kyc/identity` | PAN normalise / last 4 / mask, blind-index input strings (twin of the Edge Function), bank-name match hint | new |
 | `auth/roles` | One role per account, role → home route (`/customer`, `/provider`), background-location rule | locked decisions |
 | `auth/session-role` | Role resolution (provider row wins, else remembered role), who may become a pro | locked decisions |
 | `auth/schemas` | Zod: sign-in/up, reset, pro phone, customer profile; friendly auth error messages | legacy auth screens |
@@ -73,7 +74,7 @@ The PDF is silent or ambiguous here. Each is a named constant or parameter, so c
 ## Deliberately not ported from the web apps
 
 - The 12% customer fee (`platform_fee` / `provider_amount` maths): removed by the new model.
-- `hashAadhaar`: a client-side SHA-256 with a hard-coded public salt protects nothing, and `crypto.subtle` is missing in React Native. Duplicate detection belongs on the server.
+- `hashAadhaar` (removed 2026-10-31 together with all Aadhaar handling): a client-side SHA-256 with a hard-coded public salt protected nothing. Duplicate PAN detection now uses an HMAC blind index computed on the server (`kyc-pan` Edge Function, proposal 20261125000001).
 - `compressImage`, `loadRazorpay`, `localStorage` use: DOM-only; mobile uses `expo-image-manipulator`, the Razorpay native SDK and a secure storage adapter.
 - The silent fallback to `https://example.supabase.co` when env vars are missing.
 - The old date check `date < new Date()`, which disabled *today* once the picker returned midnight.

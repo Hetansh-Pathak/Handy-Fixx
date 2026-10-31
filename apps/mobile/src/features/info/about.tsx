@@ -9,7 +9,7 @@ import { Body, Card, Screen, ScreenHeader } from "@/components/ui";
 import { useThemeColors } from "@/theme/theme";
 
 const POINTS = [
-  { icon: ShieldCheck, title: "Checked pros", text: "Every pro passes an identity check (Aadhaar, PAN and a selfie) reviewed by our team before taking jobs." },
+  { icon: ShieldCheck, title: "Checked pros", text: "Every pro passes an identity check (PAN, a selfie and a bank or UPI name match) reviewed by our team before taking jobs." },
   { icon: BadgeIndianRupee, title: "One price, ₹0 for you", text: "You pay the price you saw, directly to the pro by UPI or cash. HandyFix charges customers nothing extra." },
   { icon: Lock, title: "Locked price, approved extras", text: "The price is locked when you book. It only grows if you approve extra work in the app." },
   { icon: MapPin, title: "A record of every job", text: "Live tracking, a 4-digit code to close the job, and a way to report a problem within 24 hours." },

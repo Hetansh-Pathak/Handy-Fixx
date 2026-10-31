@@ -26,7 +26,13 @@ describe("partner terms", () => {
     expect(all).not.toMatch(/\bQR\b/);
   });
 
-  it("is a new version, because the fee wording changed", () => {
-    expect(TERMS_VERSION).toBe("v1.2");
+  it("is a new version, because the data wording changed (no Aadhaar, encrypted PAN)", () => {
+    expect(TERMS_VERSION).toBe("v1.3");
+  });
+
+  it("does not ask for Aadhaar and says the PAN is stored encrypted", () => {
+    expect(all).toContain("We do not collect your Aadhaar card or number");
+    expect(all).toContain("stored encrypted");
+    expect(all.match(/Aadhaar/g)?.length).toBe(1);
   });
 });

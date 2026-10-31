@@ -33,7 +33,7 @@ describe("legal documents", () => {
 describe("what the documents say matches how the apps work", () => {
   const privacy = text(legalDoc("privacy", ctx));
   it("privacy: names the data the apps really collect", () => {
-    for (const w of ["Aadhaar", "PAN", "selfie", "voice note", "UPI", "about 1 km", "background location", "Supabase", "Razorpay", "Google", "Expo"]) expect(privacy).toContain(w);
+    for (const w of ["PAN", "selfie", "stored encrypted", "do not collect your Aadhaar", "voice note", "UPI", "about 1 km", "background location", "Supabase", "Razorpay", "Google", "Expo"]) expect(privacy).toContain(w);
   });
   it("privacy: says we do not sell data, that the full address and phone come only after acceptance, and that adults only may use it", () => {
     expect(privacy).toContain("do not sell");
@@ -46,7 +46,7 @@ describe("what the documents say matches how the apps work", () => {
   });
   const deletion = text(legalDoc("deletion", ctx));
   it("deletion: says how, what is erased and what is kept", () => {
-    for (const w of ["Profile", "Delete account", "Delete my HandyFix account", "15 days", "Aadhaar", "What we keep"]) expect(deletion.toLowerCase()).toContain(w.toLowerCase());
+    for (const w of ["Profile", "Delete account", "Delete my HandyFix account", "15 days", "PAN", "What we keep"]) expect(deletion.toLowerCase()).toContain(w.toLowerCase());
   });
 });
 

@@ -132,7 +132,7 @@ Use **two phones** or one phone plus the browser. Use a test customer and a test
 
 **Pro app (HandyFix Pro)**
 1. Create an account, pick "I'm a pro". The Home screen says "Verify your identity to start". Tap **Start verification**.
-2. Go through the 9 steps. Check: a wrong Aadhaar number is rejected; under 18 is rejected; the selfie opens the front camera; photos upload; closing the app and reopening continues from the same step; the last step shows your answers with a Change link for each.
+2. Go through the 8 steps (there is no Aadhaar step any more). Check: a wrong PAN format is rejected and a saved PAN shows only as XXXXXX + the last 4 characters; under 18 is rejected; the selfie opens the front camera; photos upload; closing the app and reopening continues from the same step; the last step shows your answers with a Change link for each.
 3. Submit. The Home card says "Under review". Approve the pro in the admin app (`npm run admin`, then KYC review). Within about 30 seconds the Pro app shows Verified.
 4. **Working hours** (Profile > Working hours): add Monday 9 AM to 5 PM, try adding an overlapping one (it must refuse), try "Copy to weekdays".
 5. **Wallet**: top up, then add payout details (UPI) in the Payout details card. Withdrawal only opens when you are approved and have saved UPI or bank.

@@ -11,11 +11,11 @@ export type TermsSection = { heading: string; body: string };
 export const PARTNER_TERMS: readonly TermsSection[] = [
   {
     heading: "1. Verification and identity",
-    body: "You confirm that every detail and document you submit (Aadhaar, PAN, selfie, certificates) belongs to you and is genuine. A false or borrowed document means your account is closed and may be reported.",
+    body: "You confirm that every detail and document you submit (PAN, selfie, certificates) belongs to you and is genuine, and that the bank account or UPI id you add for payouts is in your own name. A false or borrowed document means your account is closed and may be reported. We do not collect your Aadhaar card or number.",
   },
   {
     heading: "2. How we review you",
-    body: "The HandyFix team checks that your name matches your ID, your selfie matches the ID photo, you are 18 or older, and your documents are clear. Review usually takes 1–2 working days. If something is unclear we will tell you what to fix so you can send it again.",
+    body: "The HandyFix team checks that your name matches your PAN card and the name on your bank account or UPI id, your selfie matches the photo on your PAN card, you are 18 or older, and your documents are clear. Review usually takes 1–2 working days. If something is unclear we will tell you what to fix so you can send it again.",
   },
   {
     heading: "3. Your rate and the price band",
@@ -39,7 +39,7 @@ export const PARTNER_TERMS: readonly TermsSection[] = [
   },
   {
     heading: "8. Your data",
-    body: "Your documents are stored privately and opened only by the HandyFix review team. Customers never see your Aadhaar or PAN. Customers see only your name, photo, experience, rating and the services you offer. Your phone number is shared with a customer only after you accept their booking.",
+    body: "Your PAN number is stored encrypted, and only its last four characters are shown in the app. Our team opens the full number only when needed, and every time is recorded. Your PAN card photo and selfie are stored privately and opened only by the HandyFix review team. Customers never see your documents or PAN. Customers see only your name, photo, experience, rating and the services you offer. Your phone number is shared with a customer only after you accept their booking.",
   },
   {
     heading: "9. Payouts",

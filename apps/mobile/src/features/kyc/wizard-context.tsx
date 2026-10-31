@@ -1,5 +1,5 @@
 import {
-  KYC_TOTAL_STEPS, TERMS_VERSION, dobToInput, hashAadhaar, normalizeAadhaar, parseDobInput, validateAllKycSteps, validateKycStep,
+  KYC_TOTAL_STEPS, TERMS_VERSION, dobToInput, normalizePan, parseDobInput, validateAllKycSteps, validateKycStep,
   type KycDocKey, type KycFacts,
 } from "@handyfix/shared";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -7,7 +7,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { providerRowKey, useSession } from "@/features/auth/session-provider";
 import { loadErrorMessage } from "@/lib/load-error";
 import {
-  fetchKycRecord, kycKey, removeKycFiles, saveKycPlan, submitKyc, uploadKycDoc, type KycRecord, type KycSavePlan,
+  fetchKycRecord, kycKey, removeKycFiles, savePan, saveKycPlan, submitKyc, uploadKycDoc, type KycRecord, type KycSavePlan,
 } from "./api";
 import type { LocalDoc } from "./images";
 
@@ -18,7 +18,7 @@ export type KycDraft = {
   firstName: string;
   lastName: string;
   dobText: string;
-  aadhaarNumber: string;
+  /** Typed in the PAN box and sent once to the server. Cleared after saving: the app never holds a saved PAN. */
   panNumber: string;
   areas: string[];
   serviceIds: string[];
@@ -47,15 +47,12 @@ type WizardValue = {
 const WizardContext = createContext<WizardValue | null>(null);
 
 const STEP_DOCS: Partial<Record<number, KycDocKey[]>> = {
-  3: ["aadhaar_front", "aadhaar_back"],
-  4: ["selfie"],
-  5: ["pan"],
-  8: ["certificate"],
+  3: ["selfie"],
+  4: ["pan"],
+  7: ["certificate"],
 };
 
 const PATH_COLUMN: Record<KycDocKey, string> = {
-  aadhaar_front: "aadhaar_front_path",
-  aadhaar_back: "aadhaar_back_path",
   selfie: "selfie_path",
   pan: "pan_path",
   certificate: "certificate_path",
@@ -66,8 +63,7 @@ function draftFromRecord(r: KycRecord): KycDraft {
     firstName: r.firstName,
     lastName: r.lastName,
     dobText: dobToInput(r.dob),
-    aadhaarNumber: "",
-    panNumber: r.panNumber ?? "",
+    panNumber: "",
     areas: r.areas,
     serviceIds: r.serviceIds,
     experienceYears: r.experienceYears === null || r.experienceYears === undefined ? "" : String(r.experienceYears),
@@ -132,11 +128,9 @@ export function KycWizardProvider({ children, loading, failed }: {
       firstName: draft.firstName,
       lastName: draft.lastName,
       dob: parseDobInput(draft.dobText) ?? "",
-      aadhaarNumber: draft.aadhaarNumber,
-      aadhaarOnFile: record.aadhaarOnFile,
-      hasAadhaarFront: hasDoc("aadhaar_front"),
       hasSelfie: hasDoc("selfie"),
       panNumber: draft.panNumber,
+      panOnFile: !!record.panLast4,
       hasPanDoc: hasDoc("pan"),
       areas: draft.areas,
       serviceIds: draft.serviceIds,
@@ -165,24 +159,16 @@ export function KycWizardProvider({ children, loading, failed }: {
       case 2:
         plan.provider.date_of_birth = facts.dob;
         break;
-      case 3: {
-        const typed = normalizeAadhaar(draft.aadhaarNumber);
-        if (typed) Object.assign(plan.kyc, { aadhaar_last4: typed.slice(-4), aadhaar_hash: hashAadhaar(typed) });
-        break;
-      }
       case 5:
-        plan.kyc.pan_number = draft.panNumber.trim().toUpperCase();
-        break;
-      case 6:
         plan.provider.pincodes = draft.areas;
         break;
-      case 7:
+      case 6:
         Object.assign(plan.provider, { service_ids: draft.serviceIds, experience_years: Number(draft.experienceYears.trim()) });
         break;
-      case 8:
+      case 7:
         plan.provider.bio = draft.bio.trim() || null;
         break;
-      case 9:
+      case 8:
         Object.assign(plan.kyc, { terms_version: TERMS_VERSION, consent_accepted_at: draft.termsAccepted ? new Date().toISOString() : null });
         break;
       default:
@@ -206,6 +192,8 @@ export function KycWizardProvider({ children, loading, failed }: {
         }
         if (old) replaced.push(old);
       }
+      // The PAN goes to the server function (encrypted there); only when it was typed on this step.
+      if (step === 4 && normalizePan(draft.panNumber)) await savePan(normalizePan(draft.panNumber));
       await saveKycPlan(providerId, plan);
     } catch (e) {
       await removeKycFiles(uploaded);
@@ -219,14 +207,14 @@ export function KycWizardProvider({ children, loading, failed }: {
       for (const key of STEP_DOCS[step] ?? []) delete next[key];
       return next;
     });
-    if (step === 3) set("aadhaarNumber", "");
+    if (step === 4) set("panNumber", "");
   }, [draft, record, facts, userId, providerId, changes, queryClient, set]);
 
   const submit = useCallback(async () => {
     if (!facts) throw new Error("Your application is still loading. Try again in a moment.");
     const broken = validateAllKycSteps(facts, new Date());
     if (broken.length) throw new Error(broken[0]!.message);
-    await saveStep(9);
+    await saveStep(KYC_TOTAL_STEPS);
     await submitKyc();
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: providerRowKey(userId) }),

@@ -67,12 +67,12 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   await P.L("Mobile number").fill("98765 43211");
   await P.T("Continue").click();
   await P.see("Verify your identity to start");
-  check("a new pro is told to verify, with a button that starts it", (await P.has("Start verification")) && (await P.has("9-step identity check")));
+  check("a new pro is told to verify, with a button that starts it", (await P.has("Start verification")) && (await P.has("8-step identity check")));
   await P.T("Start verification").click();
   await P.see("Keep these ready");
-  check("the identity page lists what to keep ready", (await P.has("Your Aadhaar card")) && (await P.has("Your PAN card")) && (await P.has("selfie")));
+  check("the identity page lists what to keep ready (PAN and a selfie, no Aadhaar)", !(await P.has("Aadhaar")) && (await P.has("Your PAN card")) && (await P.has("selfie")));
   await P.T("Start verification").click();
-  await P.see("Step 1 of 9");
+  await P.see("Step 1 of 8");
   await P.shot("60-kyc-step1");
 
   // step 1: name
@@ -88,7 +88,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   check("a one-letter name is refused", true);
   await P.L("First name").fill("Rajesh");
   await P.T("Save and continue").click();
-  await P.see("Step 2 of 9");
+  await P.see("Step 2 of 8");
   check("step 1 saves the name on the pro's row and moves on",
     db.providerRows[0].first_name === "Rajesh" && db.providerRows[0].last_name === "Kumar" && db.providerRows[0].onboarding_step === 2,
     JSON.stringify({ f: db.providerRows[0].first_name, s: db.providerRows[0].onboarding_step }));
@@ -105,28 +105,39 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   check("an impossible date (31 February) is refused", true);
   await P.L("Date of birth").fill("05031990");
   await P.T("Save and continue").click();
-  await P.see("Step 3 of 9");
+  await P.see("Step 3 of 8");
   check("step 2 saves the date as yyyy-mm-dd", db.providerRows[0].date_of_birth === "1990-03-05", String(db.providerRows[0].date_of_birth));
 
-  // step 3: Aadhaar
-  await P.L("12-digit Aadhaar number").fill("234123412347");
-  await P.waitBody("does not pass the check");
-  check("a wrong Aadhaar number is flagged as you type", true);
+  // step 3: selfie (Aadhaar is not collected any more)
+  await P.see("Your selfie");
+  check("there is no Aadhaar step or field anywhere in the identity check", !(await P.has("Aadhaar")));
   await P.T("Save and continue").click();
-  await P.see("Look for a typo");
-  check("a wrong Aadhaar number blocks the step", true);
-  await P.L("12-digit Aadhaar number").fill("234123412346");
-  await P.T("Save and continue").click();
-  await P.see("front of your Aadhaar card");
-  check("a good number still needs the photo of the card", true);
+  await P.see("clear selfie");
+  check("step 3 needs a selfie", true);
   await P.shot("61-kyc-step3");
+
+  // step 4: PAN. The number is only sent to the server (encrypted there) once the whole step is valid.
+  await P.go("/provider/kyc/4");
+  await P.see("PAN card");
+  check("the PAN step says the number is stored encrypted with only the last 4 shown", await P.has("encrypted"));
+  await P.L("PAN number").fill("abcde12345");
+  await P.waitBody("5 letters, 4 digits");
+  check("a malformed PAN is flagged as you type", true);
+  await P.T("Save and continue").click();
+  await P.see("PAN format");
+  await P.L("PAN number").fill("abcde1234f");
+  await P.waitBody("Format looks right");
+  await P.T("Save and continue").click();
+  await P.see("photo of your PAN card");
+  check("a good PAN still needs the photo of the card, and nothing was sent to the server yet", (db.kycPanCalls || []).length === 0, JSON.stringify(db.kycPanCalls));
+  await P.shot("61b-kyc-step4");
 
   // coming back later resumes at the saved step
   await P.go("/provider");
   await P.see("Finish your verification");
   check("a half-finished application offers to continue", (await P.has("Continue verification")) && (await P.has("part-way")));
   await P.T("Continue verification").click();
-  await P.see("Step 3 of 9");
+  await P.see("Step 3 of 8");
   check("it reopens at the step where the pro stopped", true);
 
   // under review, then approved

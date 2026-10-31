@@ -19,9 +19,8 @@ export type KycRecord = {
   kycStatus: string;
   rejectionReason: string | null;
   onboardingStep: number | null;
-  aadhaarLast4: string | null;
-  aadhaarOnFile: boolean;
-  panNumber: string | null;
+  /** Only the last 4 characters of the saved PAN. The full number never comes back to the app. */
+  panLast4: string | null;
   paths: Record<KycDocKey, string | null>;
   consentAcceptedAt: string | null;
 };
@@ -32,8 +31,7 @@ type ProviderRow = {
   kyc_status: string | null; kyc_rejection_reason: string | null; onboarding_step: number | null;
 };
 type KycRow = {
-  aadhaar_last4: string | null; aadhaar_hash: string | null; pan_number: string | null;
-  aadhaar_front_path: string | null; aadhaar_back_path: string | null; selfie_path: string | null; pan_path: string | null;
+  pan_last4: string | null; selfie_path: string | null; pan_path: string | null;
   certificate_path: string | null; consent_accepted_at: string | null;
 };
 
@@ -41,8 +39,7 @@ export const kycKey = (providerId: string) => ["kyc-record", providerId] as cons
 
 const PROVIDER_COLUMNS =
   "first_name, last_name, full_name, date_of_birth, pincodes, service_ids, experience_years, bio, kyc_status, kyc_rejection_reason, onboarding_step";
-const KYC_COLUMNS =
-  "aadhaar_last4, aadhaar_hash, pan_number, aadhaar_front_path, aadhaar_back_path, selfie_path, pan_path, certificate_path, consent_accepted_at";
+const KYC_COLUMNS = "pan_last4, selfie_path, pan_path, certificate_path, consent_accepted_at";
 
 function readable(error: { code?: string | null; message: string }): Error {
   return new Error(kycSaveErrorMessage(error));
@@ -77,12 +74,8 @@ export async function fetchKycRecord(providerId: string): Promise<KycRecord> {
     kycStatus: p.kyc_status ?? "not_submitted",
     rejectionReason: p.kyc_rejection_reason,
     onboardingStep: p.onboarding_step,
-    aadhaarLast4: k?.aadhaar_last4 ?? null,
-    aadhaarOnFile: !!k?.aadhaar_hash,
-    panNumber: k?.pan_number ?? null,
+    panLast4: k?.pan_last4 ?? null,
     paths: {
-      aadhaar_front: k?.aadhaar_front_path ?? null,
-      aadhaar_back: k?.aadhaar_back_path ?? null,
       selfie: k?.selfie_path ?? null,
       pan: k?.pan_path ?? null,
       certificate: k?.certificate_path ?? null,
@@ -140,8 +133,35 @@ export async function saveKycPlan(providerId: string, plan: KycSavePlan): Promis
   }
 }
 
+type PanFunctionBody = { action: "save"; pan: string } | { action: "prepare_submit" };
+
+/** Calls the `kyc-pan` Edge Function (the only place a PAN is accepted). Its error text is written for the pro. */
+async function callKycPan(body: PanFunctionBody): Promise<{ pan_last4?: string }> {
+  const { data, error } = await getSupabase().functions.invoke("kyc-pan", { body });
+  if (error) {
+    let message = "We could not save your PAN. Please try again.";
+    const ctx = (error as { context?: unknown }).context;
+    if (ctx instanceof Response) {
+      const detail = (await ctx.json().catch(() => null)) as { error?: unknown } | null;
+      if (typeof detail?.error === "string" && detail.error.length < 300) message = detail.error;
+    } else if (/failed to send|network|fetch/i.test(error.message)) {
+      message = "No internet connection. Check your internet and try again.";
+    }
+    throw new Error(message);
+  }
+  return (data ?? {}) as { pan_last4?: string };
+}
+
+/** Sends the PAN once to be encrypted and stored; answers with the last 4 characters only. */
+export async function savePan(pan: string): Promise<string> {
+  const result = await callKycPan({ action: "save", pan });
+  if (!result.pan_last4) throw new Error("We could not save your PAN. Please try again.");
+  return result.pan_last4;
+}
+
 /** The server checks everything again and moves the application to "pending". */
 export async function submitKyc(): Promise<void> {
+  await callKycPan({ action: "prepare_submit" });
   const { data, error } = await getSupabase().rpc("submit_kyc");
   if (error) throw readable(error);
   const result = data as { success?: boolean; error?: string } | null;

@@ -59,8 +59,8 @@ const check = (name, ok, extra = "") => { results.push({ name, ok }); console.lo
   await page.getByText("Privacy Policy", { exact: true }).locator("visible=true").last().click();
   await page.waitForSelector("text=1. What we collect", { timeout: 15000 });
   const policy = await text();
-  check("the privacy policy opens in the app before signing in and describes the real data (Aadhaar, selfie, location, partners)",
-    policy.includes("Version 1.0") && policy.includes("Aadhaar") && policy.includes("selfie") && policy.includes("Razorpay") && policy.includes("Delete account"), policy.slice(0, 200));
+  check("the privacy policy opens in the app before signing in and describes the real data (PAN stored encrypted, no Aadhaar, selfie, location, partners)",
+    policy.includes("Version 1.1") && policy.includes("do not collect your Aadhaar") && policy.includes("stored encrypted") && policy.includes("selfie") && policy.includes("Razorpay") && policy.includes("Delete account"), policy.slice(0, 200));
   await shot("03b-privacy-policy");
   await page.goBack();
   await page.waitForSelector("text=Create your account");

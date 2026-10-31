@@ -14,7 +14,7 @@ export function privacyPolicy(ctx: LegalContext): LegalDoc {
         body: [
           "From everyone: your name, email address, mobile number and password (the password is handled by our sign-in service and is never visible to us). If you use Google sign-in, we receive your name and email from Google.",
           "From customers: the address and pincode of the job, the place you pin on the map, your notes, photos and a voice note you choose to add, the time you book, chat messages with your pro, ratings, reviews and any problem you report.",
-          "From pros, for the identity check: your date of birth, the last 4 digits of your Aadhaar number and a one-way scrambled version of it (used only to spot duplicate accounts), photos of your Aadhaar card, PAN card and trade certificate, your PAN number, a selfie, your work areas, services, rates and working hours, and your UPI or bank details for payouts.",
+          "From pros, for the identity check: your date of birth, your PAN number (stored encrypted; the app shows only its last 4 characters, and a one-way code made from it is used to spot duplicate accounts), photos of your PAN card and trade certificate, a selfie, your work areas, services, rates and working hours, and your UPI or bank details for payouts (the name on the account is compared with the name on your PAN). We do not collect your Aadhaar number or card.",
           "Location: customers share a location only when they type or pin an address or ask for \"Nearest\". Pros who are online share their area, rounded to about 1 km, so customers can sort by nearest. While a pro is travelling to a job, their live position is shared with that job's customer, and only then. Only the Pro app asks for background location.",
           "Money records: wallet recharges, fees, payouts and bills. Card and UPI details used to pay are handled by our payment partner and are not stored by us.",
           "Technical: the type of phone and app version, and error information that helps us fix problems.",
@@ -48,7 +48,7 @@ export function privacyPolicy(ctx: LegalContext): LegalDoc {
       {
         heading: "5. How long we keep it",
         body: [
-          "We keep your account while it is open. When you delete your account we erase your profile details and, for pros, the identity record and documents. We keep finished bookings, payment and fee records, reviews and any open disputes, with your name and phone number removed, because accounting rules and disputes need them.",
+          "We keep your account while it is open. Once a pro is approved, an automatic job deletes photos of identity documents we no longer need after a short period, unless the documents are needed for a dispute or an investigation. When you delete your account we erase your profile details and, for pros, the identity record and documents. We keep finished bookings, payment and fee records, reviews and any open disputes, with your name and phone number removed, because accounting rules and disputes need them.",
           "Chat messages and booking records may be kept for the period needed to handle disputes and legal obligations.",
         ],
       },

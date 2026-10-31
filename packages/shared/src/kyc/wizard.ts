@@ -1,9 +1,8 @@
-import {
-  isAdult, KYC_ALLOWED_MIME, KYC_TOTAL_STEPS, normalizeAadhaar, validateAadhaar, validatePAN,
-} from "./kyc";
+import { isAdult, KYC_ALLOWED_MIME, KYC_TOTAL_STEPS, validatePAN } from "./kyc";
+import { normalizePan } from "./identity";
 
 /**
- * Rules for the 9-step identity wizard in the Pro app. Everything a screen needs to decide
+ * Rules for the 8-step identity wizard in the Pro app. Everything a screen needs to decide
  * "can the pro go on?" lives here so it is tested once and the screens only call it.
  */
 
@@ -16,12 +15,11 @@ export type KycFacts = {
   lastName: string;
   /** yyyy-MM-dd, or "" until the pro has typed a full valid date. */
   dob: string;
-  /** What is typed in the Aadhaar box right now (may be empty when a number is already on file). */
-  aadhaarNumber: string;
-  aadhaarOnFile: boolean;
-  hasAadhaarFront: boolean;
   hasSelfie: boolean;
+  /** What is typed in the PAN box right now (empty when a PAN is already saved: the app never gets it back). */
   panNumber: string;
+  /** A PAN is already saved on the server (only its last 4 characters are known to the app). */
+  panOnFile: boolean;
   hasPanDoc: boolean;
   areas: readonly string[];
   serviceIds: readonly string[];
@@ -54,18 +52,6 @@ function dobProblem(dob: string, now: Date): string | null {
   return null;
 }
 
-function aadhaarProblem(f: KycFacts): string | null {
-  const typed = normalizeAadhaar(f.aadhaarNumber);
-  if (typed) {
-    if (!/^\d{12}$/.test(typed)) return "Aadhaar number must be 12 digits.";
-    if (!validateAadhaar(typed)) return "That Aadhaar number does not pass the check. Look for a typo.";
-  } else if (!f.aadhaarOnFile) {
-    return "Enter your 12-digit Aadhaar number.";
-  }
-  if (!f.hasAadhaarFront) return "Add a photo of the front of your Aadhaar card.";
-  return null;
-}
-
 function experienceProblem(value: string): string | null {
   const t = value.trim();
   if (!t) return "Enter your years of experience (0 if you are new).";
@@ -84,22 +70,23 @@ export function validateKycStep(step: number, f: KycFacts, now: Date): string | 
     case 2:
       return dobProblem(f.dob, now);
     case 3:
-      return aadhaarProblem(f);
-    case 4:
       return f.hasSelfie ? null : "Take a clear selfie of your face.";
-    case 5: {
-      const pan = f.panNumber.trim().toUpperCase();
-      if (!pan) return "Enter your PAN number.";
-      if (!validatePAN(pan)) return "PAN format is ABCDE1234F: 5 letters, 4 digits, 1 letter.";
+    case 4: {
+      const pan = normalizePan(f.panNumber);
+      if (pan) {
+        if (!validatePAN(pan)) return "PAN format is ABCDE1234F: 5 letters, 4 digits, 1 letter.";
+      } else if (!f.panOnFile) {
+        return "Enter your PAN number.";
+      }
       return f.hasPanDoc ? null : "Add a photo of your PAN card.";
     }
-    case 6:
+    case 5:
       return f.areas.length ? null : "Add at least one city where you can work.";
-    case 7:
+    case 6:
       return f.serviceIds.length ? experienceProblem(f.experienceYears) : "Pick at least one service you offer.";
-    case 8:
+    case 7:
       return f.bio.trim().length > KYC_BIO_MAX ? `Keep your bio under ${KYC_BIO_MAX} characters.` : null;
-    case 9:
+    case 8:
       return f.termsAccepted ? null : "Tick the box to agree to the Partner Agreement.";
     default:
       return "Unknown step.";
@@ -160,7 +147,7 @@ export function kycStatusView(status: string | null | undefined, reason: string 
         title: started ? "Finish your verification" : "Verify your identity to start",
         note: started
           ? "You are part-way through. Your answers are saved, so you can carry on where you stopped."
-          : "A 9-step identity check keeps customers safe. It takes about 10 minutes. Keep your Aadhaar and PAN cards ready.",
+          : "An 8-step identity check keeps customers safe. It takes about 10 minutes. Keep your PAN card ready.",
         tone: "brand", action: started ? "resume" : "start", button: started ? "Continue verification" : "Start verification",
       };
     }
@@ -194,7 +181,7 @@ export function dobToInput(dob: string | null | undefined): string {
 
 // ── Documents ────────────────────────────────────────────────────────────────
 
-export const KYC_DOC_KEYS = ["aadhaar_front", "aadhaar_back", "selfie", "pan", "certificate"] as const;
+export const KYC_DOC_KEYS = ["selfie", "pan", "certificate"] as const;
 export type KycDocKey = (typeof KYC_DOC_KEYS)[number];
 
 const EXTENSIONS: Record<string, string> = {
@@ -242,9 +229,6 @@ export function fitWithin(width: number, height: number, max: number): { width: 
 export function kycSaveErrorMessage(error: { code?: string | null; message?: string | null }): string {
   const message = error.message ?? "";
   if (error.code === "23505") {
-    if (/aadhaar/i.test(message)) {
-      return "This Aadhaar number is already linked to another provider account. Check the number, or contact support if you think this is a mistake.";
-    }
     if (/pan/i.test(message)) {
       return "This PAN is already linked to another provider account. Check the number, or contact support if you think this is a mistake.";
     }

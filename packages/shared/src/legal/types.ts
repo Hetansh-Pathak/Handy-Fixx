@@ -16,8 +16,8 @@ export type LegalDocKey = "privacy" | "terms" | "deletion";
 export type LegalDoc = { key: LegalDocKey; title: string; version: string; updated: string; intro: string; sections: LegalSection[] };
 
 /** Bump `version` and `updated` whenever the meaning of a document changes. */
-export const LEGAL_VERSION = "1.0";
-export const LEGAL_UPDATED = "29 October 2026";
+export const LEGAL_VERSION = "1.1";
+export const LEGAL_UPDATED = "1 November 2026";
 
 export const operator = (ctx: LegalContext): string => (ctx.entityName?.trim() ? `${ctx.entityName.trim()} ("HandyFix", "we", "us")` : `HandyFix ("we", "us")`);
 

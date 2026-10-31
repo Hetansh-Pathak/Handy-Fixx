@@ -13,7 +13,6 @@ import { useKycWizard } from "@/features/kyc/wizard-context";
 import { useThemeColors } from "@/theme/theme";
 
 const NEEDS = [
-  "Your Aadhaar card (front, and back if you can)",
   "Your PAN card",
   "A clear selfie (we will open the camera)",
   "About 10 minutes. Your answers are saved after every step.",

@@ -14,7 +14,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { cn, formatDate, timeAgo, maskAadhaar, maskPAN, STATUS_STYLES, STATUS_LABELS, SUSPEND_REASONS } from '@/lib/utils';
+import { cn, formatDate, timeAgo, STATUS_STYLES, STATUS_LABELS, SUSPEND_REASONS } from '@/lib/utils';
+import { KycIdentity } from '@/components/admin/KycIdentity';
 
 const PAGE_SIZE = 20;
 
@@ -132,19 +133,14 @@ const Providers: React.FC = () => {
     // Load KYC docs
     const { data: kyc } = await supabase
       .from('provider_kyc')
-      .select('*')
+      .select('pan_last4, selfie_path, pan_path, certificate_path')
       .eq('provider_id', p.id)
       .maybeSingle();
 
     if (kyc) {
-      setKycData({
-        aadhaar_last4: kyc.aadhaar_last4,
-        pan_number: kyc.pan_number,
-      });
+      setKycData({ pan_last4: kyc.pan_last4 ?? null });
       const paths: Record<string, string | null> = {
         selfie: kyc.selfie_path,
-        aadhaar_front: kyc.aadhaar_front_path,
-        aadhaar_back: kyc.aadhaar_back_path,
         pan: kyc.pan_path,
         certificate: kyc.certificate_path,
       };
@@ -519,21 +515,16 @@ const Providers: React.FC = () => {
 
                 {/* KYC */}
                 <TabsContent value="kyc" className="space-y-4 pt-4">
-                  <div className="grid grid-cols-2 gap-3 text-xs bg-secondary/30 p-3 rounded-xl">
-                    <div>
-                      <p className="text-muted-foreground">Aadhaar Last 4</p>
-                      <p className="font-mono font-bold">{kycData.aadhaar_last4 ? maskAadhaar(kycData.aadhaar_last4) : 'N/A'}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">PAN Number</p>
-                      <p className="font-mono font-bold">{kycData.pan_number ? maskPAN(kycData.pan_number) : 'N/A'}</p>
-                    </div>
-                  </div>
+                  <KycIdentity
+                    providerId={drawerProvider.id}
+                    panLast4={kycData.pan_last4 ?? null}
+                    kycName={drawerProvider.full_name}
+                    bankAccountName={(drawerProvider as { bank_account_name?: string | null }).bank_account_name ?? null}
+                    upiId={(drawerProvider as { upi_id?: string | null }).upi_id ?? null}
+                  />
                   <div className="grid grid-cols-2 gap-3">
                     {[
                       { label: 'Selfie', key: 'selfie' },
-                      { label: 'Aadhaar Front', key: 'aadhaar_front' },
-                      { label: 'Aadhaar Back', key: 'aadhaar_back' },
                       { label: 'PAN Card', key: 'pan' },
                     ].map(({ label, key }) => (
                       <div key={key} className="space-y-1 text-[10px]">

@@ -12,7 +12,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
 
 import { Shield, CheckCircle2, XCircle, Search, Eye, Loader2 } from 'lucide-react';
-import { cn, maskAadhaar, maskPAN, KYC_REJECTION_REASONS, formatDate } from '@/lib/utils';
+import { cn, KYC_REJECTION_REASONS, formatDate } from '@/lib/utils';
+import { KycIdentity } from '@/components/admin/KycIdentity';
 
 interface ProviderReviewItem {
   id: string;
@@ -33,13 +34,12 @@ interface ProviderReviewItem {
   created_at: string;
   is_verified: boolean;
   is_email_verified: boolean | null;
+  bank_account_name?: string | null;
+  upi_id?: string | null;
 }
 
 interface KycDocumentDetails {
-  aadhaar_last4: string | null;
-  pan_number: string | null;
-  aadhaar_front_path: string | null;
-  aadhaar_back_path: string | null;
+  pan_last4: string | null;
   selfie_path: string | null;
   pan_path: string | null;
   certificate_path: string | null;
@@ -96,7 +96,7 @@ const KycReview: React.FC = () => {
 
     const { data: docData } = await supabase
       .from('provider_kyc')
-      .select('aadhaar_last4, pan_number, aadhaar_front_path, aadhaar_back_path, selfie_path, pan_path, certificate_path')
+      .select('pan_last4, selfie_path, pan_path, certificate_path')
       .eq('provider_id', p.id)
       .maybeSingle();
 
@@ -104,7 +104,7 @@ const KycReview: React.FC = () => {
       setKycDocs(docData as KycDocumentDetails);
       const urls: Record<string, string> = {};
       const keys: (keyof KycDocumentDetails)[] = [
-        'aadhaar_front_path', 'aadhaar_back_path', 'selfie_path', 'pan_path', 'certificate_path',
+        'selfie_path', 'pan_path', 'certificate_path',
       ];
       for (const k of keys) {
         const path = docData[k];
@@ -262,17 +262,14 @@ const KycReview: React.FC = () => {
                 <div className="p-8 text-center"><Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" /></div>
               ) : (
                 <div className="space-y-6">
-                  {/* Masked IDs */}
-                  <div className="grid grid-cols-2 gap-4 bg-secondary/30 p-3 rounded-xl text-xs">
-                    <div>
-                      <span className="text-muted-foreground">Aadhaar Last 4:</span>
-                      <p className="font-mono font-bold">{kycDocs?.aadhaar_last4 ? maskAadhaar(kycDocs.aadhaar_last4) : 'N/A'}</p>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">PAN Number:</span>
-                      <p className="font-mono font-bold">{kycDocs?.pan_number ? maskPAN(kycDocs.pan_number) : 'N/A'}</p>
-                    </div>
-                  </div>
+                  {/* PAN (last 4, full number only through the logged reveal) and the payout-name check */}
+                  <KycIdentity
+                    providerId={selectedProvider.id}
+                    panLast4={kycDocs?.pan_last4 ?? null}
+                    kycName={selectedProvider.full_name}
+                    bankAccountName={selectedProvider.bank_account_name ?? null}
+                    upiId={selectedProvider.upi_id ?? null}
+                  />
 
                   {/* Documents grid */}
                   <div className="space-y-3">
@@ -280,8 +277,6 @@ const KycReview: React.FC = () => {
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                       {[
                         { label: 'Selfie Portrait', url: signedUrls.selfie_path },
-                        { label: 'Aadhaar Front', url: signedUrls.aadhaar_front_path },
-                        { label: 'Aadhaar Back', url: signedUrls.aadhaar_back_path },
                         { label: 'PAN Card', url: signedUrls.pan_path },
                         { label: 'Certificate', url: signedUrls.certificate_path },
                       ].map((doc, idx) => (

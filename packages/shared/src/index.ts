@@ -59,7 +59,7 @@ export * from "./dispatch/search";
 export * from "./dispatch/snapshot";
 export * from "./dispatch/offer-card";
 export * from "./kyc/kyc";
-export * from "./kyc/sha256";
+export * from "./kyc/identity";
 export * from "./kyc/wizard";
 export * from "./kyc/terms";
 export * from "./auth/roles";

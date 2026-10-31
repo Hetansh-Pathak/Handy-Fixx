@@ -248,44 +248,31 @@ export type Database = {
       provider_kyc: {
         Row: {
           provider_id: string
-          aadhaar_last4: string | null
-          aadhaar_hash: string | null
-          pan_number: string | null
-          aadhaar_front_path: string | null
-          aadhaar_back_path: string | null
+          pan_last4: string | null
           selfie_path: string | null
           pan_path: string | null
           certificate_path: string | null
           consent_accepted_at: string | null
           terms_version: string | null
+          legal_hold: boolean
+          photos_deleted_at: string | null
           created_at: string
           updated_at: string
         }
         Insert: {
           provider_id: string
-          aadhaar_last4?: string | null
-          aadhaar_hash?: string | null
-          pan_number?: string | null
-          aadhaar_front_path?: string | null
-          aadhaar_back_path?: string | null
           selfie_path?: string | null
           pan_path?: string | null
           certificate_path?: string | null
           consent_accepted_at?: string | null
           terms_version?: string | null
-          created_at?: string
-          updated_at?: string
         }
         Update: {
-          aadhaar_last4?: string | null
-          pan_number?: string | null
-          aadhaar_front_path?: string | null
-          aadhaar_back_path?: string | null
           selfie_path?: string | null
           pan_path?: string | null
           certificate_path?: string | null
           consent_accepted_at?: string | null
-          updated_at?: string
+          terms_version?: string | null
         }
         Relationships: []
       }
