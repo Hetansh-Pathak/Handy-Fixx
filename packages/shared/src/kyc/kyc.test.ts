@@ -15,7 +15,7 @@ describe("Aadhaar is gone", () => {
     const all = (await import("../index")) as Record<string, unknown>;
     expect(Object.keys(all).filter((k) => /aadhaar/i.test(k))).toEqual([]);
     expect(Object.keys(all)).not.toContain("sha256Hex");
-  });
+  }, 30_000); // imports the whole package: slow on a busy machine (took 5.1 s of the 5 s default under load)
   it("no step label or rejection reason mentions Aadhaar", () => {
     expect(Object.values(KYC_STEP_LABELS).join(" ")).not.toMatch(/aadhaar/i);
     expect(KYC_REJECTION_REASONS.join(" ")).not.toMatch(/aadhaar/i);

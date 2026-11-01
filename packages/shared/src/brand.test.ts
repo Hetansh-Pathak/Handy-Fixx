@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
-import { APP_NAME, APP_NAME_PRO, BRAND_COPY, brandCopy, brandServerText, PLATFORM_FEE_LABEL, SUPPORT_NAME } from "./brand";
+import { APP_NAME, APP_NAME_PRO, APP_WORDMARK, BRAND_COPY, brandCopy, brandServerText, PLATFORM_FEE_LABEL, SUPPORT_NAME } from "./brand";
 import { LAUNCH_PERIOD } from "./money/launch";
 
 const repo = resolve(__dirname, "../../..");
@@ -10,6 +10,7 @@ describe("brand constants", () => {
   it("name the product apnabanda", () => {
     expect(APP_NAME).toBe("apnabanda");
     expect(APP_NAME_PRO).toBe("apnabanda Pro");
+    expect(APP_WORDMARK.join("")).toBe(APP_NAME);
     expect(SUPPORT_NAME).toBe("apnabanda");
     expect(PLATFORM_FEE_LABEL).toBe("apnabanda fee");
   });

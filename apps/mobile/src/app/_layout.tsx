@@ -9,12 +9,12 @@ import {
 } from "@expo-google-fonts/plus-jakarta-sans";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import { useEffect } from "react";
 import { variantAllowsRole } from "@handyfix/shared";
 import { Linking } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { SessionProvider, useSession } from "@/features/auth/session-provider";
 import { PushHandler } from "@/features/push/push-handler";
+import { SplashHost } from "@/features/splash/splash-host";
 import { Button, FullScreenMessage } from "@/components/ui";
 import { env } from "@/lib/env";
 import { queryClient } from "@/lib/query-client";
@@ -22,19 +22,12 @@ import { ThemeProvider, useThemeColors } from "@/theme/theme";
 
 void SplashScreen.preventAutoHideAsync();
 
-function Navigator() {
+function Navigator({ fontsReady }: { fontsReady: boolean }) {
   const colors = useThemeColors();
   const { status, role, errorMessage, refresh, signOut } = useSession();
-  const [fontsLoaded, fontError] = useFonts({
-    PlusJakartaSans_400Regular, PlusJakartaSans_500Medium, PlusJakartaSans_600SemiBold, PlusJakartaSans_700Bold, PlusJakartaSans_800ExtraBold,
-  });
-  const fontsReady = fontsLoaded || !!fontError; // never block the app on a font
 
-  useEffect(() => {
-    if (status !== "loading" && fontsReady) void SplashScreen.hideAsync();
-  }, [status, fontsReady]);
-
-  if (status === "loading" || !fontsReady) return null; // native splash stays up
+  // The opening screen (or, when it is off, the native splash) stays up until the session is known and the fonts are loaded.
+  if (status === "loading" || !fontsReady) return null;
 
   if (status === "misconfigured") {
     return <FullScreenMessage title="App not configured" message={errorMessage ?? "Missing Supabase settings."} />;
@@ -92,12 +85,18 @@ function Navigator() {
 }
 
 export default function RootLayout() {
+  const [fontsLoaded, fontError] = useFonts({
+    PlusJakartaSans_400Regular, PlusJakartaSans_500Medium, PlusJakartaSans_600SemiBold, PlusJakartaSans_700Bold, PlusJakartaSans_800ExtraBold,
+  });
+  const fontsReady = fontsLoaded || !!fontError; // never block the app on a font
   return (
     <SafeAreaProvider>
       <ThemeProvider>
         <QueryClientProvider client={queryClient}>
           <SessionProvider>
-            <Navigator />
+            <SplashHost fontsReady={fontsReady}>
+              <Navigator fontsReady={fontsReady} />
+            </SplashHost>
           </SessionProvider>
         </QueryClientProvider>
       </ThemeProvider>

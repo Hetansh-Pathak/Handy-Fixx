@@ -46,4 +46,6 @@ export const env = {
   instantDispatch: process.env.EXPO_PUBLIC_INSTANT_DISPATCH === "1",
   /** Native-check screens are always on in dev; set EXPO_PUBLIC_ENABLE_SPIKE=1 for other builds. */
   spikeEnabled: __DEV__ || process.env.EXPO_PUBLIC_ENABLE_SPIKE === "1",
+  /** Turns the animated opening screen off (browser tests, store screenshots). */
+  skipSplash: process.env.EXPO_PUBLIC_SKIP_SPLASH === "1",
 } as const;

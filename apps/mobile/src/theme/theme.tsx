@@ -2,7 +2,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { StatusBar } from "expo-status-bar";
 import { vars } from "nativewind";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import { Platform, useColorScheme, View } from "react-native";
+import { Platform, useColorScheme, View, type StyleProp, type ViewStyle } from "react-native";
 import { cssVars, PALETTES, type Palette, type ThemeName } from "./palettes";
 
 /** Profile > Appearance. Stored on this device only. */
@@ -70,6 +70,20 @@ export function useTheme(): ThemeContextValue {
   const ctx = useContext(ThemeContext);
   if (!ctx) throw new Error("useTheme must be used inside ThemeProvider");
   return ctx;
+}
+
+/**
+ * Always-dark island for brand posters (the opening screen, the login poster): everything inside, classes and
+ * `useTheme()` / `useThemeColors()` alike, sees the Dark palette even when the phone is in Light. Layout via `style`.
+ */
+export function DarkScope({ children, style }: { children: ReactNode; style?: StyleProp<ViewStyle> }) {
+  const parent = useTheme();
+  const value = useMemo<ThemeContextValue>(() => ({ ...parent, scheme: "dark", colors: PALETTES.dark }), [parent]);
+  return (
+    <ThemeContext.Provider value={value}>
+      <View style={[{ backgroundColor: PALETTES.dark.canvas }, VARS.dark, style]}>{children}</View>
+    </ThemeContext.Provider>
+  );
 }
 
 /** Colour values for props that cannot take a class (icons, switches, placeholders, maps). */

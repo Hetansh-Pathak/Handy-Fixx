@@ -7,6 +7,8 @@ import { LAUNCH_PERIOD } from "./money/launch";
 export const APP_NAME = "apnabanda";
 /** The provider app. The "PRO" badge on the logo is a picture; this is the name in text. */
 export const APP_NAME_PRO = "apnabanda Pro";
+/** The wordmark split for the two-colour logo: "apna" in the text colour, "banda" in amber. Joined it is APP_NAME. */
+export const APP_WORDMARK = ["apna", "banda"] as const;
 /** Who customers and pros write to or call: "Email apnabanda", "Call apnabanda 99…". */
 export const SUPPORT_NAME = "apnabanda";
 /** The label on every fee line a pro sees. The fee itself (3%, min 5, max 50) lives in money/fee.ts. */

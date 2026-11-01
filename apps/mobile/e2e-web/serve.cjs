@@ -33,6 +33,8 @@ const child = spawn(process.execPath, [require.resolve("expo/bin/cli"), "start",
     EXPO_PUBLIC_SUPABASE_URL: "https://mock.supabase.co",
     EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "anon-key",
     EXPO_PUBLIC_ENABLE_SPIKE: "0",
+    // The animated opening screen would only slow the tests down; splash-flow.cjs starts the server with EXPO_PUBLIC_SKIP_SPLASH=0.
+    EXPO_PUBLIC_SKIP_SPLASH: process.env.EXPO_PUBLIC_SKIP_SPLASH ?? "1",
     EXPO_PUBLIC_ARRIVED_STATUS: "0",
     EXPO_PUBLIC_PDF_PRICING_LIVE: "0",
     EXPO_PUBLIC_MAPS_ENABLED: "0",
