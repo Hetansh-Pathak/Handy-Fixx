@@ -107,6 +107,11 @@ Owner plan of 2026-10-29 ("first release, do all the things"), one slice at a ti
 7. **Release prep:** Google Maps key + `EXPO_PUBLIC_MAPS_ENABLED=1`, EAS builds, Play Store closed test, hosted privacy policy URL; delete `legacy/` at mobile parity.
 8. **Later (PDF order):** ranking by rating, distance and response speed; Featured boost and Pro subscription (~40 pros); urgent add-on, real refunds, maintenance plans (after in-app payments); society tie-ups and ads (500+ bookings).
 
+## Opening screen + login poster (2026-11-01, branch hetansh2, NOT pushed) - DONE
+
+- **Animated opening screen "Black + Blur slap"** (customer and Pro, about 2.5 s, transform + opacity only, always dark, cold start only, reduced-motion final frame, spinner after 3.5 s) and the **login poster "Black + Blur sticker collage"** (full on Sign in, compact on Create account / Forgot password). Words in `BRAND_COPY` (`packages/shared/src/brand.ts`), timing rules in `packages/shared/src/splash/gate.ts`, both tested; browser suites `splash-flow.cjs` and `login-poster-flow.cjs`. **No new development build needed** (no config or native change). Details, files, results, screenshots (`docs/screens/splash-login/`): `docs/CHANGES_SPLASH_LOGIN.md`.
+- **Follow-ups for the owner:** try it on a real Android phone (frame rate, blur fallback, keyboard behaviour) and on iOS; confirm the Pro pill wording ("First 10 jobs or 1 month fee-free") and the customer line "Lower prices."; decide whether Reset password and Role pick should get the compact poster too.
+
 ## One job at a time + apnabanda rename (2026-11-01, branch hetansh2, NOT pushed)
 
 - **Slice 1, one job at a time:** shared rule `providerBusy` (`requestAccess` state `busy`), Pro popup / request page / Jobs show "Finish your current job first", customer list and booking screen mark a busy pro. Server twin = proposal `20261126000000` (NOT applied; APPLY_PLAN row 16; dry run `30_`; 38-check throwaway-Postgres test incl. two sessions at once). **Owner:** review, dry run, apply after `20261114`, `20261124000000/1`.
