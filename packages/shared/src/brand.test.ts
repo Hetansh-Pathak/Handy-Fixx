@@ -1,7 +1,8 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
-import { APP_NAME, APP_NAME_PRO, brandServerText, PLATFORM_FEE_LABEL, SUPPORT_NAME } from "./brand";
+import { APP_NAME, APP_NAME_PRO, BRAND_COPY, brandCopy, brandServerText, PLATFORM_FEE_LABEL, SUPPORT_NAME } from "./brand";
+import { LAUNCH_PERIOD } from "./money/launch";
 
 const repo = resolve(__dirname, "../../..");
 
@@ -17,6 +18,35 @@ describe("brand constants", () => {
     expect(brandServerText("Open HandyFix Pro to see it")).toBe("Open apnabanda Pro to see it");
     expect(brandServerText("This KYC detail can only be saved by Handy Fix (x).")).toBe("This KYC detail can only be saved by apnabanda (x).");
     expect(brandServerText("Recharge ₹49 to accept.")).toBe("Recharge ₹49 to accept.");
+  });
+});
+
+describe("opening screen and login poster copy", () => {
+  it("has the agreed customer words", () => {
+    expect(BRAND_COPY.customer).toMatchObject({ splashTagline: "Trusted pros. Lower prices.", splashPill: "Ghar ka kaam, sahi daam", posterPill: "Customer fee ₹0" });
+    const h = BRAND_COPY.customer.posterHeadline;
+    expect(h.before + h.accent + h.after).toBe("Your banda for every home job.");
+    expect(h.accent).toBe("banda");
+  });
+  it("has the agreed Pro words, with the launch numbers read from LAUNCH_PERIOD (not typed)", () => {
+    const p = BRAND_COPY.provider;
+    expect(p.splashTagline).toBe("More jobs near you");
+    expect(p.splashPill).toBeNull();
+    expect(p.posterHeadline.before + p.posterHeadline.accent + p.posterHeadline.after).toBe("More jobs. Fair fee. Your area.");
+    expect(p.posterSubline).toBe("Get requests near you. Pay a small fee only on completed jobs.");
+    expect(p.posterPill).toBe(`First ${LAUNCH_PERIOD.jobs} jobs or 1 month fee-free`);
+  });
+  it("picks the copy by app variant; the dev build with both shows the customer copy", () => {
+    expect(brandCopy("provider")).toBe(BRAND_COPY.provider);
+    expect(brandCopy("customer")).toBe(BRAND_COPY.customer);
+    expect(brandCopy("both")).toBe(BRAND_COPY.customer);
+    expect(brandCopy(undefined)).toBe(BRAND_COPY.customer);
+  });
+  it("makes no promise the business model does not keep (no percent discounts, no delivery times)", () => {
+    for (const c of Object.values(BRAND_COPY)) {
+      const all = [c.splashTagline, c.splashPill ?? "", c.posterSubline, c.posterPill, c.posterHeadline.before, c.posterHeadline.accent, c.posterHeadline.after].join(" ");
+      expect(all).not.toMatch(/%|\bminutes?\b|\bdiscount/i);
+    }
   });
 });
 

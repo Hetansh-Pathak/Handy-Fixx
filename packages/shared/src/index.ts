@@ -12,6 +12,7 @@ export * from "./booking/status";
 export * from "./booking/schedule";
 export * from "./booking/provider-busy";
 export * from "./brand";
+export * from "./splash/gate";
 export * from "./booking/validation";
 export * from "./booking/completion-code";
 export * from "./booking/attachments";
