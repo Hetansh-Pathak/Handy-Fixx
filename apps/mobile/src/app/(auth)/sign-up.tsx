@@ -32,7 +32,7 @@ export default function SignUp() {
   };
 
   return (
-    <AuthShell>
+    <AuthShell poster="compact">
       <Title>Create your account</Title>
       <Body muted>{env.appVariant === "provider" ? "Join apnabanda Pro and start receiving jobs." : env.appVariant === "customer" ? "Book trusted pros for any home service." : "One account, one role. You choose customer or pro on the next step."}</Body>
       <ErrorBanner message={error} />

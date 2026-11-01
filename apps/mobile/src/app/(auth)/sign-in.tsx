@@ -43,7 +43,7 @@ export default function SignIn() {
   };
 
   return (
-    <AuthShell>
+    <AuthShell poster="full">
       <View className="gap-1">
         <Title>Welcome back</Title>
         <Body muted>{env.appVariant === "provider" ? "Sign in to receive and manage your jobs." : env.appVariant === "customer" ? "Sign in to book trusted pros." : "Sign in to book trusted pros or manage your jobs."}</Body>

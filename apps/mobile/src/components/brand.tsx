@@ -2,9 +2,10 @@ import {
   Bug, Hammer, MapPin, PaintBucket, Settings, Sparkles, Thermometer, Truck, Users, Wind, Wrench, Zap, Scissors, type LucideIcon,
 } from "lucide-react-native";
 import type { ReactNode } from "react";
-import { ScrollView, View } from "react-native";
+import { KeyboardAvoidingView, Platform, ScrollView, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { AppLogo } from "@/components/app-logo";
+import { AuthPoster } from "@/features/auth/AuthPoster";
 import { Glass } from "@/components/glass";
 import { ScreenBackground } from "@/components/screen-background";
 import { Text } from "@/components/text";
@@ -51,8 +52,30 @@ export function Eyebrow({ children }: { children: string }) {
   return <Text className="text-sm font-semibold uppercase tracking-wider text-brand">{children}</Text>;
 }
 
-/** Auth screens: the logo above one frosted card, centered on the glowing canvas. */
-export function AuthShell({ children }: { children: ReactNode }) {
+/**
+ * Auth screens: the logo above one frosted card, centered on the glowing canvas. With `poster` the sign-in family gets the
+ * "Black + Blur sticker collage" on top ("full" for Sign in, "compact" for the longer forms) and the same card under it. The form,
+ * its fields and buttons are exactly the children; only the frame around them changes.
+ */
+export function AuthShell({ children, poster }: { children: ReactNode; poster?: "full" | "compact" }) {
+  if (poster) {
+    return (
+      <ScreenBackground>
+        <SafeAreaView className="flex-1" edges={["bottom"]}>
+          <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+            <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ flexGrow: 1 }}>
+              <AuthPoster compact={poster === "compact"} />
+              <View style={{ padding: 20, gap: 20 }}>
+                <Glass tone="card" intensity={30} className="gap-4 rounded-hero border border-line p-5">
+                  {children}
+                </Glass>
+              </View>
+            </ScrollView>
+          </KeyboardAvoidingView>
+        </SafeAreaView>
+      </ScreenBackground>
+    );
+  }
   return (
     <ScreenBackground>
       <SafeAreaView className="flex-1" edges={["top", "bottom"]}>

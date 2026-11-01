@@ -29,7 +29,7 @@ export default function ForgotPassword() {
   };
 
   return (
-    <AuthShell>
+    <AuthShell poster="compact">
       <Title>Reset your password</Title>
       <Body muted>We will email you a link. Open it on this phone to choose a new password.</Body>
       <ErrorBanner message={error} />
