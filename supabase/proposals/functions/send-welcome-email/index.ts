@@ -3,6 +3,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 // @ts-expect-error Supabase resolves Deno URL imports at deploy time.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { escapeHtml } from "../_shared/http.ts";
+import { emailFact, emailLayout, emailParagraph, emailPromises } from "../_shared/email-theme.ts";
 import { createWelcomeHandler } from "./handler.ts";
 
 // PROPOSAL 20261125 (finding H2), NOT DEPLOYED. Rules live in handler.ts (tested in supabase/tests/security).
@@ -15,19 +16,22 @@ const url = Deno.env.get("SUPABASE_URL") ?? "";
 const anonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
 const admin = createClient(url, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "", { auth: { persistSession: false } });
 
-const html = (nameHtml: string, email: string, isLogin: boolean) => `<!doctype html>
-<html><head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" /></head>
-<body style="margin:0;background:#0f0f0f;font-family:Segoe UI,Arial,sans-serif"><div style="max-width:600px;margin:auto;padding:40px 20px">
-<div style="background:#1a1a1a;border:1px solid #2a2a2a;border-radius:16px;overflow:hidden">
-<div style="padding:36px 32px;text-align:center;background:linear-gradient(135deg,#d4a017,#f5c842)"><h1 style="margin:0;color:#0f0f0f;font-size:28px">apnabanda</h1>
-<p style="margin:8px 0 0;color:#0f0f0f;font-size:14px">Your Trusted Home Services Marketplace</p></div>
-<div style="padding:32px"><p style="margin:0 0 12px;color:#f5f5f5;font-size:20px;font-weight:700">${isLogin ? `Welcome back, ${nameHtml}!` : `Welcome aboard, ${nameHtml}!`}</p>
-<p style="color:#a0a0a0;font-size:15px;line-height:1.7">${isLogin
-  ? "You have signed in to apnabanda. Your home services are ready whenever you need them."
-  : "Your apnabanda account is ready. Book verified, skilled professionals in your area."}</p>
-<p style="color:#ccc;font-size:14px">Email: <span style="color:#f5c842">${escapeHtml(email)}</span></p></div>
-<div style="padding:24px 32px;border-top:1px solid #222;text-align:center;color:#555;font-size:12px">© 2026 apnabanda. If this was not you, contact support.</div>
-</div></div></body></html>`;
+const html = (nameHtml: string, email: string, isLogin: boolean) => emailLayout({
+  title: isLogin ? "Welcome back to apnabanda" : "Welcome to apnabanda",
+  preheader: isLogin ? "You have signed in to apnabanda." : "Your apnabanda account is ready.",
+  heading: isLogin ? `Welcome back, ${nameHtml}!` : `Welcome aboard, ${nameHtml}!`,
+  tagline: "Verified pros. Fixed price.",
+  bodyHtml:
+    emailParagraph(isLogin
+      ? "You have signed in to apnabanda. Your home services are ready whenever you need them."
+      : "Your apnabanda account is ready. Book verified, skilled professionals in your area.")
+    + emailFact("Email", escapeHtml(email))
+    + emailPromises([
+      ["Verified pros", "Identity checked before they take jobs"],
+      ["Fixed price", "The price you see is the price you pay. Customer fee ₹0"],
+      ["Track your job", "Live updates from booking to done"],
+    ]),
+});
 
 serve(createWelcomeHandler({
   env: (name) => Deno.env.get(name),

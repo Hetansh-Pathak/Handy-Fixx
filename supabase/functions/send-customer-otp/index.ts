@@ -3,6 +3,8 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 // @ts-expect-error Supabase resolves Deno URL imports at deploy time.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+import { emailCodeBox, emailLayout, emailParagraph } from "../_shared/email-theme.ts";
+
 declare const Deno: { env: { get: (name: string) => string | undefined } };
 
 const corsHeaders = {
@@ -21,15 +23,18 @@ const sha256 = async (value: string) => {
   return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, "0")).join("");
 };
 
-const emailHtml = (code: string, email: string) => `<!doctype html>
-<html><head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" /></head>
-<body style="margin:0;background:#0f0f0f;font-family:Segoe UI,Arial,sans-serif">
-<div style="max-width:600px;margin:auto;padding:40px 20px"><div style="background:#1a1a1a;border:1px solid #2a2a2a;border-radius:16px;overflow:hidden">
-<div style="padding:36px 32px;text-align:center;background:linear-gradient(135deg,#d4a017,#f5c842)"><h1 style="margin:0;color:#0f0f0f;font-size:28px">apnabanda</h1></div>
-<div style="padding:32px"><p style="margin:0 0 12px;color:#f5f5f5;font-size:20px;font-weight:700">Verify your email to book</p>
-<p style="color:#a0a0a0;font-size:15px;line-height:1.7">Use this code to verify <strong style="color:#f5f5f5">${email}</strong>. It expires in ${OTP_TTL_MINUTES} minutes.</p>
-<div style="margin:24px 0;padding:20px;border:1px solid #55420e;border-radius:12px;background:#222;text-align:center;color:#f5c842;font-size:36px;font-weight:800;letter-spacing:10px">${code}</div>
-<p style="color:#a0a0a0;font-size:13px">Never share this code. apnabanda will never ask for it. If you didn't request it, ignore this email.</p></div></div></div></body></html>`;
+const escapeHtml = (value: string) => value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+
+const emailHtml = (code: string, email: string) => emailLayout({
+  title: "Your apnabanda verification code",
+  preheader: `Your code is ${code}. It expires in ${OTP_TTL_MINUTES} minutes.`,
+  heading: "Verify your email to book",
+  tagline: "Verified, rated, and at a fixed price.",
+  bodyHtml:
+    emailParagraph(`Use this code to verify <strong>${escapeHtml(email)}</strong>. It expires in ${OTP_TTL_MINUTES} minutes.`)
+    + emailCodeBox(code)
+    + emailParagraph("Never share this code. apnabanda will never ask for it. If you didn't request it, ignore this email."),
+});
 
 serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });

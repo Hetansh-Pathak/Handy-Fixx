@@ -4,6 +4,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { escapeHtml } from "../_shared/http.ts";
 import { OTP_TTL_MINUTES } from "../_shared/otp.ts";
+import { emailCodeBox, emailLayout, emailParagraph } from "../_shared/email-theme.ts";
 import { createSendHandler } from "./handler.ts";
 
 // PROPOSAL 20261125 (finding C3), NOT DEPLOYED. Rules live in handler.ts (tested in supabase/tests/security).
@@ -13,15 +14,17 @@ import { createSendHandler } from "./handler.ts";
 
 declare const Deno: { env: { get: (name: string) => string | undefined } };
 
-const otpEmail = (code: string, email: string) => `<!doctype html>
-<html><head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" /></head>
-<body style="margin:0;background:#0f0f0f;font-family:Segoe UI,Arial,sans-serif"><div style="max-width:600px;margin:auto;padding:40px 20px">
-<div style="background:#1a1a1a;border:1px solid #2a2a2a;border-radius:16px;overflow:hidden">
-<div style="padding:36px 32px;text-align:center;background:linear-gradient(135deg,#d4a017,#f5c842)"><h1 style="margin:0;color:#0f0f0f;font-size:28px">apnabanda</h1></div>
-<div style="padding:32px"><p style="margin:0 0 12px;color:#f5f5f5;font-size:20px;font-weight:700">Verify your provider email</p>
-<p style="color:#a0a0a0;font-size:15px;line-height:1.7">Use this code to verify <strong style="color:#f5f5f5">${escapeHtml(email)}</strong>. It expires in ${OTP_TTL_MINUTES} minutes.</p>
-<div style="margin:24px 0;padding:20px;border:1px solid #55420e;border-radius:12px;background:#222;text-align:center;color:#f5c842;font-size:36px;font-weight:800;letter-spacing:10px">${code}</div>
-<p style="color:#a0a0a0;font-size:13px">Never share this code. apnabanda will never ask for it. If you did not request it, ignore this email.</p></div></div></div></body></html>`;
+const otpEmail = (code: string, email: string) => emailLayout({
+  title: "Your apnabanda Pro verification code",
+  preheader: `Your code is ${code}. It expires in ${OTP_TTL_MINUTES} minutes.`,
+  heading: "Verify your email",
+  app: "provider",
+  tagline: "More jobs. Fair fee. Your area.",
+  bodyHtml:
+    emailParagraph(`Use this code to verify <strong>${escapeHtml(email)}</strong>. It expires in ${OTP_TTL_MINUTES} minutes.`)
+    + emailCodeBox(code)
+    + emailParagraph("Never share this code. apnabanda will never ask for it. If you did not request it, ignore this email."),
+});
 
 const url = Deno.env.get("SUPABASE_URL") ?? "";
 const anonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
@@ -65,7 +68,7 @@ serve(createSendHandler({
       body: JSON.stringify({
         sender: { name: Deno.env.get("BREVO_SENDER_NAME") ?? "apnabanda", email: senderEmail },
         to: [{ email: to }],
-        subject: "Your apnabanda verification code",
+        subject: "Your apnabanda Pro verification code",
         htmlContent: otpEmail(code, to),
       }),
     });

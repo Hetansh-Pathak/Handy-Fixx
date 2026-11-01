@@ -118,6 +118,12 @@ Owner plan of 2026-10-29 ("first release, do all the things"), one slice at a ti
 - **Slice 2, name apnabanda:** brand constants `packages/shared/src/brand.ts`, every visible HandyFix string reworded, `TERMS_VERSION` v1.4, `LEGAL_VERSION` 1.2, `site/` and push file regenerated, guard test `brand.test.ts`. **Owner:** decide the Android package ids (`in.handyfix.*`, permanent after the first Play Store upload), redeploy the edge functions that send wording, publish `site/`, build new apps.
 - Details, file lists, test results, what is not done: `docs/CHANGES_ONE_JOB_AND_RENAME.md`.
 
+## Emails in the apnabanda look (2026-11-02, branch hetansh2, NOT pushed, NOT deployed)
+
+- The three mails (customer code, Pro code, welcome) now share one template, `_shared/email-theme.ts` (dark "Black + Blur" header with white "apna" + amber "banda", white "Blue + White" card, blue code tile, dark-mode block, amber PRO pill for the Pro code mail; no old gold card, no "Marketplace" line, no handyfix.in links, no Unsubscribe link on a transactional mail). Two identical copies: `supabase/functions/_shared/` (used by `send-customer-otp`) and `supabase/proposals/functions/_shared/` (used by the hardened `send-provider-otp` and `send-welcome-email`). 6 new tests in `supabase/tests/security/edge/email-theme.test.ts` (49/49 edge tests pass, tsc clean).
+- **The inbox still shows HandyFix because the live functions have not been redeployed.** Owner: redeploy `send-customer-otp`, `send-provider-otp`, `send-welcome-email` (the second and third from the hardened copies in `supabase/proposals/functions/`, as before from `supabase/staging/out/deploy`; that folder is generated, rebuild it first). `supabase/functions/send-welcome-email` and `send-provider-otp` are the OLD unhardened copies: do not deploy them.
+- Not changed: the sender name (secret `BREVO_SENDER_NAME`, set it to `apnabanda` in the Edge Function secrets) and the sender address (`BREVO_SENDER_EMAIL`).
+
 ## Live rollout status (2026-11-01)
 
 - **Applied on live by the owner with `supabase/live/rollout-live.mjs`:** slice 1 (17 steps: the older proposals plus security A, D, E) and slice 2 (security B, KYC PAN encryption). Hardened functions (kyc-pan, kyc-admin-reveal-pan, kyc-retention, send-provider-otp, verify-provider-otp, send-welcome-email) deployed by the owner from `supabase/staging/out/deploy`; KYC loads again.
